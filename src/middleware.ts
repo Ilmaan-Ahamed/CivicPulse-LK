@@ -1,27 +1,34 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-// Define public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
+// Public routes — no auth required
+const PUBLIC_ROUTES = [
   "/",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/dashboard(.*)",
-  "/api/webhooks(.*)",
-  "/api/dashboard(.*)",
-]);
+  "/sign-in",
+  "/sign-up",
+  "/dashboard",
+  "/onboarding",
+  "/callback",
+  "/api/webhooks",
+  "/api/dashboard",
+  "/api/onboarding",
+];
 
-// Define role-restricted routes
-const isDSConsoleRoute = createRouteMatcher(["/ds-console(.*)"]);
-const isFieldRoute = createRouteMatcher(["/field(.*)"]);
-const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
+function isPublicRoute(req: NextRequest): boolean {
+  const { pathname } = req.nextUrl;
+  return PUBLIC_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/")
+  );
+}
 
 export default clerkMiddleware(async (auth, req) => {
   // Allow public routes without authentication
   if (isPublicRoute(req)) {
-    return;
+    return NextResponse.next();
   }
 
-  // Protect all other routes — require sign-in
+  // Protect all other routes — redirect to sign-in if not authenticated
   await auth.protect();
 });
 

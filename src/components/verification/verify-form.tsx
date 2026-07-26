@@ -50,47 +50,47 @@ export function VerifyForm({ reportId }: VerifyFormProps) {
       )}
 
       {/* Decision Buttons */}
-      <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-300">
+      <div className="space-y-2.5">
+        <label className="text-xs font-semibold text-slate-300 tracking-wide">
           Your Verification Decision *
         </label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <button
             type="button"
             onClick={() => setStatus("CONFIRMED")}
-            className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
+            className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all duration-300 cursor-pointer ${
               status === "CONFIRMED"
-                ? "bg-teal-500/20 border-teal-500 text-teal-300 font-bold"
-                : "bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700"
+                ? "bg-teal-500/10 border-teal-500 text-teal-350 font-bold shadow-lg shadow-teal-500/5 scale-[1.02]"
+                : "bg-slate-950/45 border-slate-850 text-slate-400 hover:border-slate-700 hover:bg-slate-900/30"
             }`}
           >
-            <CheckCircle2 className="w-5 h-5 text-teal-400" />
+            <CheckCircle2 className={`w-5 h-5 transition-colors duration-300 ${status === "CONFIRMED" ? "text-teal-400" : "text-slate-500"}`} />
             <span className="text-xs">Confirm Authenticity</span>
           </button>
 
           <button
             type="button"
             onClick={() => setStatus("DISPUTED")}
-            className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
+            className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all duration-300 cursor-pointer ${
               status === "DISPUTED"
-                ? "bg-red-500/20 border-red-500 text-red-300 font-bold"
-                : "bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700"
+                ? "bg-red-500/10 border-red-500 text-red-350 font-bold shadow-lg shadow-red-500/5 scale-[1.02]"
+                : "bg-slate-950/45 border-slate-850 text-slate-400 hover:border-slate-700 hover:bg-slate-900/30"
             }`}
           >
-            <XCircle className="w-5 h-5 text-red-400" />
+            <XCircle className={`w-5 h-5 transition-colors duration-300 ${status === "DISPUTED" ? "text-red-400" : "text-slate-500"}`} />
             <span className="text-xs">Dispute / False</span>
           </button>
 
           <button
             type="button"
             onClick={() => setStatus("NEEDS_INFO")}
-            className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
+            className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all duration-300 cursor-pointer ${
               status === "NEEDS_INFO"
-                ? "bg-amber-500/20 border-amber-500 text-amber-300 font-bold"
-                : "bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700"
+                ? "bg-amber-500/10 border-amber-500 text-amber-350 font-bold shadow-lg shadow-amber-500/5 scale-[1.02]"
+                : "bg-slate-950/45 border-slate-850 text-slate-400 hover:border-slate-700 hover:bg-slate-900/30"
             }`}
           >
-            <HelpCircle className="w-5 h-5 text-amber-400" />
+            <HelpCircle className={`w-5 h-5 transition-colors duration-300 ${status === "NEEDS_INFO" ? "text-amber-400" : "text-slate-500"}`} />
             <span className="text-xs">Needs More Info</span>
           </button>
         </div>
@@ -98,7 +98,7 @@ export function VerifyForm({ reportId }: VerifyFormProps) {
 
       {/* Optional Comment */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-300">
+        <label className="text-xs font-semibold text-slate-300 tracking-wide">
           Verification Notes / Field Observation
         </label>
         <textarea
@@ -106,7 +106,7 @@ export function VerifyForm({ reportId }: VerifyFormProps) {
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder="Add details about your physical check (e.g., 'Inspected on site, pothole spans full lane width')..."
-          className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-white text-sm placeholder:text-slate-500 focus:border-teal-500 transition-colors resize-none"
+          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-white text-sm placeholder:text-slate-650 focus:border-teal-500/85 focus:ring-4 focus:ring-teal-500/10 hover:border-slate-700 transition-all duration-300 outline-none resize-none"
         />
       </div>
 
@@ -114,11 +114,11 @@ export function VerifyForm({ reportId }: VerifyFormProps) {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full py-3.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+        className="w-full py-4 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-450 text-white font-bold text-sm sm:text-base shadow-xl shadow-teal-650/15 hover:shadow-teal-500/25 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
       >
         {submitting ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-5 h-5 animate-spin" />
             Submitting Verification...
           </>
         ) : (
