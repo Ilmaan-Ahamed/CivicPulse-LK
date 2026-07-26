@@ -1,0 +1,313 @@
+// ===========================================
+// CivicPulse LK - Database Schema
+// ===========================================
+// PostgreSQL + PostGIS via Neon DB
+// Run: npx prisma db push
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [postgis]
+}
+
+// ===========================================
+// Enums
+// ===========================================
+
+enum Role {
+  CITIZEN
+  VERIFIER
+  DS_OFFICER
+  AGENCY
+  NGO
+  VOLUNTEER
+  ADMIN
+}
+
+enum Language {
+  EN
+  SI
+  TA
+}
+
+enum Category {
+  ROAD_DAMAGE
+  DRAINAGE
+  STREETLIGHT
+  WATER_SUPPLY
+  WASTE
+  BRIDGE
+  PUBLIC_BUILDING
+  SIDEWALK
+  TRAFFIC_SIGNAL
+  OTHER
+}
+
+enum ReportStatus {
+  SUBMITTED
+  UNDER_VERIFICATION
+  VERIFIED
+  ASSIGNED
+  IN_PROGRESS
+  FIELD_VERIFIED
+  RESOLVED
+  REJECTED
+  CLOSED
+}
+
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum VerificationStatus {
+  CONFIRMED
+  DISPUTED
+  NEEDS_INFO
+}
+
+enum AssignmentStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  DECLINED
+}
+
+enum InspectionResult {
+  CONFIRMED_RESOLVED
+  PARTIALLY_RESOLVED
+  NOT_RESOLVED
+  ESCALATE
+}
+
+// ===========================================
+// Models
+// ===========================================
+
+model User {
+  id            String   @id @default(cuid())
+  clerkId       String   @unique
+  email         String   @unique
+  firstName     String?
+  lastName      String?
+  avatarUrl     String?
+  role          Role     @default(CITIZEN)
+  trustScore    Float    @default(50)
+  preferredLang Language @default(EN)
+  district      String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  reports       Report[]          @relation("ReportAuthor")
+  verifications Verification[]    @relation("VerificationAuthor")
+  assignments   Assignment[]      @relation("AssignedByOfficer")
+  fieldTasks    Assignment[]      @relation("AssignedToAgent")
+  inspections   FieldInspection[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+
+  @@index([clerkId])
+  @@index([role])
+  @@index([district])
+}
+
+model Report {
+  id            String       @id @default(cuid())
+  referenceNo   String       @unique @default(cuid())
+  citizenId     String
+  category      Category
+  title         String
+  description   String
+  summary       String? // AI-generated summary
+  latitude      Float
+  longitude     Float
+  address       String?
+  district      String?
+  status        ReportStatus @default(SUBMITTED)
+  priority      Priority? // AI-suggested priority
+  aiConfidence  Float? // AI confidence score (0-1)
+  duplicateOfId String? // If flagged as duplicate
+  isDuplicate   Boolean      @default(false)
+  verifyCount   Int          @default(0)
+  disputeCount  Int          @default(0)
+  resolvedAt    DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  citizen       User            @relation("ReportAuthor", fields: [citizenId], references: [id])
+  duplicateOf   Report?         @relation("DuplicateReports", fields: [duplicateOfId], references: [id])
+  duplicates    Report[]        @relation("DuplicateReports")
+  photos        Photo[]
+  verifications Verification[]
+  assignments   Assignment[]
+  statusHistory StatusHistory[]
+
+  @@index([citizenId])
+  @@index([status])
+  @@index([category])
+  @@index([district])
+  @@index([createdAt])
+  @@index([latitude, longitude])
+}
+
+model Photo {
+  id             String   @id @default(cuid())
+  url            String
+  key            String // MinIO object key
+  caption        String?
+  reportId       String?
+  verificationId String?
+  inspectionId   String?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  report       Report?          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  verification Verification?    @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  inspection   FieldInspection? @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@index([verificationId])
+  @@index([inspectionId])
+}
+
+model Verification {
+  id         String             @id @default(cuid())
+  reportId   String
+  verifierId String
+  status     VerificationStatus
+  comment    String?
+  latitude   Float? // Verifier's location for proximity proof
+  longitude  Float?
+  createdAt  DateTime           @default(now())
+
+  // Relations
+  report   Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  verifier User    @relation("VerificationAuthor", fields: [verifierId], references: [id])
+  photos   Photo[]
+
+  @@unique([reportId, verifierId]) // One verification per user per report
+  @@index([reportId])
+  @@index([verifierId])
+}
+
+model Assignment {
+  id           String           @id @default(cuid())
+  reportId     String
+  dsOfficerId  String // DS Officer who made the assignment
+  assignedToId String // Agency/NGO/Volunteer assigned to
+  status       AssignmentStatus @default(PENDING)
+  notes        String?
+  deadline     DateTime?
+  acceptedAt   DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  report      Report            @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  dsOfficer   User              @relation("AssignedByOfficer", fields: [dsOfficerId], references: [id])
+  assignedTo  User              @relation("AssignedToAgent", fields: [assignedToId], references: [id])
+  inspections FieldInspection[]
+
+  @@index([reportId])
+  @@index([dsOfficerId])
+  @@index([assignedToId])
+  @@index([status])
+}
+
+model FieldInspection {
+  id           String           @id @default(cuid())
+  assignmentId String
+  inspectorId  String
+  findings     String
+  result       InspectionResult
+  latitude     Float // GPS proof of presence
+  longitude    Float
+  inspectedAt  DateTime         @default(now())
+  createdAt    DateTime         @default(now())
+
+  // Relations
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  inspector  User       @relation(fields: [inspectorId], references: [id])
+  photos     Photo[]
+
+  @@index([assignmentId])
+  @@index([inspectorId])
+}
+
+model StatusHistory {
+  id         String        @id @default(cuid())
+  reportId   String
+  fromStatus ReportStatus?
+  toStatus   ReportStatus
+  changedBy  String? // User ID who caused the change
+  reason     String?
+  createdAt  DateTime      @default(now())
+
+  // Relations
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@index([createdAt])
+}
+
+model Agency {
+  id           String   @id @default(cuid())
+  name         String
+  type         String // GOVERNMENT, NGO, VOLUNTEER_TEAM, CSR
+  contactEmail String?
+  contactPhone String?
+  district     String?
+  description  String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([type])
+  @@index([district])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String // REPORT_UPDATE, VERIFICATION, ASSIGNMENT, etc.
+  entityId  String? // Related report/assignment ID
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String // CREATE, UPDATE, DELETE, ASSIGN, VERIFY, etc.
+  entity    String // Report, Verification, Assignment, etc.
+  entityId  String
+  metadata  Json? // Additional context
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
