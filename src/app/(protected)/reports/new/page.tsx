@@ -1,4 +1,4 @@
-import { ReportForm } from "@/components/reports/report-form";
+﻿import { ReportForm } from "@/components/reports/report-form";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -9,7 +9,7 @@ export default function NewReportPage() {
       <div className="space-y-4">
         <Link
           href="/reports"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-400 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-emerald-400 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Reports
@@ -20,10 +20,10 @@ export default function NewReportPage() {
             <ShieldAlert className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
               Report Public Infrastructure Issue
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400">
+            <p className="text-xs sm:text-sm text-muted">
               Geotag damaged roads, broken streetlights, or drainage issues for community verification and DS triage.
             </p>
           </div>
@@ -37,3 +37,5 @@ export default function NewReportPage() {
     </div>
   );
 }
+
+

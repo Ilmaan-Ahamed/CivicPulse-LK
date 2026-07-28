@@ -1,4 +1,4 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+﻿import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 
@@ -7,10 +7,10 @@ import { redirect } from "next/navigation";
  *
  * This page is hit after Clerk sign-in or sign-up.
  * It ensures the user exists in our DB, then routes them:
- *   - New users (no role set yet) → /onboarding
- *   - DS_OFFICER / AGENCY / NGO / ADMIN → /ds-console
- *   - VERIFIER → /verify
- *   - CITIZEN → / (home)
+ *   - New users (no role set yet) â†’ /onboarding
+ *   - DS_OFFICER / AGENCY / NGO / ADMIN â†’ /ds-console
+ *   - VERIFIER â†’ /verify
+ *   - CITIZEN â†’ / (home)
  */
 export default async function AuthCallbackPage() {
   const { userId } = await auth();
@@ -62,3 +62,5 @@ export default async function AuthCallbackPage() {
       redirect("/");
   }
 }
+
+

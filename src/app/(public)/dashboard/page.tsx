@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+﻿import { prisma } from "@/lib/db";
 import {
   BarChart3,
   CheckCircle2,
@@ -30,66 +30,66 @@ export default async function PublicDashboardPage() {
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-10">
       {/* Dashboard Title Header */}
       <div>
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-3">
           <BarChart3 className="w-4 h-4" />
           Real-time Civic Data & Transparency
         </div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">
+        <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
           Public Transparency Dashboard
         </h1>
-        <p className="text-sm text-slate-400 mt-1 max-w-3xl">
+        <p className="text-sm text-muted mt-1 max-w-3xl">
           Open access to infrastructure reporting metrics, community verification accuracy, DS Office response rates, and repair resolutions across Sri Lanka.
         </p>
       </div>
 
       {/* Overview Stat Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
+        <div className="p-6 rounded-2xl bg-surface border border-primary/20 backdrop-blur-md space-y-2">
+          <div className="flex items-center justify-between text-muted">
             <span className="text-xs font-semibold">Total Reports</span>
-            <ShieldAlert className="w-5 h-5 text-emerald-400" />
+            <ShieldAlert className="w-5 h-5 text-primary" />
           </div>
-          <div className="text-3xl font-extrabold text-white">{totalReports}</div>
-          <div className="text-[11px] text-slate-400">Submitted across Sri Lanka</div>
+          <div className="text-3xl font-extrabold text-foreground">{totalReports}</div>
+          <div className="text-[11px] text-muted">Submitted across Sri Lanka</div>
         </div>
 
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
+        <div className="p-6 rounded-2xl bg-surface border border-primary/20 backdrop-blur-md space-y-2">
+          <div className="flex items-center justify-between text-muted">
             <span className="text-xs font-semibold">Community Verified</span>
-            <CheckCircle2 className="w-5 h-5 text-teal-400" />
+            <CheckCircle2 className="w-5 h-5 text-primary-light" />
           </div>
-          <div className="text-3xl font-extrabold text-white">{verifiedCount}</div>
-          <div className="text-[11px] text-slate-400">Escalated to DS Offices</div>
+          <div className="text-3xl font-extrabold text-foreground">{verifiedCount}</div>
+          <div className="text-[11px] text-muted">Escalated to DS Offices</div>
         </div>
 
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
+        <div className="p-6 rounded-2xl bg-surface border border-primary/20 backdrop-blur-md space-y-2">
+          <div className="flex items-center justify-between text-muted">
             <span className="text-xs font-semibold">Resolved Repairs</span>
-            <TrendingUp className="w-5 h-5 text-indigo-400" />
+            <TrendingUp className="w-5 h-5 text-accent" />
           </div>
-          <div className="text-3xl font-extrabold text-white">{resolvedCount}</div>
-          <div className="text-[11px] text-slate-400">Completed with photo proof</div>
+          <div className="text-3xl font-extrabold text-foreground">{resolvedCount}</div>
+          <div className="text-[11px] text-muted">Completed with photo proof</div>
         </div>
 
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-2">
-          <div className="flex items-center justify-between text-slate-400">
+        <div className="p-6 rounded-2xl bg-surface border border-primary/20 backdrop-blur-md space-y-2">
+          <div className="flex items-center justify-between text-muted">
             <span className="text-xs font-semibold">Resolution Rate</span>
-            <Clock className="w-5 h-5 text-amber-400" />
+            <Clock className="w-5 h-5 text-primary" />
           </div>
-          <div className="text-3xl font-extrabold text-white">{resolutionRate}%</div>
-          <div className="text-[11px] text-slate-400">Average resolution efficiency</div>
+          <div className="text-3xl font-extrabold text-foreground">{resolutionRate}%</div>
+          <div className="text-[11px] text-muted">Average resolution efficiency</div>
         </div>
       </div>
 
       {/* Category Distribution Breakdown */}
-      <div className="p-8 rounded-3xl bg-slate-900/60 border border-slate-800 space-y-6">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-amber-400" />
+      <div className="p-8 rounded-3xl bg-surface border border-primary/20 space-y-6">
+        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-primary" />
           Reports by Infrastructure Category
         </h3>
 
         {categoryCounts.length === 0 ? (
-          <p className="text-xs text-slate-400">No report category data available yet.</p>
+          <p className="text-xs text-muted">No report category data available yet.</p>
         ) : (
           <div className="space-y-4">
             {categoryCounts.map((item: { category: string; _count: { category: number } }) => {
@@ -100,14 +100,14 @@ export default async function PublicDashboardPage() {
               return (
                 <div key={item.category} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-300 font-semibold">{label}</span>
-                    <span className="text-slate-400 font-mono">
+                    <span className="text-muted font-semibold">{label}</span>
+                    <span className="text-muted font-mono">
                       {count} ({percentage}%)
                     </span>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                  <div className="w-full h-2 rounded-full bg-surface-hover overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full"
+                      className="h-full bg-gradient-to-r from-primary to-primary-light rounded-full"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
@@ -120,3 +120,5 @@ export default async function PublicDashboardPage() {
     </div>
   );
 }
+
+

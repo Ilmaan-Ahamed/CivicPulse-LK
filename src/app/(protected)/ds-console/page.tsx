@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+﻿import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Building2, AlertTriangle, ArrowRight, ShieldCheck, Clock, CheckCircle2 } from "lucide-react";
 import { formatRelativeTime, PRIORITY_COLORS, CATEGORY_LABELS } from "@/lib/utils";
@@ -28,10 +28,10 @@ export default async function DSConsolePage() {
           <Building2 className="w-4 h-4" />
           Divisional Secretariat Institutional Coordinator
         </div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">
+        <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
           DS Office Coordination Console
         </h1>
-        <p className="text-sm text-slate-400 mt-1 max-w-3xl">
+        <p className="text-sm text-muted mt-1 max-w-3xl">
           Triage community-verified reports, review Gemini AI priority suggestions, and assign cases to Municipal Councils, RDA, NWSDB, NGOs, or volunteer teams.
         </p>
       </div>
@@ -41,7 +41,7 @@ export default async function DSConsolePage() {
         <div className="p-12 text-center rounded-3xl bg-slate-900/40 border border-slate-800 space-y-3">
           <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
           <h3 className="text-base font-bold text-white">No Verified Reports Awaiting Assignment</h3>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted">
             As soon as community members confirm 3 verifications for a report, it will appear here for DS Office triage.
           </p>
         </div>
@@ -61,7 +61,7 @@ export default async function DSConsolePage() {
                     <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
                       {report.referenceNo}
                     </span>
-                    <span className="text-xs font-semibold text-slate-400">
+                    <span className="text-xs font-semibold text-muted">
                       {CATEGORY_LABELS[report.category] || report.category}
                     </span>
                     {report.priority && (
@@ -76,7 +76,7 @@ export default async function DSConsolePage() {
                   </div>
 
                   <h3 className="font-bold text-lg text-white">{report.title}</h3>
-                  <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                  <p className="text-xs text-muted line-clamp-2 leading-relaxed">
                     {report.description}
                   </p>
 
@@ -93,7 +93,7 @@ export default async function DSConsolePage() {
                 <div className="shrink-0 flex items-center gap-3">
                   <Link
                     href={`/ds-console/${report.id}`}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 transition-all"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-foreground font-bold text-xs shadow-lg shadow-indigo-600/20 transition-all"
                   >
                     {isAssigned ? "Manage Assignment" : "Assign Authority"}
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -107,3 +107,5 @@ export default async function DSConsolePage() {
     </div>
   );
 }
+
+

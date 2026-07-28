@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { ArrowRight, ShieldCheck, Calendar, MapPin } from "lucide-react";
 import { CATEGORY_LABELS, formatRelativeTime } from "@/lib/utils";
 
@@ -32,16 +32,16 @@ export function VerifyCard({ report }: VerifyCardProps) {
         </div>
 
         {/* Title & Description */}
-        <h3 className="font-bold text-sm sm:text-base text-white group-hover:text-teal-350 transition-colors duration-300 line-clamp-1">
+        <h3 className="font-bold text-sm sm:text-base text-foreground group-hover:text-teal-350 transition-colors duration-300 line-clamp-1">
           {report.title}
         </h3>
-        <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed font-normal">
+        <p className="text-xs text-muted line-clamp-2 leading-relaxed font-normal">
           {report.description}
         </p>
       </div>
 
       {/* Footer Info */}
-      <div className="mt-4 pt-3.5 border-t border-slate-850 flex items-center justify-between text-[11px] text-slate-400">
+      <div className="mt-4 pt-3.5 border-t border-slate-850 flex items-center justify-between text-[11px] text-muted">
         <div className="flex items-center gap-1.5 font-semibold text-teal-400 bg-teal-500/5 border border-teal-500/10 px-2.5 py-1 rounded-lg">
           <ShieldCheck className="w-3.5 h-3.5" />
           <span>{confirmCount} Confirms</span>
@@ -58,3 +58,5 @@ export function VerifyCard({ report }: VerifyCardProps) {
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -16,6 +16,7 @@ import {
   ArrowRight,
   ChevronDown,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -37,27 +38,27 @@ export function Navbar() {
   };
 
   const navLinks = [
-    { href: "/reports", label: "Report Issue", icon: FilePlus, color: "text-emerald-400" },
-    { href: "/verify", label: "Verification", icon: CheckCircle2, color: "text-teal-400" },
-    { href: "/ds-console", label: "DS Console", icon: Building2, color: "text-indigo-400" },
-    { href: "/dashboard", label: "Dashboard", icon: BarChart3, color: "text-amber-400" },
+    { href: "/reports", label: "Report Issue", icon: FilePlus, color: "text-primary" },
+    { href: "/verify", label: "Verification", icon: CheckCircle2, color: "text-primary-light" },
+    { href: "/ds-console", label: "DS Console", icon: Building2, color: "text-accent" },
+    { href: "/dashboard", label: "Dashboard", icon: BarChart3, color: "text-primary" },
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-800/40 bg-[#0a0f1a]/70 backdrop-blur-md transition-all duration-300">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/70 backdrop-blur-md transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/10 group-hover:scale-105 transition-transform duration-300">
-            <div className="w-full h-full bg-[#0a0f1a] rounded-[10px] flex items-center justify-center">
-              <ShieldAlert className="w-5 h-5 text-emerald-400" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-primary-light p-0.5 shadow-lg shadow-primary/10 group-hover:scale-105 transition-transform duration-300">
+            <div className="w-full h-full bg-background rounded-[10px] flex items-center justify-center">
+              <ShieldAlert className="w-5 h-5 text-primary" />
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-lg tracking-tight text-white flex items-center gap-1">
-              CivicPulse <span className="text-emerald-400 font-extrabold">LK</span>
+            <span className="font-bold text-lg tracking-tight text-foreground flex items-center gap-1">
+              CivicPulse <span className="text-primary font-extrabold">LK</span>
             </span>
-            <span className="text-[10px] text-slate-400 tracking-wider font-mono uppercase">
+            <span className="text-[10px] text-muted tracking-wider font-mono uppercase">
               Sri Lanka Infrastructure
             </span>
           </div>
@@ -74,8 +75,8 @@ export function Navbar() {
                 href={link.href}
                 className={`px-3 py-2 rounded-xl flex items-center gap-2 border transition-all duration-300 ${
                   active
-                    ? "bg-slate-900/60 border-slate-800 text-white font-semibold shadow-sm"
-                    : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/40"
+                    ? "bg-surface border-border text-foreground font-semibold shadow-sm"
+                    : "border-transparent text-muted hover:text-foreground hover:bg-surface/60"
                 }`}
               >
                 <Icon className={`w-4 h-4 ${link.color} ${active ? "opacity-100" : "opacity-80 group-hover:opacity-100"}`} />
@@ -87,27 +88,28 @@ export function Navbar() {
 
         {/* Right Action Menu */}
         <div className="hidden md:flex items-center gap-4">
+          <ThemeToggle />
           {/* Language Switcher Dropdown */}
           <div className="relative group">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-800/80 bg-slate-900/40 text-slate-300 text-xs font-semibold hover:border-slate-700 hover:text-white transition-all duration-300">
-              <Globe className="w-3.5 h-3.5 text-slate-400" />
+            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-surface/60 text-muted text-xs font-semibold hover:border-slate-700 hover:text-foreground transition-all duration-300">
+              <Globe className="w-3.5 h-3.5 text-muted" />
               <span>{currentLang}</span>
-              <ChevronDown className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-transform duration-300 group-hover:rotate-180" />
+              <ChevronDown className="w-3 h-3 text-muted group-hover:text-foreground transition-transform duration-300 group-hover:rotate-180" />
             </button>
-            <div className="absolute right-0 mt-1.5 w-32 py-1 bg-slate-900/95 border border-slate-850 rounded-2xl shadow-2xl opacity-0 scale-95 origin-top-right group-hover:opacity-100 group-hover:scale-100 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto backdrop-blur-xl z-50">
+            <div className="absolute right-0 mt-1.5 w-32 py-1 bg-surface border border-border rounded-2xl shadow-2xl opacity-0 scale-95 origin-top-right group-hover:opacity-100 group-hover:scale-100 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto backdrop-blur-xl z-50">
               {languages.map((lang) => (
                 <button
                   key={lang.code}
                   onClick={() => setCurrentLang(lang.code)}
-                  className={`w-full px-3.5 py-2 text-left text-xs flex items-center justify-between hover:bg-slate-800/80 transition-colors ${
+                  className={`w-full px-3.5 py-2 text-left text-xs flex items-center justify-between hover:bg-surface-hover transition-colors ${
                     currentLang === lang.code
-                      ? "text-emerald-400 font-bold"
-                      : "text-slate-300"
+                      ? "text-primary font-bold"
+                      : "text-muted"
                   }`}
                 >
                   <span>{lang.label}</span>
                   {currentLang === lang.code && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-450" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-md shadow-primary/50" />
                   )}
                 </button>
               ))}
@@ -119,7 +121,7 @@ export function Navbar() {
               <UserButton
                 appearance={{
                   elements: {
-                    avatarBox: "w-9 h-9 border-2 border-emerald-500/20 hover:border-emerald-400 transition-all duration-300 shadow-md shadow-emerald-500/5",
+                    avatarBox: "w-9 h-9 border-2 border-primary/20 hover:border-primary transition-all duration-300 shadow-md shadow-primary/5",
                   },
                 }}
               />
@@ -128,13 +130,13 @@ export function Navbar() {
             <div className="flex items-center gap-2">
               <Link
                 href="/sign-in"
-                className="text-xs font-semibold text-slate-350 hover:text-white px-3 py-2 rounded-xl transition-all duration-300"
+                className="text-xs font-semibold text-muted hover:text-foreground px-3 py-2 rounded-xl transition-all duration-300"
               >
                 Sign In
               </Link>
               <Link
                 href="/sign-up"
-                className="inline-flex items-center gap-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl transition-all duration-300 shadow-lg shadow-emerald-600/10 hover:shadow-emerald-500/25 active:scale-95"
+                className="inline-flex items-center gap-1.5 text-xs font-bold bg-primary hover:bg-primary-light text-foreground px-4 py-2 rounded-xl transition-all duration-300 shadow-lg shadow-primary/10 hover:shadow-primary/25 active:scale-95"
               >
                 Get Started
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -145,11 +147,12 @@ export function Navbar() {
 
         {/* Mobile Menu Toggle Button */}
         <div className="flex md:hidden items-center gap-3">
+          <ThemeToggle />
           {isSignedIn && (
             <UserButton
               appearance={{
                 elements: {
-                  avatarBox: "w-8 h-8 border border-emerald-500/20",
+                  avatarBox: "w-8 h-8 border border-primary/20",
                 },
               }}
             />
@@ -157,7 +160,7 @@ export function Navbar() {
 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-900/60 border border-transparent hover:border-slate-800 rounded-xl transition-all duration-300"
+            className="p-2 text-muted hover:text-foreground hover:bg-surface border border-transparent hover:border-border rounded-xl transition-all duration-300"
           >
             {mobileMenuOpen ? (
               <X className="w-5 h-5" />
@@ -170,7 +173,7 @@ export function Navbar() {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-slate-850 bg-[#0a0f1a]/95 backdrop-blur-2xl px-4 py-4 space-y-4 animate-fade-in z-50 relative">
+        <div className="md:hidden border-b border-border bg-background/95 backdrop-blur-2xl px-4 py-4 space-y-4 animate-fade-in z-50 relative">
           <div className="space-y-1.5">
             {navLinks.map((link) => {
               const Icon = link.icon;
@@ -182,8 +185,8 @@ export function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold border transition-all duration-300 ${
                     active
-                      ? "bg-slate-900 border-slate-800 text-white"
-                      : "border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200"
+                      ? "bg-surface border-border text-foreground"
+                      : "border-transparent text-muted hover:bg-surface/60 hover:text-foreground"
                   }`}
                 >
                   <Icon className={`w-4 h-4 ${link.color}`} />
@@ -193,7 +196,7 @@ export function Navbar() {
             })}
           </div>
 
-          <div className="pt-4 border-t border-slate-850 flex items-center justify-between">
+          <div className="pt-4 border-t border-border flex items-center justify-between">
             <div className="flex gap-1.5">
               {languages.map((lang) => (
                 <button
@@ -201,8 +204,8 @@ export function Navbar() {
                   onClick={() => setCurrentLang(lang.code)}
                   className={`px-3 py-1.5 text-xs rounded-xl border font-bold transition-all duration-305 ${
                     currentLang === lang.code
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                      : "border-slate-850 bg-slate-900/45 text-slate-450 hover:border-slate-700"
+                      ? "border-primary/30 bg-primary/10 text-primary"
+                      : "border-border bg-surface/60 text-muted hover:border-border-hover"
                   }`}
                 >
                   {lang.label}
@@ -214,9 +217,9 @@ export function Navbar() {
               <Link
                 href="/sign-in"
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-xs text-emerald-400 font-bold hover:underline py-1.5"
+                className="text-xs text-primary font-bold hover:underline py-1.5"
               >
-                Sign In →
+                Sign In â†’
               </Link>
             )}
           </div>
@@ -225,3 +228,9 @@ export function Navbar() {
     </header>
   );
 }
+
+
+
+
+
+

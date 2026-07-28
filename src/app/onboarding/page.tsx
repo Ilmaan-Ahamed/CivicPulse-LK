@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -48,10 +48,10 @@ const ROLE_OPTIONS: RoleCard[] = [
       "Get notified on DS Office actions",
       "View public transparency dashboard",
     ],
-    color: "emerald",
-    borderColor: "border-emerald-500/40",
-    textColor: "text-emerald-400",
-    bgColor: "bg-emerald-500/10",
+    color: "primary",
+    borderColor: "border-primary/40",
+    textColor: "text-primary",
+    bgColor: "bg-primary/10",
     icon: <ShieldAlert className="w-7 h-7" />,
   },
   {
@@ -66,10 +66,10 @@ const ROLE_OPTIONS: RoleCard[] = [
       "Help escalate critical issues",
       "Strengthen report authenticity",
     ],
-    color: "teal",
-    borderColor: "border-teal-500/40",
-    textColor: "text-teal-400",
-    bgColor: "bg-teal-500/10",
+    color: "primary-light",
+    borderColor: "border-primary-light/40",
+    textColor: "text-primary-light",
+    bgColor: "bg-primary-light/10",
     icon: <CheckCircle2 className="w-7 h-7" />,
   },
 ];
@@ -114,20 +114,20 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center px-4 py-16 relative overflow-hidden">
       {/* Ambient glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-emerald-500/8 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[400px] h-[300px] bg-indigo-500/8 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-primary/8 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[300px] bg-accent/8 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-3xl space-y-10 z-10">
         {/* Header */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold">
             <ShieldCheck className="w-4 h-4" />
             Welcome to CivicPulse LK
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">
             How will you contribute?
           </h1>
-          <p className="text-slate-400 text-sm max-w-xl mx-auto leading-relaxed">
+          <p className="text-muted text-sm max-w-xl mx-auto leading-relaxed">
             Choose your role to get started. You can always discuss a role
             upgrade with your district administrator later.
           </p>
@@ -148,7 +148,7 @@ export default function OnboardingPage() {
                 }`}
               >
                 {isSelected && (
-                  <div className="absolute top-4 right-4 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                  <div className="absolute top-4 right-4 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                     <CheckCircle2 className="w-3 h-3 text-white" />
                   </div>
                 )}
@@ -161,7 +161,7 @@ export default function OnboardingPage() {
 
                 <div className="space-y-1 mb-4">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-white text-base">
+                    <h3 className="font-bold text-foreground text-base">
                       {opt.title}
                     </h3>
                     <span
@@ -170,7 +170,7 @@ export default function OnboardingPage() {
                       {opt.subtitle}
                     </span>
                   </div>
-                  <p className="text-slate-400 text-xs leading-relaxed">
+                  <p className="text-muted text-xs leading-relaxed">
                     {opt.description}
                   </p>
                 </div>
@@ -179,7 +179,7 @@ export default function OnboardingPage() {
                   {opt.features.map((f) => (
                     <li
                       key={f}
-                      className="flex items-start gap-2 text-xs text-slate-300"
+                      className="flex items-start gap-2 text-xs text-muted"
                     >
                       <CheckCircle2
                         className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${opt.textColor}`}
@@ -195,17 +195,17 @@ export default function OnboardingPage() {
 
         {/* District Selection */}
         <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm font-semibold text-slate-300">
-            <MapPin className="w-4 h-4 text-amber-400" />
+          <label className="flex items-center gap-2 text-sm font-semibold text-muted">
+            <MapPin className="w-4 h-4 text-primary" />
             Your District{" "}
-            <span className="text-slate-500 font-normal text-xs">
-              (optional — helps show nearby reports)
+            <span className="text-subtle font-normal text-xs">
+              (optional â€” helps show nearby reports)
             </span>
           </label>
           <select
             value={selectedDistrict}
             onChange={(e) => setSelectedDistrict(e.target.value)}
-            className="w-full bg-slate-900/60 border border-slate-800 text-slate-200 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/60 transition-colors"
+            className="w-full bg-slate-900/60 border border-slate-800 text-foreground text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-primary/60 transition-colors"
           >
             <option value="">Select your district...</option>
             {DISTRICTS.map((d) => (
@@ -217,11 +217,11 @@ export default function OnboardingPage() {
         </div>
 
         {/* DS Officer Info Note */}
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-          <Users className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-slate-300 leading-relaxed">
-            <strong className="text-indigo-400">DS Officers, NGOs & Government Agencies</strong>{" "}
-            — Institutional access is managed by your district administrator.
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-accent/10 border border-accent/20">
+          <Users className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+          <p className="text-xs text-muted leading-relaxed">
+            <strong className="text-accent">DS Officers, NGOs & Government Agencies</strong>{" "}
+            â€” Institutional access is managed by your district administrator.
             Sign up as a Citizen and contact your DS Office to request an
             institutional role upgrade.
           </p>
@@ -238,7 +238,7 @@ export default function OnboardingPage() {
         <button
           onClick={handleSubmit}
           disabled={!selectedRole || isSubmitting}
-          className="w-full inline-flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm shadow-xl shadow-emerald-600/20 transition-all hover:scale-[1.01] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+          className="w-full inline-flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-foreground font-bold text-sm shadow-xl shadow-primary/20 transition-all hover:scale-[1.01] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
           {isSubmitting ? (
             <>
@@ -256,3 +256,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+

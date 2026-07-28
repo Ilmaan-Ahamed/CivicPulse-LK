@@ -1,57 +1,78 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ===========================================
-   CivicPulse LK — Design System
-   Premium dark theme with glassmorphism
+   CivicPulse LK Design System
+   Light + Dark theme with glassmorphism
 =========================================== */
 
 :root {
-  /* Brand Colors */
-  --primary: #10b981;
-  --primary-light: #34d399;
-  --primary-dark: #059669;
-  --primary-glow: rgba(16, 185, 129, 0.15);
+  --primary: #f97316;
+  --primary-light: #fb923c;
+  --primary-dark: #ea580c;
+  --primary-glow: rgba(249, 115, 22, 0.1);
 
-  --accent: #6366f1;
-  --accent-light: #818cf8;
-  --accent-dark: #4f46e5;
+  --accent: #f97316;
+  --accent-light: #fb923c;
+  --accent-dark: #ea580c;
 
-  /* Neutral Palette */
-  --background: #0a0f1a;
-  --background-secondary: #111827;
-  --background-tertiary: #1f2937;
-  --surface: #1e293b;
-  --surface-hover: #334155;
+  --background: #f5f5dc;
+  --background-secondary: #faf0e6;
+  --background-tertiary: #f0e6d3;
+  --surface: #faf0e6;
+  --surface-hover: #e6dcc3;
 
-  /* Text */
-  --foreground: #f1f5f9;
-  --foreground-muted: #94a3b8;
-  --foreground-subtle: #64748b;
+  --foreground: #1a1a1a;
+  --foreground-muted: #4a4a4a;
+  --foreground-subtle: #6a6a6a;
 
-  /* Borders */
-  --border: rgba(148, 163, 184, 0.12);
-  --border-hover: rgba(148, 163, 184, 0.25);
+  --border: rgba(26, 26, 26, 0.1);
+  --border-hover: rgba(26, 26, 26, 0.2);
 
-  /* Glassmorphism */
-  --glass-bg: rgba(30, 41, 59, 0.6);
-  --glass-border: rgba(148, 163, 184, 0.1);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --glass-bg: rgba(250, 240, 230, 0.7);
+  --glass-border: rgba(26, 26, 26, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 
-  /* Status Colors */
   --success: #10b981;
   --warning: #f59e0b;
   --error: #ef4444;
   --info: #3b82f6;
 
-  /* Spacing */
   --radius: 0.75rem;
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
 
-  /* Font */
   --font-heading: var(--font-geist-sans), system-ui, sans-serif;
   --font-body: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
+}
+
+.dark {
+  --primary: #f97316;
+  --primary-light: #fb923c;
+  --primary-dark: #ea580c;
+  --primary-glow: rgba(249, 115, 22, 0.15);
+
+  --accent: #f97316;
+  --accent-light: #fb923c;
+  --accent-dark: #ea580c;
+
+  --background: #000000;
+  --background-secondary: #0a0a0a;
+  --background-tertiary: #141414;
+  --surface: #0a0a0a;
+  --surface-hover: #1a1a1a;
+
+  --foreground: #ffffff;
+  --foreground-muted: #a0a0a0;
+  --foreground-subtle: #707070;
+
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.2);
+
+  --glass-bg: rgba(10, 10, 10, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 @theme inline {
@@ -71,10 +92,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* ===========================================
-   Base Styles
-=========================================== */
-
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--surface-hover) transparent;
@@ -90,9 +107,9 @@ body {
   font-family: var(--font-body);
   min-height: 100vh;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Background gradient mesh */
 body::before {
   content: "";
   position: fixed;
@@ -107,10 +124,6 @@ body::before {
   pointer-events: none;
   z-index: 0;
 }
-
-/* ===========================================
-   Glass Card
-=========================================== */
 
 .glass-card {
   background: var(--glass-bg);
@@ -129,10 +142,6 @@ body::before {
     0 0 0 1px rgba(16, 185, 129, 0.1);
   transform: translateY(-2px);
 }
-
-/* ===========================================
-   Buttons
-=========================================== */
 
 .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
@@ -176,10 +185,6 @@ body::before {
   border-color: var(--border-hover);
 }
 
-/* ===========================================
-   Glow Effects
-=========================================== */
-
 .glow-primary {
   box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
 }
@@ -187,10 +192,6 @@ body::before {
 .glow-text {
   text-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
 }
-
-/* ===========================================
-   Gradient Text
-=========================================== */
 
 .gradient-text {
   background: linear-gradient(135deg, var(--primary-light) 0%, var(--accent-light) 100%);
@@ -206,76 +207,36 @@ body::before {
   background-clip: text;
 }
 
-/* ===========================================
-   Animations
-=========================================== */
-
 @keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(16, 185, 129, 0.25);
-  }
+  0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.1); }
+  50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.25); }
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.6s ease-out forwards;
-}
+.animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
+.animate-slide-up { animation: slide-up 0.8s ease-out forwards; }
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
 
-.animate-slide-up {
-  animation: slide-up 0.8s ease-out forwards;
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-/* Staggered animations for children */
 .stagger-children > * {
   opacity: 0;
   animation: fade-in 0.5s ease-out forwards;
@@ -288,57 +249,23 @@ body::before {
 .stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
 .stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
 
-/* ===========================================
-   Skeleton Loading
-=========================================== */
-
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--surface) 25%,
-    var(--surface-hover) 50%,
-    var(--surface) 75%
-  );
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-hover) 50%, var(--surface) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius);
 }
 
-/* ===========================================
-   Scrollbar
-=========================================== */
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--surface-hover);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--foreground-subtle);
-}
-
-/* ===========================================
-   Focus States (Accessibility)
-=========================================== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--foreground-subtle); }
 
 *:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-radius: 4px;
 }
-
-/* ===========================================
-   Selection
-=========================================== */
 
 ::selection {
   background: rgba(16, 185, 129, 0.3);

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -116,12 +116,12 @@ export function ReportForm() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {/* Category Selector */}
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-300 tracking-wide">
+          <label className="text-xs font-semibold text-muted tracking-wide">
             Infrastructure Category *
           </label>
           <select
             {...register("category")}
-            className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-white text-sm focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+            className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-foreground text-sm focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
           >
             {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
               <option key={key} value={key} className="bg-slate-950 text-white">
@@ -136,12 +136,12 @@ export function ReportForm() {
 
         {/* District Selector */}
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-300 tracking-wide">
+          <label className="text-xs font-semibold text-muted tracking-wide">
             District / Jurisdiction
           </label>
           <select
             {...register("district")}
-            className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-white text-sm focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+            className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-foreground text-sm focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
           >
             <option value="" className="bg-slate-950">
               Select District (Optional)
@@ -157,14 +157,14 @@ export function ReportForm() {
 
       {/* Title Input */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-300 tracking-wide">
+        <label className="text-xs font-semibold text-muted tracking-wide">
           Report Title *
         </label>
         <input
           type="text"
           placeholder="e.g. Severe pothole on Main Street near Bus Stand"
           {...register("title")}
-          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-white text-sm placeholder:text-slate-650 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-foreground text-sm placeholder:text-slate-650 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
         />
         {errors.title && (
           <p className="text-xs text-red-400 font-semibold">{errors.title.message}</p>
@@ -173,14 +173,14 @@ export function ReportForm() {
 
       {/* Description Textarea */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-300 tracking-wide">
+        <label className="text-xs font-semibold text-muted tracking-wide">
           Detailed Description *
         </label>
         <textarea
           rows={4}
           placeholder="Describe the issue, estimated size/hazard, how long it has persisted, and any nearby landmarks..."
           {...register("description")}
-          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-white text-sm placeholder:text-slate-650 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none resize-none"
+          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-foreground text-sm placeholder:text-slate-650 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none resize-none"
         />
         {errors.description && (
           <p className="text-xs text-red-400 font-semibold">{errors.description.message}</p>
@@ -189,20 +189,20 @@ export function ReportForm() {
 
       {/* Address / Landmark */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-300 tracking-wide">
+        <label className="text-xs font-semibold text-muted tracking-wide">
           Address / Nearest Landmark
         </label>
         <input
           type="text"
           placeholder="e.g. Opposite Post Office, Temple Road, Ward 4"
           {...register("address")}
-          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-white text-sm placeholder:text-slate-650 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-foreground text-sm placeholder:text-slate-650 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
         />
       </div>
 
       {/* Photo Upload Section */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-300 tracking-wide">
+        <label className="text-xs font-semibold text-muted tracking-wide">
           Photo Evidence
         </label>
         <PhotoUpload onPhotosChange={setPhotos} maxFiles={4} />
@@ -210,7 +210,7 @@ export function ReportForm() {
 
       {/* GPS Location Picker */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 tracking-wide">
+        <label className="text-xs font-semibold text-muted flex items-center gap-1.5 tracking-wide">
           <MapPin className="w-4 h-4 text-emerald-400 animate-pulse" />
           Location Coordinates (GPS) *
         </label>
@@ -225,7 +225,7 @@ export function ReportForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm sm:text-base shadow-xl shadow-emerald-650/15 hover:shadow-emerald-500/25 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
+        className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-foreground font-bold text-sm sm:text-base shadow-xl shadow-emerald-650/15 hover:shadow-emerald-500/25 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
       >
         {submitting ? (
           <>
@@ -242,3 +242,5 @@ export function ReportForm() {
     </form>
   );
 }
+
+
