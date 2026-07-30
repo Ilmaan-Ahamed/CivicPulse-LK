@@ -121,7 +121,7 @@ export function ReportForm() {
           </label>
           <select
             {...register("category")}
-            className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-foreground text-sm focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+            className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-foreground text-sm focus:border-orange-500/85 focus:ring-4 focus:ring-orange-500/10 hover:border-white/20 transition-all duration-300 outline-none"
           >
             {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
               <option key={key} value={key} className="bg-slate-950 text-white">
@@ -141,7 +141,7 @@ export function ReportForm() {
           </label>
           <select
             {...register("district")}
-            className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-foreground text-sm focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+            className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-foreground text-sm focus:border-orange-500/85 focus:ring-4 focus:ring-orange-500/10 hover:border-white/20 transition-all duration-300 outline-none"
           >
             <option value="" className="bg-slate-950">
               Select District (Optional)
@@ -164,7 +164,7 @@ export function ReportForm() {
           type="text"
           placeholder="e.g. Severe pothole on Main Street near Bus Stand"
           {...register("title")}
-          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-foreground text-sm placeholder:text-slate-650 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+          className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-foreground text-sm placeholder:text-white/40 focus:border-orange-500/85 focus:ring-4 focus:ring-orange-500/10 hover:border-white/20 transition-all duration-300 outline-none"
         />
         {errors.title && (
           <p className="text-xs text-red-400 font-semibold">{errors.title.message}</p>
@@ -180,7 +180,7 @@ export function ReportForm() {
           rows={4}
           placeholder="Describe the issue, estimated size/hazard, how long it has persisted, and any nearby landmarks..."
           {...register("description")}
-          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-foreground text-sm placeholder:text-slate-650 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none resize-none"
+          className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-foreground text-sm placeholder:text-white/40 focus:border-orange-500/85 focus:ring-4 focus:ring-orange-500/10 hover:border-white/20 transition-all duration-300 outline-none resize-none"
         />
         {errors.description && (
           <p className="text-xs text-red-400 font-semibold">{errors.description.message}</p>
@@ -196,7 +196,7 @@ export function ReportForm() {
           type="text"
           placeholder="e.g. Opposite Post Office, Temple Road, Ward 4"
           {...register("address")}
-          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-foreground text-sm placeholder:text-slate-650 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+          className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-foreground text-sm placeholder:text-white/40 focus:border-orange-500/85 focus:ring-4 focus:ring-orange-500/10 hover:border-white/20 transition-all duration-300 outline-none"
         />
       </div>
 
@@ -211,7 +211,7 @@ export function ReportForm() {
       {/* GPS Location Picker */}
       <div className="space-y-2">
         <label className="text-xs font-semibold text-muted flex items-center gap-1.5 tracking-wide">
-          <MapPin className="w-4 h-4 text-emerald-400 animate-pulse" />
+          <MapPin className="w-4 h-4 text-orange-400 animate-pulse" />
           Location Coordinates (GPS) *
         </label>
         <MapView
@@ -225,7 +225,7 @@ export function ReportForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-foreground font-bold text-sm sm:text-base shadow-xl shadow-emerald-650/15 hover:shadow-emerald-500/25 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
+        className="w-full py-4 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-foreground font-bold text-sm sm:text-base shadow-xl shadow-orange-600/15 hover:shadow-orange-500/25 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
       >
         {submitting ? (
           <>

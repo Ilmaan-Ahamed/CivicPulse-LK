@@ -58,8 +58,8 @@ export function PhotoUpload({
         onClick={() => fileInputRef.current?.click()}
         className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-350 ${
           isDragging
-            ? "border-emerald-500 bg-emerald-500/10"
-            : "border-slate-800 bg-[#070b14]/40 hover:border-slate-700 hover:bg-slate-900/30"
+            ? "border-orange-500 bg-orange-500/10"
+            : "border-orange-500/20 bg-[#070b14]/40 hover:border-orange-500/40 hover:bg-orange-500/5"
         }`}
       >
         <input
@@ -72,7 +72,7 @@ export function PhotoUpload({
         />
 
         <div className="flex flex-col items-center gap-3 group/zone">
-          <div className="w-12 h-12 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-center text-emerald-400 shadow-md group-hover/zone:scale-105 transition-transform duration-300">
+          <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 shadow-md group-hover/zone:scale-105 transition-transform duration-300">
             <UploadCloud className="w-6 h-6 animate-pulse" />
           </div>
           <div>

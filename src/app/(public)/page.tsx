@@ -37,9 +37,10 @@ export default function LandingPage() {
 
           {/* Main Title */}
           <h1 className="text-4xl sm:text-6xl font-extrabold text-foreground tracking-tight leading-[1.15]">
-            Community-Verified Public Infrastructure Reporting for{" "}
+            Community-Verified Public Infrastructure Reporting for
+            <br />
             <span className="bg-gradient-to-r from-primary via-primary-light to-accent bg-clip-text text-transparent">
-              Sri Lanka
+                  Sri Lanka
             </span>
           </h1>
 

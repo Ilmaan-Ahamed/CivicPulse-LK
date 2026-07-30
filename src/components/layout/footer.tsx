@@ -1,5 +1,6 @@
 ﻿import Link from "next/link";
 import { ShieldAlert, Heart, ExternalLink } from "lucide-react";
+import { PLATFORM_MODULE_LIST } from "@/lib/platform-modules";
 
 export function Footer() {
   return (
@@ -29,24 +30,19 @@ export function Footer() {
           <div className="space-y-3">
             <h4 className="font-bold text-foreground text-sm tracking-wide">Platform Modules</h4>
             <ul className="space-y-2">
+              {PLATFORM_MODULE_LIST.map((mod) => (
+                <li key={mod.slug}>
+                  <Link
+                    href={`/modules/${mod.slug}`}
+                    className="hover:text-primary transition-colors duration-300 flex items-center gap-1"
+                  >
+                    {mod.footerLabel}
+                  </Link>
+                </li>
+              ))}
               <li>
-                <Link href="/reports" className="hover:text-primary transition-colors duration-300 flex items-center gap-1">
-                  Citizen Reporting Form
-                </Link>
-              </li>
-              <li>
-                <Link href="/verify" className="hover:text-primary transition-colors duration-300 flex items-center gap-1">
-                  Community Verification Layer
-                </Link>
-              </li>
-              <li>
-                <Link href="/ds-console" className="hover:text-primary transition-colors duration-300 flex items-center gap-1">
-                  DS Office Console
-                </Link>
-              </li>
-              <li>
-                <Link href="/dashboard" className="hover:text-primary transition-colors duration-300 flex items-center gap-1">
-                  Public Transparency Dashboard
+                <Link href="/modules" className="hover:text-primary transition-colors duration-300 flex items-center gap-1 text-primary/90">
+                  View all modules
                 </Link>
               </li>
             </ul>

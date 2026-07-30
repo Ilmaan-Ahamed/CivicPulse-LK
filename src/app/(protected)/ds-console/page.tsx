@@ -24,7 +24,7 @@ export default async function DSConsolePage() {
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
       {/* Console Header */}
       <div>
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs font-semibold mb-3">
           <Building2 className="w-4 h-4" />
           Divisional Secretariat Institutional Coordinator
         </div>
@@ -38,8 +38,8 @@ export default async function DSConsolePage() {
 
       {/* Verified Reports Queue Table/Cards */}
       {verifiedReports.length === 0 ? (
-        <div className="p-12 text-center rounded-3xl bg-slate-900/40 border border-slate-800 space-y-3">
-          <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+        <div className="p-12 text-center rounded-3xl bg-orange-500/10 border border-orange-500/30 space-y-3">
+          <CheckCircle2 className="w-10 h-10 text-orange-400 mx-auto" />
           <h3 className="text-base font-bold text-white">No Verified Reports Awaiting Assignment</h3>
           <p className="text-xs text-muted">
             As soon as community members confirm 3 verifications for a report, it will appear here for DS Office triage.

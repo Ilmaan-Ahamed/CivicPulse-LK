@@ -9,14 +9,14 @@ export default function NewReportPage() {
       <div className="space-y-4">
         <Link
           href="/reports"
-          className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-emerald-400 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-orange-400 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Reports
         </Link>
 
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+          <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400">
             <ShieldAlert className="w-6 h-6" />
           </div>
           <div>
@@ -31,7 +31,7 @@ export default function NewReportPage() {
       </div>
 
       {/* Form Container Card */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-xl shadow-2xl">
+      <div className="p-6 sm:p-8 rounded-3xl bg-orange-500/5 border border-orange-500/30 backdrop-blur-xl shadow-2xl shadow-orange-950/20">
         <ReportForm />
       </div>
     </div>
