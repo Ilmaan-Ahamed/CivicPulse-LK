@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { MapPin, Calendar, ArrowRight, Image as ImageIcon } from "lucide-react";
 import { formatRelativeTime, STATUS_COLORS, PRIORITY_COLORS, CATEGORY_LABELS } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ interface ReportCardProps {
 
 export function ReportCard({ report }: ReportCardProps) {
   const statusStyle =
-    STATUS_COLORS[report.status] || "bg-slate-800/40 text-slate-300 border-slate-750";
+    STATUS_COLORS[report.status] || "bg-slate-800/40 text-muted border-slate-750";
   const priorityStyle =
     report.priority && PRIORITY_COLORS[report.priority]
       ? PRIORITY_COLORS[report.priority]
@@ -57,7 +57,7 @@ export function ReportCard({ report }: ReportCardProps) {
 
           {/* Floating Badges */}
           <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
-            <span className="font-mono text-[10px] font-bold text-white bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800/80 backdrop-blur-md">
+            <span className="font-mono text-[10px] font-bold text-foreground bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800/80 backdrop-blur-md">
               {report.referenceNo}
             </span>
 
@@ -83,10 +83,10 @@ export function ReportCard({ report }: ReportCardProps) {
           <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
             {CATEGORY_LABELS[report.category] || report.category}
           </span>
-          <h3 className="font-bold text-sm sm:text-base text-white group-hover:text-emerald-350 transition-colors duration-300 line-clamp-1">
+          <h3 className="font-bold text-sm sm:text-base text-foreground group-hover:text-emerald-350 transition-colors duration-300 line-clamp-1">
             {report.title}
           </h3>
-          <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed font-normal">
+          <p className="text-xs text-muted line-clamp-2 leading-relaxed font-normal">
             {report.description}
           </p>
         </div>
@@ -94,16 +94,16 @@ export function ReportCard({ report }: ReportCardProps) {
 
       {/* Card Footer */}
       <div className="p-5 pt-0">
-        <div className="pt-3 border-t border-slate-850 flex items-center justify-between text-[11px] text-slate-400">
+        <div className="pt-3 border-t border-slate-850 flex items-center justify-between text-[11px] text-muted">
           <div className="flex items-center gap-3">
             {report.district && (
               <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                <MapPin className="w-3.5 h-3.5 text-subtle" />
                 {report.district}
               </span>
             )}
             <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-slate-500" />
+              <Calendar className="w-3.5 h-3.5 text-subtle" />
               {formatRelativeTime(report.createdAt)}
             </span>
           </div>
@@ -120,3 +120,5 @@ export function ReportCard({ report }: ReportCardProps) {
     </div>
   );
 }
+
+

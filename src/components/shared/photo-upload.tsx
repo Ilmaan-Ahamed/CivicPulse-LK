@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef } from "react";
 import { UploadCloud, X, Image as ImageIcon, Loader2 } from "lucide-react";
@@ -58,8 +58,8 @@ export function PhotoUpload({
         onClick={() => fileInputRef.current?.click()}
         className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-350 ${
           isDragging
-            ? "border-emerald-500 bg-emerald-500/10"
-            : "border-slate-800 bg-[#070b14]/40 hover:border-slate-700 hover:bg-slate-900/30"
+            ? "border-orange-500 bg-orange-500/10"
+            : "border-orange-500/20 bg-[#070b14]/40 hover:border-orange-500/40 hover:bg-orange-500/5"
         }`}
       >
         <input
@@ -72,11 +72,11 @@ export function PhotoUpload({
         />
 
         <div className="flex flex-col items-center gap-3 group/zone">
-          <div className="w-12 h-12 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-center text-emerald-400 shadow-md group-hover/zone:scale-105 transition-transform duration-300">
+          <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 shadow-md group-hover/zone:scale-105 transition-transform duration-300">
             <UploadCloud className="w-6 h-6 animate-pulse" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-200">
+            <p className="text-sm font-semibold text-foreground">
               Click to upload photo evidence or drag & drop
             </p>
             <p className="text-xs text-slate-450 mt-1.5 font-medium">
@@ -107,7 +107,7 @@ export function PhotoUpload({
                   e.stopPropagation();
                   removeFile(index);
                 }}
-                className="absolute top-1.5 right-1.5 p-1.5 rounded-xl bg-slate-950/80 text-slate-350 hover:text-white hover:bg-red-650 transition-all duration-300 backdrop-blur-md cursor-pointer border border-slate-800/60"
+                className="absolute top-1.5 right-1.5 p-1.5 rounded-xl bg-slate-950/80 text-slate-350 hover:text-foreground hover:bg-red-650 transition-all duration-300 backdrop-blur-md cursor-pointer border border-slate-800/60"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -118,3 +118,5 @@ export function PhotoUpload({
     </div>
   );
 }
+
+

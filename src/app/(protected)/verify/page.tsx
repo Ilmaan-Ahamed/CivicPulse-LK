@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+﻿import { prisma } from "@/lib/db";
 import { VerifyCard } from "@/components/verification/verify-card";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 
@@ -17,11 +17,11 @@ export default async function VerifyFeedPage() {
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+        <h1 className="text-3xl font-extrabold text-foreground tracking-tight flex items-center gap-3">
           <ShieldCheck className="w-8 h-8 text-teal-400" />
           Community Verification Layer
         </h1>
-        <p className="text-sm text-slate-400 mt-1 max-w-3xl">
+        <p className="text-sm text-muted mt-1 max-w-3xl">
           Help filter out false or exaggerated complaints. Confirm infrastructure reports near you to earn trust points and escalate verified issues to Divisional Secretariat offices.
         </p>
       </div>
@@ -30,7 +30,7 @@ export default async function VerifyFeedPage() {
         <div className="p-12 text-center rounded-3xl bg-slate-900/40 border border-slate-800 space-y-3">
           <CheckCircle2 className="w-10 h-10 text-teal-400 mx-auto" />
           <h3 className="text-base font-bold text-white">All Clear! No Pending Verifications</h3>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted">
             All submitted reports in your area have been verified or triaged.
           </p>
         </div>
@@ -44,3 +44,5 @@ export default async function VerifyFeedPage() {
     </div>
   );
 }
+
+

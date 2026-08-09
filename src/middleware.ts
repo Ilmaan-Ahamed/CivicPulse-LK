@@ -8,6 +8,7 @@ const PUBLIC_ROUTES = [
   "/sign-in",
   "/sign-up",
   "/dashboard",
+  "/modules",
   "/onboarding",
   "/callback",
   "/api/webhooks",

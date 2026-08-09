@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+﻿import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { VerifyForm } from "@/components/verification/verify-form";
@@ -24,7 +24,7 @@ export default async function ReportVerificationPage({
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto space-y-8">
       <Link
         href="/verify"
-        className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-teal-400 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-teal-400 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Verification Feed
@@ -36,13 +36,13 @@ export default async function ReportVerificationPage({
           <span className="font-mono text-xs text-teal-400 font-bold">
             {report.referenceNo}
           </span>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted">
             {CATEGORY_LABELS[report.category] || report.category}
           </span>
         </div>
 
         <h2 className="text-xl font-extrabold text-white">{report.title}</h2>
-        <p className="text-xs text-slate-300 leading-relaxed">{report.description}</p>
+        <p className="text-xs text-muted leading-relaxed">{report.description}</p>
       </div>
 
       {/* Verification Form Card */}
@@ -57,3 +57,4 @@ export default async function ReportVerificationPage({
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+﻿import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -50,14 +50,14 @@ export default async function ReportDetailPage({
   }
 
   const statusStyle =
-    STATUS_COLORS[report.status] || "bg-slate-800 text-slate-300 border-slate-700";
+    STATUS_COLORS[report.status] || "bg-slate-800 text-muted border-slate-700";
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-8">
       {/* Top Breadcrumb */}
       <Link
         href="/reports"
-        className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-400 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-emerald-400 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Reports Feed
@@ -70,7 +70,7 @@ export default async function ReportDetailPage({
             <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
               {report.referenceNo}
             </span>
-            <span className="text-xs font-medium text-slate-400">
+            <span className="text-xs font-medium text-muted">
               {CATEGORY_LABELS[report.category] || report.category}
             </span>
           </div>
@@ -102,23 +102,23 @@ export default async function ReportDetailPage({
               <BrainCircuit className="w-4 h-4" />
               Gemini AI Advisory Summary
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               {report.summary}
             </p>
           </div>
         )}
 
         <div className="space-y-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
             Citizen Description
           </h3>
-          <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">
+          <p className="text-sm text-muted leading-relaxed whitespace-pre-line">
             {report.description}
           </p>
         </div>
 
         {/* Location & Metadata */}
-        <div className="pt-4 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-400">
+        <div className="pt-4 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-muted">
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-emerald-400" />
             <span>Reported by Citizen #{report.citizenId.substring(0, 8)}</span>
@@ -142,7 +142,7 @@ export default async function ReportDetailPage({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Map View */}
         <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800 space-y-3">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <MapPin className="w-4 h-4 text-emerald-400" />
             Geotagged Location
           </h3>
@@ -156,7 +156,7 @@ export default async function ReportDetailPage({
         {/* Community Verification Status Card */}
         <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-teal-400" />
               Community Verification
             </h3>
@@ -164,13 +164,13 @@ export default async function ReportDetailPage({
               href={`/verify/${report.id}`}
               className="text-xs font-semibold text-teal-400 hover:underline"
             >
-              Verify This Report →
+              Verify This Report â†’
             </Link>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Verifications Received:</span>
+              <span className="text-muted">Verifications Received:</span>
               <span className="font-bold text-white">
                 {report.verifications.length} Verifiers
               </span>
@@ -184,7 +184,7 @@ export default async function ReportDetailPage({
                 }}
               />
             </div>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-muted">
               Requires 3 community confirmations to escalate to DS Office Triage.
             </p>
           </div>
@@ -193,3 +193,4 @@ export default async function ReportDetailPage({
     </div>
   );
 }
+
