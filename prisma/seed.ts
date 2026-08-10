@@ -3,13 +3,8 @@
 // It creates users, agencies, reports, verifications, and photos in a specific order to maintain referential integrity.
 // Note: This script is intended for development and testing only. Do not run in production environments.
 
-import dotenv from 'dotenv';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient, Role, Language, Category, ReportStatus, Priority, VerificationStatus, AssignmentStatus, InspectionResult } from '@prisma/client';
-
-dotenv.config();
-
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+import { Role, Language, Category, ReportStatus, Priority, VerificationStatus, AssignmentStatus, InspectionResult } from '@prisma/client';
+import prisma from '../src/lib/db';
 
 async function main() {
   console.log('Seeding CivicPulse LK database...');
@@ -59,32 +54,32 @@ async function main() {
   const citizens = users.filter(u => u.role === Role.CITIZEN);
   const verifiers = users.filter(u => u.role === Role.VERIFIER);
   const dsOfficers = users.filter(u => u.role === Role.DS_OFFICER);
-  const fieldAgentRoles: Role[] = [Role.AGENCY, Role.NGO, Role.VOLUNTEER];
-  const fieldAgents = users.filter(u => fieldAgentRoles.includes(u.role));
+  const fieldAgentRoles = new Set<Role>([Role.AGENCY, Role.NGO, Role.VOLUNTEER]);
+  const fieldAgents = users.filter(u => fieldAgentRoles.has(u.role));
   const admin = users.find(u => u.role === Role.ADMIN)!;
 
   // ---------------- 2. AGENCIES (20 records) ----------------
   const agencySeed = [
-    { name: 'Road Development Authority (RDA) - Western', type: 'GOVERNMENT', district: 'Colombo', description: 'Responsible for national and provincial road maintenance', contactEmail: 'road@example.org', contactPhone: '+94112300000' },
-    { name: 'National Water Supply & Drainage Board', type: 'GOVERNMENT', district: 'Colombo', description: 'Water supply and drainage infrastructure authority', contactEmail: 'national@example.org', contactPhone: '+94112300000' },
-    { name: 'Ceylon Electricity Board (CEB)', type: 'GOVERNMENT', district: 'Colombo', description: 'National electricity infrastructure authority', contactEmail: 'ceylon@example.org', contactPhone: '+94112300000' },
-    { name: 'Sri Lanka Police - Traffic Division', type: 'GOVERNMENT', district: 'Colombo', description: 'Traffic and road safety enforcement', contactEmail: 'sri@example.org', contactPhone: '+94112300000' },
-    { name: 'Central Environmental Authority (CEA)', type: 'GOVERNMENT', district: 'Colombo', description: 'Environmental protection and sanitation oversight', contactEmail: 'central@example.org', contactPhone: '+94112300000' },
-    { name: 'Colombo Municipal Council', type: 'GOVERNMENT', district: 'Colombo', description: 'Urban services for Colombo district', contactEmail: 'colombo@example.org', contactPhone: '+94112300000' },
-    { name: 'Negombo Municipal Council', type: 'GOVERNMENT', district: 'Negombo', description: 'Urban services for Negombo district', contactEmail: 'negombo@example.org', contactPhone: '+94112300000' },
-    { name: 'Kandy Municipal Council', type: 'GOVERNMENT', district: 'Kandy', description: 'Urban services for Kandy district', contactEmail: 'kandy@example.org', contactPhone: '+94112300000' },
-    { name: 'Galle Municipal Council', type: 'GOVERNMENT', district: 'Galle', description: 'Urban services for Galle district', contactEmail: 'galle@example.org', contactPhone: '+94112300000' },
-    { name: 'Jaffna Municipal Council', type: 'GOVERNMENT', district: 'Jaffna', description: 'Urban services for Jaffna district', contactEmail: 'jaffna@example.org', contactPhone: '+94112300000' },
-    { name: 'Sarvodaya Shramadana Movement', type: 'NGO', district: 'Colombo', description: 'Community development NGO', contactEmail: 'sarvodaya@example.org', contactPhone: '+94112300000' },
-    { name: 'Sewalanka Foundation', type: 'NGO', district: 'Colombo', description: 'Community development NGO', contactEmail: 'sewalanka@example.org', contactPhone: '+94112300000' },
-    { name: 'Sri Lanka Red Cross Society', type: 'NGO', district: 'Colombo', description: 'Disaster relief and community welfare', contactEmail: 'sri@example.org', contactPhone: '+94112300000' },
-    { name: 'Rotary Club of Negombo', type: 'NGO', district: 'Negombo', description: 'Civic welfare service club', contactEmail: 'rotary@example.org', contactPhone: '+94112300000' },
-    { name: 'Lions Club of Kandy', type: 'NGO', district: 'Kandy', description: 'Civic welfare service club', contactEmail: 'lions@example.org', contactPhone: '+94112300000' },
-    { name: 'National Building Research Organisation (NBRO)', type: 'GOVERNMENT', district: 'Colombo', description: 'Structural and landslide risk assessment', contactEmail: 'national@example.org', contactPhone: '+94112300000' },
-    { name: 'Disaster Management Centre (DMC)', type: 'GOVERNMENT', district: 'Colombo', description: 'National disaster response coordination', contactEmail: 'disaster@example.org', contactPhone: '+94112300000' },
-    { name: 'Clean Negombo Initiative', type: 'VOLUNTEER_TEAM', district: 'Negombo', description: 'Local grassroots volunteer cleanup group', contactEmail: 'clean@example.org', contactPhone: '+94112300000' },
-    { name: 'University CSR Volunteer Network - SLTC', type: 'CSR', district: 'Negombo', description: 'Student CSR volunteer network', contactEmail: 'university@example.org', contactPhone: '+94112300000' },
-    { name: 'Ministry of Urban Development & Housing', type: 'GOVERNMENT', district: 'Colombo', description: 'National urban planning authority', contactEmail: 'ministry@example.org', contactPhone: '+94112300000' },
+    { name: 'Road Development Authority (RDA) - Western', type: 'GOVERNMENT', district: 'Colombo', description: 'Responsible for national and provincial road maintenance', contactEmail: 'road1@example.org', contactPhone: '+94772998500' },
+    { name: 'National Water Supply & Drainage Board', type: 'GOVERNMENT', district: 'Colombo', description: 'Water supply and drainage infrastructure authority', contactEmail: 'national2@example.org', contactPhone: '+94716360060' },
+    { name: 'Ceylon Electricity Board (CEB)', type: 'GOVERNMENT', district: 'Colombo', description: 'National electricity infrastructure authority', contactEmail: 'ceylon3@example.org', contactPhone: '+94769430815' },
+    { name: 'Sri Lanka Police - Traffic Division', type: 'GOVERNMENT', district: 'Colombo', description: 'Traffic and road safety enforcement', contactEmail: 'sri4@example.org', contactPhone: '+94709586960' },
+    { name: 'Central Environmental Authority (CEA)', type: 'GOVERNMENT', district: 'Colombo', description: 'Environmental protection and sanitation oversight', contactEmail: 'central5@example.org', contactPhone: '+94782721960' },
+    { name: 'Colombo Municipal Council', type: 'GOVERNMENT', district: 'Colombo', description: 'Urban services for Colombo district', contactEmail: 'colombo6@example.org', contactPhone: '+94754746093' },
+    { name: 'Negombo Municipal Council', type: 'GOVERNMENT', district: 'Negombo', description: 'Urban services for Negombo district', contactEmail: 'negombo7@example.org', contactPhone: '+94728056747' },
+    { name: 'Kandy Municipal Council', type: 'GOVERNMENT', district: 'Kandy', description: 'Urban services for Kandy district', contactEmail: 'kandy8@example.org', contactPhone: '+94749236009' },
+    { name: 'Galle Municipal Council', type: 'GOVERNMENT', district: 'Galle', description: 'Urban services for Galle district', contactEmail: 'galle9@example.org', contactPhone: '+94778400346' },
+    { name: 'Jaffna Municipal Council', type: 'GOVERNMENT', district: 'Jaffna', description: 'Urban services for Jaffna district', contactEmail: 'jaffna10@example.org', contactPhone: '+94715025425' },
+    { name: 'Sarvodaya Shramadana Movement', type: 'NGO', district: 'Colombo', description: 'Community development NGO', contactEmail: 'sarvodaya11@example.org', contactPhone: '+94761042527' },
+    { name: 'Sewalanka Foundation', type: 'NGO', district: 'Colombo', description: 'Community development NGO', contactEmail: 'sewalanka12@example.org', contactPhone: '+94702354318' },
+    { name: 'Sri Lanka Red Cross Society', type: 'NGO', district: 'Colombo', description: 'Disaster relief and community welfare', contactEmail: 'sri13@example.org', contactPhone: '+94782857850' },
+    { name: 'Rotary Club of Negombo', type: 'NGO', district: 'Negombo', description: 'Civic welfare service club', contactEmail: 'rotary14@example.org', contactPhone: '+94755819091' },
+    { name: 'Lions Club of Kandy', type: 'NGO', district: 'Kandy', description: 'Civic welfare service club', contactEmail: 'lions15@example.org', contactPhone: '+94722645033' },
+    { name: 'National Building Research Organisation (NBRO)', type: 'GOVERNMENT', district: 'Colombo', description: 'Structural and landslide risk assessment', contactEmail: 'national16@example.org', contactPhone: '+94748543956' },
+    { name: 'Disaster Management Centre (DMC)', type: 'GOVERNMENT', district: 'Colombo', description: 'National disaster response coordination', contactEmail: 'disaster17@example.org', contactPhone: '+94771192750' },
+    { name: 'Clean Negombo Initiative', type: 'VOLUNTEER_TEAM', district: 'Negombo', description: 'Local grassroots volunteer cleanup group', contactEmail: 'clean18@example.org', contactPhone: '+94719225646' },
+    { name: 'University CSR Volunteer Network - SLTC', type: 'CSR', district: 'Negombo', description: 'Student CSR volunteer network', contactEmail: 'university19@example.org', contactPhone: '+94766271957' },
+    { name: 'Ministry of Urban Development & Housing', type: 'GOVERNMENT', district: 'Colombo', description: 'National urban planning authority', contactEmail: 'ministry20@example.org', contactPhone: '+94704526984' },
   ];
 
   const agencies = [];
