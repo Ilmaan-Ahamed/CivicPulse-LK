@@ -2,6 +2,54 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import type { Role } from "@prisma/client";
 
+// ─── Role dashboard map ────────────────────────────────────────────────────
+// Single source of truth for post-login / role-mismatch redirects.
+export const ROLE_DASHBOARD: Record<Role, string> = {
+  CITIZEN: "/citizen",
+  VERIFIER: "/citizen",
+  VOLUNTEER: "/citizen",
+  NGO: "/ngo",
+  AGENCY: "/agency",
+  DS_OFFICER: "/ds-officer",
+  ADMIN: "/admin",
+};
+
+// ─── JWT-only helpers (no DB round-trip) ──────────────────────────────────
+
+/**
+ * Read the user's role from Clerk JWT session claims.
+ * Returns null if not authenticated or no role in claims.
+ * Use in Server Components / middleware where DB latency matters.
+ */
+export async function getCurrentUserRole(): Promise<Role | null> {
+  const { sessionClaims } = await auth();
+  if (!sessionClaims) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const meta = (sessionClaims as any)?.publicMetadata ?? (sessionClaims as any)?.metadata;
+  const role = meta?.role as Role | undefined;
+  return role ?? null;
+}
+
+/**
+ * Require a specific role (or one of several roles) — reads from JWT only.
+ * Throws if unauthenticated or role doesn't match.
+ * Use as secondary gate in Server Actions / API routes.
+ */
+export async function requireRoleFromClaims(...roles: Role[]): Promise<Role> {
+  const role = await getCurrentUserRole();
+  if (!role) {
+    throw new Error("Unauthorized: Please sign in to continue.");
+  }
+  if (!roles.includes(role)) {
+    throw new Error(
+      `Forbidden: Requires one of [${roles.join(", ")}], but you have role ${role}.`
+    );
+  }
+  return role;
+}
+
+// ─── DB-backed helpers ─────────────────────────────────────────────────────
+
 /**
  * Get the current authenticated user from the database.
  * Returns null if not authenticated or user not found in DB.
@@ -30,7 +78,8 @@ export async function requireAuth() {
 }
 
 /**
- * Require a specific role (or one of several roles).
+ * Require a specific role (or one of several roles) — reads from DB.
+ * Use for mutations that need the full user object anyway.
  * Throws an error if the user doesn't have the required role.
  */
 export async function requireRole(...roles: Role[]) {
@@ -44,7 +93,7 @@ export async function requireRole(...roles: Role[]) {
 }
 
 /**
- * Check if the current user has a specific role.
+ * Check if the current user has a specific role (DB-backed).
  * Returns false if not authenticated.
  */
 export async function hasRole(...roles: Role[]): Promise<boolean> {
@@ -52,6 +101,8 @@ export async function hasRole(...roles: Role[]): Promise<boolean> {
   if (!user) return false;
   return roles.includes(user.role);
 }
+
+// ─── Role hierarchy ────────────────────────────────────────────────────────
 
 /**
  * Role hierarchy for permission checks.
@@ -73,6 +124,8 @@ const ROLE_HIERARCHY: Record<Role, number> = {
 export function hasMinimumRole(userRole: Role, minimumRole: Role): boolean {
   return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[minimumRole];
 }
+
+// ─── Clerk sync ────────────────────────────────────────────────────────────
 
 /**
  * Sync Clerk user data to our database.
@@ -107,6 +160,7 @@ export async function syncUserToDatabase(clerkUser: {
       role: "CITIZEN",
       trustScore: 50,
       preferredLang: "EN",
+      onboardingComplete: false,
     },
   });
 }

@@ -121,7 +121,11 @@ export function ReportForm() {
           </label>
           <select
             {...register("category")}
+<<<<<<< HEAD
             className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-foreground text-sm focus:border-orange-500/85 focus:ring-4 focus:ring-orange-500/10 hover:border-white/20 transition-all duration-300 outline-none"
+=======
+            className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-800 text-white text-sm focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+>>>>>>> 7548f6d (Update CivicPulse development features)
           >
             {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
               <option key={key} value={key} className="bg-slate-950 text-white">
@@ -141,7 +145,11 @@ export function ReportForm() {
           </label>
           <select
             {...register("district")}
+<<<<<<< HEAD
             className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-foreground text-sm focus:border-orange-500/85 focus:ring-4 focus:ring-orange-500/10 hover:border-white/20 transition-all duration-300 outline-none"
+=======
+            className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-800 text-white text-sm focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+>>>>>>> 7548f6d (Update CivicPulse development features)
           >
             <option value="" className="bg-slate-950">
               Select District (Optional)
@@ -164,7 +172,11 @@ export function ReportForm() {
           type="text"
           placeholder="e.g. Severe pothole on Main Street near Bus Stand"
           {...register("title")}
+<<<<<<< HEAD
           className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-foreground text-sm placeholder:text-white/40 focus:border-orange-500/85 focus:ring-4 focus:ring-orange-500/10 hover:border-white/20 transition-all duration-300 outline-none"
+=======
+          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-800 text-white text-sm placeholder:text-slate-500 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+>>>>>>> 7548f6d (Update CivicPulse development features)
         />
         {errors.title && (
           <p className="text-xs text-red-400 font-semibold">{errors.title.message}</p>
@@ -180,7 +192,11 @@ export function ReportForm() {
           rows={4}
           placeholder="Describe the issue, estimated size/hazard, how long it has persisted, and any nearby landmarks..."
           {...register("description")}
+<<<<<<< HEAD
           className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-foreground text-sm placeholder:text-white/40 focus:border-orange-500/85 focus:ring-4 focus:ring-orange-500/10 hover:border-white/20 transition-all duration-300 outline-none resize-none"
+=======
+          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-800 text-white text-sm placeholder:text-slate-500 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none resize-none"
+>>>>>>> 7548f6d (Update CivicPulse development features)
         />
         {errors.description && (
           <p className="text-xs text-red-400 font-semibold">{errors.description.message}</p>
@@ -196,7 +212,11 @@ export function ReportForm() {
           type="text"
           placeholder="e.g. Opposite Post Office, Temple Road, Ward 4"
           {...register("address")}
+<<<<<<< HEAD
           className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-foreground text-sm placeholder:text-white/40 focus:border-orange-500/85 focus:ring-4 focus:ring-orange-500/10 hover:border-white/20 transition-all duration-300 outline-none"
+=======
+          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-800 text-white text-sm placeholder:text-slate-500 focus:border-emerald-500/85 focus:ring-4 focus:ring-emerald-500/10 hover:border-slate-700 transition-all duration-300 outline-none"
+>>>>>>> 7548f6d (Update CivicPulse development features)
         />
       </div>
 
@@ -225,7 +245,11 @@ export function ReportForm() {
       <button
         type="submit"
         disabled={submitting}
+<<<<<<< HEAD
         className="w-full py-4 rounded-xl bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-foreground font-bold text-sm sm:text-base shadow-xl shadow-orange-600/15 hover:shadow-orange-500/25 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
+=======
+        className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm sm:text-base shadow-xl shadow-emerald-600/15 hover:shadow-emerald-500/25 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
+>>>>>>> 7548f6d (Update CivicPulse development features)
       >
         {submitting ? (
           <>

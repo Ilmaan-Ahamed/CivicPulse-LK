@@ -72,6 +72,13 @@ enum VerificationStatus {
   NEEDS_INFO
 }
 
+enum RoleRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  NEEDS_INFO
+}
+
 enum AssignmentStatus {
   PENDING
   ACCEPTED
@@ -92,32 +99,38 @@ enum InspectionResult {
 // ===========================================
 
 model User {
-  id            String   @id @default(cuid())
-  clerkId       String   @unique
-  email         String   @unique
-  firstName     String?
-  lastName      String?
-  avatarUrl     String?
-  role          Role     @default(CITIZEN)
-  trustScore    Float    @default(50)
-  preferredLang Language @default(EN)
-  district      String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  clerkId            String   @unique
+  email              String   @unique
+  firstName          String?
+  lastName           String?
+  avatarUrl          String?
+  role               Role     @default(CITIZEN)
+  trustScore         Float    @default(50)
+  preferredLang      Language @default(EN)
+  district           String? // legacy — kept for existing data
+  dsDivision         String? // DS Division / district picker from onboarding
+  phone              String? // optional phone number
+  onboardingComplete Boolean  @default(false)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   // Relations
-  reports       Report[]          @relation("ReportAuthor")
-  verifications Verification[]    @relation("VerificationAuthor")
-  assignments   Assignment[]      @relation("AssignedByOfficer")
-  fieldTasks    Assignment[]      @relation("AssignedToAgent")
-  inspections   FieldInspection[]
-  auditLogs     AuditLog[]
-  notifications Notification[]
+  reports              Report[]          @relation("ReportAuthor")
+  verifications        Verification[]    @relation("VerificationAuthor")
+  assignments          Assignment[]      @relation("AssignedByOfficer")
+  fieldTasks           Assignment[]      @relation("AssignedToAgent")
+  inspections          FieldInspection[]
+  auditLogs            AuditLog[]
+  notifications        Notification[]
+  roleRequests         RoleRequest[]     @relation("UserRoleRequests")
+  reviewedRoleRequests RoleRequest[]     @relation("ReviewedRequests")
 
   @@index([clerkId])
   @@index([role])
   @@index([district])
+  @@index([onboardingComplete])
 }
 
 model Report {
@@ -309,5 +322,33 @@ model AuditLog {
 
   @@index([userId])
   @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// ===========================================
+// Role Request (Onboarding — pending approval)
+// ===========================================
+
+model RoleRequest {
+  id            String            @id @default(cuid())
+  userId        String
+  requestedRole Role // NGO | AGENCY | DS_OFFICER
+  orgName       String? // For NGO / Agency
+  justification String? // Why do you need this role?
+  dsDivision    String? // Relevant division/district context
+  status        RoleRequestStatus @default(PENDING)
+  reviewedBy    String? // Admin userId who approved/rejected
+  reviewedAt    DateTime?
+  reviewNote    String? // Admin note (for NEEDS_INFO or REJECTED)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  // Relations
+  user     User  @relation("UserRoleRequests", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("ReviewedRequests", fields: [reviewedBy], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([requestedRole])
   @@index([createdAt])
 }

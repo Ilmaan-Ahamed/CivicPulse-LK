@@ -96,7 +96,11 @@ export function Navbar() {
               <span>{currentLang}</span>
               <ChevronDown className="w-3 h-3 text-muted group-hover:text-foreground transition-transform duration-300 group-hover:rotate-180" />
             </button>
+<<<<<<< HEAD
             <div className="absolute right-0 mt-1.5 w-32 py-1 bg-surface border border-border rounded-2xl shadow-2xl opacity-0 scale-95 origin-top-right group-hover:opacity-100 group-hover:scale-100 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto backdrop-blur-xl z-50">
+=======
+            <div className="absolute right-0 mt-1.5 w-32 py-1 bg-slate-900/95 border border-slate-800 rounded-2xl shadow-2xl opacity-0 scale-95 origin-top-right group-hover:opacity-100 group-hover:scale-100 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto backdrop-blur-xl z-50">
+>>>>>>> 7548f6d (Update CivicPulse development features)
               {languages.map((lang) => (
                 <button
                   key={lang.code}
@@ -109,7 +113,11 @@ export function Navbar() {
                 >
                   <span>{lang.label}</span>
                   {currentLang === lang.code && (
+<<<<<<< HEAD
                     <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-md shadow-primary/50" />
+=======
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-500" />
+>>>>>>> 7548f6d (Update CivicPulse development features)
                   )}
                 </button>
               ))}
@@ -130,7 +138,11 @@ export function Navbar() {
             <div className="flex items-center gap-2">
               <Link
                 href="/sign-in"
+<<<<<<< HEAD
                 className="text-xs font-semibold text-muted hover:text-foreground px-3 py-2 rounded-xl transition-all duration-300"
+=======
+                className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-2 rounded-xl transition-all duration-300"
+>>>>>>> 7548f6d (Update CivicPulse development features)
               >
                 Sign In
               </Link>
@@ -173,7 +185,11 @@ export function Navbar() {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
+<<<<<<< HEAD
         <div className="md:hidden border-b border-border bg-background/95 backdrop-blur-2xl px-4 py-4 space-y-4 animate-fade-in z-50 relative">
+=======
+        <div className="md:hidden border-b border-slate-800 bg-[#0a0f1a]/95 backdrop-blur-2xl px-4 py-4 space-y-4 animate-fade-in z-50 relative">
+>>>>>>> 7548f6d (Update CivicPulse development features)
           <div className="space-y-1.5">
             {navLinks.map((link) => {
               const Icon = link.icon;
@@ -196,16 +212,25 @@ export function Navbar() {
             })}
           </div>
 
+<<<<<<< HEAD
           <div className="pt-4 border-t border-border flex items-center justify-between">
+=======
+          <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+>>>>>>> 7548f6d (Update CivicPulse development features)
             <div className="flex gap-1.5">
               {languages.map((lang) => (
                 <button
                   key={lang.code}
                   onClick={() => setCurrentLang(lang.code)}
-                  className={`px-3 py-1.5 text-xs rounded-xl border font-bold transition-all duration-305 ${
+                  className={`px-3 py-1.5 text-xs rounded-xl border font-bold transition-all duration-300 ${
                     currentLang === lang.code
+<<<<<<< HEAD
                       ? "border-primary/30 bg-primary/10 text-primary"
                       : "border-border bg-surface/60 text-muted hover:border-border-hover"
+=======
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                      : "border-slate-800 bg-slate-900/45 text-slate-400 hover:border-slate-700"
+>>>>>>> 7548f6d (Update CivicPulse development features)
                   }`}
                 >
                   {lang.label}

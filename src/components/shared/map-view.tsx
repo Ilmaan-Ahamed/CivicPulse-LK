@@ -65,11 +65,19 @@ export function MapView({
     <div className="space-y-3 relative z-10">
       {/* Interactive Geolocation Action Bar */}
       {interactive && (
+<<<<<<< HEAD
         <div className="flex items-center justify-between gap-4 p-3 rounded-xl bg-surface border border-primary/20 backdrop-blur-md">
           <div className="flex items-center gap-2 text-xs">
             <Compass className="w-4 h-4 text-primary animate-pulse" />
             <span className="font-mono text-muted font-semibold">
               {currentLat.toFixed(4)}Â° N, {currentLng.toFixed(4)}Â° E
+=======
+        <div className="flex items-center justify-between gap-4 p-3 rounded-xl bg-slate-900/40 border border-slate-800 backdrop-blur-md">
+          <div className="flex items-center gap-2 text-xs">
+            <Compass className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <span className="font-mono text-slate-300 font-semibold">
+              {currentLat.toFixed(4)}° N, {currentLng.toFixed(4)}° E
+>>>>>>> 7548f6d (Update CivicPulse development features)
             </span>
           </div>
 
@@ -77,7 +85,11 @@ export function MapView({
             type="button"
             onClick={handleGetCurrentLocation}
             disabled={locating}
+<<<<<<< HEAD
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 text-xs font-semibold transition-all duration-300 disabled:opacity-50 cursor-pointer active:scale-95"
+=======
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 text-xs font-semibold transition-all duration-300 disabled:opacity-50 cursor-pointer active:scale-95"
+>>>>>>> 7548f6d (Update CivicPulse development features)
           >
             <Navigation className={`w-3.5 h-3.5 ${locating ? "animate-spin text-primary" : ""}`} />
             {locating ? "Acquiring GPS..." : "Auto-Detect My GPS"}
@@ -86,7 +98,11 @@ export function MapView({
       )}
 
       {/* Visual Map Representation */}
+<<<<<<< HEAD
       <div className="relative w-full h-56 rounded-2xl overflow-hidden border border-primary/20 bg-surface-hover flex items-center justify-center group transition-all duration-300 hover:border-primary/40">
+=======
+      <div className="relative w-full h-56 rounded-2xl overflow-hidden border border-slate-800 bg-[#070b14]/90 flex items-center justify-center group transition-all duration-300 hover:border-emerald-500/30">
+>>>>>>> 7548f6d (Update CivicPulse development features)
         {/* Subtle Map Grid Background */}
         <div
           className="absolute inset-0 opacity-15"
@@ -98,6 +114,7 @@ export function MapView({
 
         {/* Center Marker Pin */}
         <div className="relative z-10 flex flex-col items-center animate-float">
+<<<<<<< HEAD
           <div className="p-2.5 rounded-full bg-primary/10 border-2 border-primary/80 text-primary shadow-2xl shadow-primary/20 backdrop-blur-md">
             <MapPin className="w-6 h-6 fill-primary/20" />
           </div>
@@ -106,6 +123,16 @@ export function MapView({
 
         {/* Coordinate Badge Overlay */}
         <div className="absolute bottom-3 left-3 z-10 px-3 py-1.5 rounded-lg bg-surface/80 border border-primary/20 text-[10px] text-muted backdrop-blur-md font-mono font-semibold">
+=======
+          <div className="p-2.5 rounded-full bg-emerald-500/10 border-2 border-emerald-400/80 text-emerald-400 shadow-2xl shadow-emerald-500/20 backdrop-blur-md">
+            <MapPin className="w-6 h-6 fill-emerald-500/20" />
+          </div>
+          <div className="w-3.5 h-1 bg-emerald-500/45 rounded-full blur-[1px] mt-1.5 animate-pulse" />
+        </div>
+
+        {/* Coordinate Badge Overlay */}
+        <div className="absolute bottom-3 left-3 z-10 px-3 py-1.5 rounded-lg bg-slate-950/80 border border-slate-800 text-[10px] text-slate-300 backdrop-blur-md font-mono font-semibold">
+>>>>>>> 7548f6d (Update CivicPulse development features)
           Lat: {currentLat} | Lng: {currentLng}
         </div>
       </div>
