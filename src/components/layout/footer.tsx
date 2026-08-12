@@ -100,7 +100,7 @@ export function Footer() {
           <div className="flex items-center gap-1.5 text-subtle">
             <span>Built with</span>
             <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-            <span>for Sri Lanka public infrastructure transparency</span>
+            <span>for Sri Lanka public infrastructure transparency and accountability. </span>
           </div>
         </div>
       </div>
