@@ -6,26 +6,12 @@ import { ROLE_DASHBOARD } from "@/lib/auth";
 /**
  * Auth Callback Page
  *
-<<<<<<< HEAD
  * This page is hit after Clerk sign-in or sign-up.
  * It ensures the user exists in our DB, then routes them:
  *   - New users (no role set yet) â†’ /onboarding
  *   - DS_OFFICER / AGENCY / NGO / ADMIN â†’ /ds-console
  *   - VERIFIER â†’ /verify
  *   - CITIZEN â†’ / (home)
-=======
- * Hit after Clerk sign-in or sign-up (signInFallbackRedirectUrl / signUpFallbackRedirectUrl).
- *
- * Flow:
- *  1. Upsert the user into our DB (idempotent).
- *  2. If onboarding is not yet complete → /onboarding.
- *  3. Route to the role's dashboard root using ROLE_DASHBOARD map:
- *       CITIZEN / VERIFIER / VOLUNTEER → /citizen
- *       NGO                            → /ngo
- *       AGENCY                         → /agency
- *       DS_OFFICER                     → /ds-officer
- *       ADMIN                          → /admin
->>>>>>> 7548f6d (Update CivicPulse development features)
  */
 export default async function AuthCallbackPage() {
   const { userId } = await auth();

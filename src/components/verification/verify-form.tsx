@@ -60,13 +60,8 @@ export function VerifyForm({ reportId }: VerifyFormProps) {
             onClick={() => setStatus("CONFIRMED")}
             className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all duration-300 cursor-pointer ${
               status === "CONFIRMED"
-<<<<<<< HEAD
                 ? "bg-teal-500/10 border-teal-500 text-teal-350 font-bold shadow-lg shadow-teal-500/5 scale-[1.02]"
                 : "bg-slate-950/45 border-slate-850 text-muted hover:border-slate-700 hover:bg-slate-900/30"
-=======
-                ? "bg-teal-500/10 border-teal-500 text-teal-300 font-bold shadow-lg shadow-teal-500/5 scale-[1.02]"
-                : "bg-slate-950/45 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900/30"
->>>>>>> 7548f6d (Update CivicPulse development features)
             }`}
           >
             <CheckCircle2 className={`w-5 h-5 transition-colors duration-300 ${status === "CONFIRMED" ? "text-teal-400" : "text-subtle"}`} />
@@ -78,13 +73,8 @@ export function VerifyForm({ reportId }: VerifyFormProps) {
             onClick={() => setStatus("DISPUTED")}
             className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all duration-300 cursor-pointer ${
               status === "DISPUTED"
-<<<<<<< HEAD
                 ? "bg-red-500/10 border-red-500 text-red-350 font-bold shadow-lg shadow-red-500/5 scale-[1.02]"
                 : "bg-slate-950/45 border-slate-850 text-muted hover:border-slate-700 hover:bg-slate-900/30"
-=======
-                ? "bg-red-500/10 border-red-500 text-red-300 font-bold shadow-lg shadow-red-500/5 scale-[1.02]"
-                : "bg-slate-950/45 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900/30"
->>>>>>> 7548f6d (Update CivicPulse development features)
             }`}
           >
             <XCircle className={`w-5 h-5 transition-colors duration-300 ${status === "DISPUTED" ? "text-red-400" : "text-subtle"}`} />
@@ -96,13 +86,8 @@ export function VerifyForm({ reportId }: VerifyFormProps) {
             onClick={() => setStatus("NEEDS_INFO")}
             className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all duration-300 cursor-pointer ${
               status === "NEEDS_INFO"
-<<<<<<< HEAD
                 ? "bg-amber-500/10 border-amber-500 text-amber-350 font-bold shadow-lg shadow-amber-500/5 scale-[1.02]"
                 : "bg-slate-950/45 border-slate-850 text-muted hover:border-slate-700 hover:bg-slate-900/30"
-=======
-                ? "bg-amber-500/10 border-amber-500 text-amber-300 font-bold shadow-lg shadow-amber-500/5 scale-[1.02]"
-                : "bg-slate-950/45 border-slate-800 text-slate-400 hover:border-slate-700 hover:bg-slate-900/30"
->>>>>>> 7548f6d (Update CivicPulse development features)
             }`}
           >
             <HelpCircle className={`w-5 h-5 transition-colors duration-300 ${status === "NEEDS_INFO" ? "text-amber-400" : "text-subtle"}`} />
@@ -121,11 +106,7 @@ export function VerifyForm({ reportId }: VerifyFormProps) {
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder="Add details about your physical check (e.g., 'Inspected on site, pothole spans full lane width')..."
-<<<<<<< HEAD
           className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-850 text-foreground text-sm placeholder:text-slate-650 focus:border-teal-500/85 focus:ring-4 focus:ring-teal-500/10 hover:border-slate-700 transition-all duration-300 outline-none resize-none"
-=======
-          className="w-full px-4 py-3 rounded-xl bg-slate-950/45 border border-slate-800 text-white text-sm placeholder:text-slate-500 focus:border-teal-500/85 focus:ring-4 focus:ring-teal-500/10 hover:border-slate-700 transition-all duration-300 outline-none resize-none"
->>>>>>> 7548f6d (Update CivicPulse development features)
         />
       </div>
 
@@ -133,11 +114,7 @@ export function VerifyForm({ reportId }: VerifyFormProps) {
       <button
         type="submit"
         disabled={submitting}
-<<<<<<< HEAD
         className="w-full py-4 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-450 text-foreground font-bold text-sm sm:text-base shadow-xl shadow-teal-650/15 hover:shadow-teal-500/25 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
-=======
-        className="w-full py-4 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-400 text-white font-bold text-sm sm:text-base shadow-xl shadow-teal-600/15 hover:shadow-teal-500/25 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
->>>>>>> 7548f6d (Update CivicPulse development features)
       >
         {submitting ? (
           <>

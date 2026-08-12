@@ -2,17 +2,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import type { Role } from "@prisma/client";
 
-// ─── Role dashboard map ────────────────────────────────────────────────────
-// Single source of truth for post-login / role-mismatch redirects.
-export const ROLE_DASHBOARD: Record<Role, string> = {
-  CITIZEN: "/citizen",
-  VERIFIER: "/citizen",
-  VOLUNTEER: "/citizen",
-  NGO: "/ngo",
-  AGENCY: "/agency",
-  DS_OFFICER: "/ds-officer",
-  ADMIN: "/admin",
-};
+export { ROLE_DASHBOARD } from "@/lib/roles";
 
 // ─── JWT-only helpers (no DB round-trip) ──────────────────────────────────
 

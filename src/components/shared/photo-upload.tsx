@@ -107,11 +107,7 @@ export function PhotoUpload({
                   e.stopPropagation();
                   removeFile(index);
                 }}
-<<<<<<< HEAD
                 className="absolute top-1.5 right-1.5 p-1.5 rounded-xl bg-slate-950/80 text-slate-350 hover:text-foreground hover:bg-red-650 transition-all duration-300 backdrop-blur-md cursor-pointer border border-slate-800/60"
-=======
-                className="absolute top-1.5 right-1.5 p-1.5 rounded-xl bg-slate-950/80 text-slate-300 hover:text-white hover:bg-red-600 transition-all duration-300 backdrop-blur-md cursor-pointer border border-slate-800/60"
->>>>>>> 7548f6d (Update CivicPulse development features)
               >
                 <X className="w-3.5 h-3.5" />
               </button>
