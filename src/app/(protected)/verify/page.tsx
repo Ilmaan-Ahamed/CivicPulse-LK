@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-﻿import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/db";
 import { VerifyCard } from "@/components/verification/verify-card";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 
@@ -44,12 +43,6 @@ export default async function VerifyFeedPage() {
       )}
     </div>
   );
-=======
-import { redirect } from "next/navigation";
-
-export default function LegacyVerifyRedirect() {
-  redirect("/citizen/verify");
->>>>>>> 7548f6d (Update CivicPulse development features)
 }
 
 
