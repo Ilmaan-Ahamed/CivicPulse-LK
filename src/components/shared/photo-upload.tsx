@@ -56,7 +56,7 @@ export function PhotoUpload({
           handleFiles(e.dataTransfer.files);
         }}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-350 ${
+        className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-300 ${
           isDragging
             ? "border-orange-500 bg-orange-500/10"
             : "border-orange-500/20 bg-[#070b14]/40 hover:border-orange-500/40 hover:bg-orange-500/5"
@@ -79,7 +79,7 @@ export function PhotoUpload({
             <p className="text-sm font-semibold text-foreground">
               Click to upload photo evidence or drag & drop
             </p>
-            <p className="text-xs text-slate-450 mt-1.5 font-medium">
+            <p className="text-xs text-slate-400 mt-1.5 font-medium">
               Supports PNG, JPG, JPEG up to 10MB each (max {maxFiles} photos)
             </p>
           </div>
@@ -92,7 +92,7 @@ export function PhotoUpload({
           {previews.map((src, index) => (
             <div
               key={index}
-              className="relative aspect-video rounded-xl overflow-hidden border border-slate-850 bg-slate-900 group shadow-md"
+              className="relative aspect-video rounded-xl overflow-hidden border border-slate-800 bg-slate-900 group shadow-md"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -107,7 +107,11 @@ export function PhotoUpload({
                   e.stopPropagation();
                   removeFile(index);
                 }}
+<<<<<<< HEAD
                 className="absolute top-1.5 right-1.5 p-1.5 rounded-xl bg-slate-950/80 text-slate-350 hover:text-foreground hover:bg-red-650 transition-all duration-300 backdrop-blur-md cursor-pointer border border-slate-800/60"
+=======
+                className="absolute top-1.5 right-1.5 p-1.5 rounded-xl bg-slate-950/80 text-slate-300 hover:text-white hover:bg-red-600 transition-all duration-300 backdrop-blur-md cursor-pointer border border-slate-800/60"
+>>>>>>> 7548f6d (Update CivicPulse development features)
               >
                 <X className="w-3.5 h-3.5" />
               </button>

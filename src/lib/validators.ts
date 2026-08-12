@@ -164,3 +164,68 @@ export const reportQuerySchema = z.object({
 });
 
 export type ReportQueryInput = z.infer<typeof reportQuerySchema>;
+
+// ===========================================
+// Onboarding Validators
+// ===========================================
+
+const baseOnboardingFields = {
+  preferredLang: z.enum(["EN", "SI", "TA"]).default("EN"),
+  dsDivision: z.string().max(100).optional(),
+  phone: z
+    .string()
+    .max(20)
+    .regex(/^[+\d\s\-()]*$/, "Invalid phone number format")
+    .optional()
+    .or(z.literal("")),
+};
+
+export const onboardingSchema = z.discriminatedUnion("role", [
+  // Citizen — instant access, no org fields
+  z.object({
+    role: z.literal("CITIZEN"),
+    ...baseOnboardingFields,
+  }),
+  // NGO — requires org context for admin review
+  z.object({
+    role: z.literal("NGO"),
+    ...baseOnboardingFields,
+    orgName: z
+      .string()
+      .min(2, "Organisation name must be at least 2 characters")
+      .max(200, "Organisation name must be under 200 characters"),
+    justification: z
+      .string()
+      .min(10, "Please provide at least 10 characters of justification")
+      .max(1000, "Justification must be under 1000 characters"),
+  }),
+  // Agency — requires org context for admin review
+  z.object({
+    role: z.literal("AGENCY"),
+    ...baseOnboardingFields,
+    orgName: z
+      .string()
+      .min(2, "Organisation name must be at least 2 characters")
+      .max(200, "Organisation name must be under 200 characters"),
+    justification: z
+      .string()
+      .min(10, "Please provide at least 10 characters of justification")
+      .max(1000, "Justification must be under 1000 characters"),
+  }),
+  // DS Officer — requires division + justification for admin review
+  z.object({
+    role: z.literal("DS_OFFICER"),
+    ...baseOnboardingFields,
+    orgName: z
+      .string()
+      .min(2, "Division/office name must be at least 2 characters")
+      .max(200)
+      .optional(),
+    justification: z
+      .string()
+      .min(10, "Please provide at least 10 characters of justification")
+      .max(1000, "Justification must be under 1000 characters"),
+  }),
+]);
+
+export type OnboardingInput = z.infer<typeof onboardingSchema>;

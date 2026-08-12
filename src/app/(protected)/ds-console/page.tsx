@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Building2, AlertTriangle, ArrowRight, ShieldCheck, Clock, CheckCircle2 } from "lucide-react";
@@ -106,6 +107,12 @@ export default async function DSConsolePage() {
       )}
     </div>
   );
+=======
+import { redirect } from "next/navigation";
+
+export default function LegacyDsConsoleRedirect() {
+  redirect("/ds-officer");
+>>>>>>> 7548f6d (Update CivicPulse development features)
 }
 
 

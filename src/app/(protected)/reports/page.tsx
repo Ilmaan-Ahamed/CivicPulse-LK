@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ReportCard } from "@/components/reports/report-card";
@@ -65,6 +66,12 @@ export default async function ReportsPage() {
       )}
     </div>
   );
+=======
+import { redirect } from "next/navigation";
+
+export default function LegacyReportsRedirect() {
+  redirect("/citizen/reports");
+>>>>>>> 7548f6d (Update CivicPulse development features)
 }
 
 

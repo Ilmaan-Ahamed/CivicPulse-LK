@@ -26,13 +26,17 @@ export function VerifyCard({ report }: VerifyCardProps) {
           <span className="font-mono text-[10px] font-bold text-teal-400 bg-teal-500/10 px-2.5 py-1 rounded-lg border border-teal-500/20 uppercase">
             {report.referenceNo}
           </span>
-          <span className="text-[10px] font-semibold text-slate-450 uppercase tracking-wider">
+          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
             {CATEGORY_LABELS[report.category] || report.category}
           </span>
         </div>
 
         {/* Title & Description */}
+<<<<<<< HEAD
         <h3 className="font-bold text-sm sm:text-base text-foreground group-hover:text-teal-350 transition-colors duration-300 line-clamp-1">
+=======
+        <h3 className="font-bold text-sm sm:text-base text-white group-hover:text-teal-300 transition-colors duration-300 line-clamp-1">
+>>>>>>> 7548f6d (Update CivicPulse development features)
           {report.title}
         </h3>
         <p className="text-xs text-muted line-clamp-2 leading-relaxed font-normal">
@@ -41,7 +45,11 @@ export function VerifyCard({ report }: VerifyCardProps) {
       </div>
 
       {/* Footer Info */}
+<<<<<<< HEAD
       <div className="mt-4 pt-3.5 border-t border-slate-850 flex items-center justify-between text-[11px] text-muted">
+=======
+      <div className="mt-4 pt-3.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+>>>>>>> 7548f6d (Update CivicPulse development features)
         <div className="flex items-center gap-1.5 font-semibold text-teal-400 bg-teal-500/5 border border-teal-500/10 px-2.5 py-1 rounded-lg">
           <ShieldCheck className="w-3.5 h-3.5" />
           <span>{confirmCount} Confirms</span>

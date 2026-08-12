@@ -51,7 +51,7 @@ export function ReportCard({ report }: ReportCardProps) {
                 }}
               />
               <ImageIcon className="w-8 h-8 text-slate-700 group-hover:text-emerald-500/45 transition-colors duration-300" />
-              <span className="text-[10px] text-slate-650 mt-1 font-mono uppercase tracking-wider">No Photo Evidence</span>
+              <span className="text-[10px] text-slate-500 mt-1 font-mono uppercase tracking-wider">No Photo Evidence</span>
             </div>
           )}
 
@@ -83,7 +83,11 @@ export function ReportCard({ report }: ReportCardProps) {
           <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
             {CATEGORY_LABELS[report.category] || report.category}
           </span>
+<<<<<<< HEAD
           <h3 className="font-bold text-sm sm:text-base text-foreground group-hover:text-emerald-350 transition-colors duration-300 line-clamp-1">
+=======
+          <h3 className="font-bold text-sm sm:text-base text-white group-hover:text-emerald-300 transition-colors duration-300 line-clamp-1">
+>>>>>>> 7548f6d (Update CivicPulse development features)
             {report.title}
           </h3>
           <p className="text-xs text-muted line-clamp-2 leading-relaxed font-normal">
@@ -94,7 +98,11 @@ export function ReportCard({ report }: ReportCardProps) {
 
       {/* Card Footer */}
       <div className="p-5 pt-0">
+<<<<<<< HEAD
         <div className="pt-3 border-t border-slate-850 flex items-center justify-between text-[11px] text-muted">
+=======
+        <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+>>>>>>> 7548f6d (Update CivicPulse development features)
           <div className="flex items-center gap-3">
             {report.district && (
               <span className="flex items-center gap-1">
