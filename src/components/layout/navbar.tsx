@@ -46,78 +46,69 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/70 backdrop-blur-md transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-primary-light p-0.5 shadow-lg shadow-primary/10 group-hover:scale-105 transition-transform duration-300">
-            <div className="w-full h-full bg-background rounded-[10px] flex items-center justify-center">
-              <ShieldAlert className="w-5 h-5 text-primary" />
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="group flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-linear-to-tr from-primary to-primary-light p-0.5 shadow-lg shadow-primary/10 transition-transform duration-300 group-hover:scale-105">
+            <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-background">
+              <ShieldAlert className="h-5 w-5 text-primary" />
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-lg tracking-tight text-foreground flex items-center gap-1">
-              CivicPulse <span className="text-primary font-extrabold">LK</span>
+            <span className="flex items-center gap-1 text-lg font-bold tracking-tight text-foreground">
+              CivicPulse <span className="font-extrabold text-primary">LK</span>
             </span>
-            <span className="text-[10px] text-muted tracking-wider font-mono uppercase">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
               Sri Lanka Infrastructure
             </span>
           </div>
         </Link>
 
-        {/* Desktop Nav Links */}
-        <nav className="hidden md:flex items-center gap-1.5 text-sm font-medium">
+        <nav className="hidden items-center gap-1.5 text-sm font-medium md:flex">
           {navLinks.map((link) => {
             const Icon = link.icon;
             const active = isActive(link.href);
+
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-3 py-2 rounded-xl flex items-center gap-2 border transition-all duration-300 ${
+                className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition-all duration-300 ${
                   active
-                    ? "bg-surface border-border text-foreground font-semibold shadow-sm"
-                    : "border-transparent text-muted hover:text-foreground hover:bg-surface/60"
+                    ? "border-border bg-surface text-foreground font-semibold shadow-sm"
+                    : "border-transparent text-muted hover:bg-surface/60 hover:text-foreground"
                 }`}
               >
-                <Icon className={`w-4 h-4 ${link.color} ${active ? "opacity-100" : "opacity-80 group-hover:opacity-100"}`} />
+                <Icon
+                  className={`h-4 w-4 ${link.color} ${active ? "opacity-100" : "opacity-80"}`}
+                />
                 <span>{link.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        {/* Right Action Menu */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden items-center gap-4 md:flex">
           <ThemeToggle />
-          {/* Language Switcher Dropdown */}
-          <div className="relative group">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-surface/60 text-muted text-xs font-semibold hover:border-slate-700 hover:text-foreground transition-all duration-300">
-              <Globe className="w-3.5 h-3.5 text-muted" />
+
+          <div className="group relative">
+            <button className="flex items-center gap-1.5 rounded-xl border border-border bg-surface/60 px-3 py-1.5 text-xs font-semibold text-muted transition-all duration-300 hover:border-slate-700 hover:text-foreground">
+              <Globe className="h-3.5 w-3.5 text-muted" />
               <span>{currentLang}</span>
-              <ChevronDown className="w-3 h-3 text-muted group-hover:text-foreground transition-transform duration-300 group-hover:rotate-180" />
+              <ChevronDown className="h-3 w-3 text-muted transition-transform duration-300 group-hover:rotate-180 group-hover:text-foreground" />
             </button>
-<<<<<<< HEAD
-            <div className="absolute right-0 mt-1.5 w-32 py-1 bg-surface border border-border rounded-2xl shadow-2xl opacity-0 scale-95 origin-top-right group-hover:opacity-100 group-hover:scale-100 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto backdrop-blur-xl z-50">
-=======
-            <div className="absolute right-0 mt-1.5 w-32 py-1 bg-slate-900/95 border border-slate-800 rounded-2xl shadow-2xl opacity-0 scale-95 origin-top-right group-hover:opacity-100 group-hover:scale-100 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto backdrop-blur-xl z-50">
->>>>>>> 7548f6d (Update CivicPulse development features)
+
+            <div className="pointer-events-none absolute right-0 z-50 mt-1.5 w-32 origin-top-right scale-95 rounded-2xl border border-border bg-surface py-1 opacity-0 shadow-2xl transition-all duration-300 group-hover:pointer-events-auto group-hover:scale-100 group-hover:opacity-100 backdrop-blur-xl">
               {languages.map((lang) => (
                 <button
                   key={lang.code}
                   onClick={() => setCurrentLang(lang.code)}
-                  className={`w-full px-3.5 py-2 text-left text-xs flex items-center justify-between hover:bg-surface-hover transition-colors ${
-                    currentLang === lang.code
-                      ? "text-primary font-bold"
-                      : "text-muted"
+                  className={`flex w-full items-center justify-between px-3.5 py-2 text-left text-xs transition-colors hover:bg-surface-hover ${
+                    currentLang === lang.code ? "font-bold text-primary" : "text-muted"
                   }`}
                 >
                   <span>{lang.label}</span>
                   {currentLang === lang.code && (
-<<<<<<< HEAD
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-md shadow-primary/50" />
-=======
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-500" />
->>>>>>> 7548f6d (Update CivicPulse development features)
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-md shadow-primary/50" />
                   )}
                 </button>
               ))}
@@ -129,7 +120,8 @@ export function Navbar() {
               <UserButton
                 appearance={{
                   elements: {
-                    avatarBox: "w-9 h-9 border-2 border-primary/20 hover:border-primary transition-all duration-300 shadow-md shadow-primary/5",
+                    avatarBox:
+                      "h-9 w-9 border-2 border-primary/20 shadow-md shadow-primary/5 transition-all duration-300 hover:border-primary",
                   },
                 }}
               />
@@ -138,99 +130,79 @@ export function Navbar() {
             <div className="flex items-center gap-2">
               <Link
                 href="/sign-in"
-<<<<<<< HEAD
-                className="text-xs font-semibold text-muted hover:text-foreground px-3 py-2 rounded-xl transition-all duration-300"
-=======
-                className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-2 rounded-xl transition-all duration-300"
->>>>>>> 7548f6d (Update CivicPulse development features)
+                className="rounded-xl px-3 py-2 text-xs font-semibold text-muted transition-all duration-300 hover:text-foreground"
               >
                 Sign In
               </Link>
               <Link
                 href="/sign-up"
-                className="inline-flex items-center gap-1.5 text-xs font-bold bg-primary hover:bg-primary-light text-foreground px-4 py-2 rounded-xl transition-all duration-300 shadow-lg shadow-primary/10 hover:shadow-primary/25 active:scale-95"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-foreground shadow-lg shadow-primary/10 transition-all duration-300 hover:bg-primary-light hover:shadow-primary/25 active:scale-95"
               >
                 Get Started
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
           )}
         </div>
 
-        {/* Mobile Menu Toggle Button */}
-        <div className="flex md:hidden items-center gap-3">
+        <div className="flex items-center gap-3 md:hidden">
           <ThemeToggle />
           {isSignedIn && (
             <UserButton
               appearance={{
                 elements: {
-                  avatarBox: "w-8 h-8 border border-primary/20",
+                  avatarBox: "h-8 w-8 border border-primary/20",
                 },
               }}
             />
           )}
 
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-muted hover:text-foreground hover:bg-surface border border-transparent hover:border-border rounded-xl transition-all duration-300"
+            className="rounded-xl border border-transparent p-2 text-muted transition-all duration-300 hover:border-border hover:bg-surface hover:text-foreground"
+            aria-label="Toggle navigation menu"
           >
-            {mobileMenuOpen ? (
-              <X className="w-5 h-5" />
-            ) : (
-              <Menu className="w-5 h-5" />
-            )}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
       {mobileMenuOpen && (
-<<<<<<< HEAD
-        <div className="md:hidden border-b border-border bg-background/95 backdrop-blur-2xl px-4 py-4 space-y-4 animate-fade-in z-50 relative">
-=======
-        <div className="md:hidden border-b border-slate-800 bg-[#0a0f1a]/95 backdrop-blur-2xl px-4 py-4 space-y-4 animate-fade-in z-50 relative">
->>>>>>> 7548f6d (Update CivicPulse development features)
+        <div className="relative z-50 border-b border-border bg-background/95 px-4 py-4 backdrop-blur-2xl md:hidden">
           <div className="space-y-1.5">
             {navLinks.map((link) => {
               const Icon = link.icon;
               const active = isActive(link.href);
+
               return (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold border transition-all duration-300 ${
+                  className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 text-sm font-semibold transition-all duration-300 ${
                     active
-                      ? "bg-surface border-border text-foreground"
+                      ? "border-border bg-surface text-foreground"
                       : "border-transparent text-muted hover:bg-surface/60 hover:text-foreground"
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${link.color}`} />
+                  <Icon className={`h-4 w-4 ${link.color}`} />
                   {link.label}
                 </Link>
               );
             })}
           </div>
 
-<<<<<<< HEAD
-          <div className="pt-4 border-t border-border flex items-center justify-between">
-=======
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
->>>>>>> 7548f6d (Update CivicPulse development features)
+          <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
             <div className="flex gap-1.5">
               {languages.map((lang) => (
                 <button
                   key={lang.code}
                   onClick={() => setCurrentLang(lang.code)}
-                  className={`px-3 py-1.5 text-xs rounded-xl border font-bold transition-all duration-300 ${
+                  className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all duration-300 ${
                     currentLang === lang.code
-<<<<<<< HEAD
                       ? "border-primary/30 bg-primary/10 text-primary"
                       : "border-border bg-surface/60 text-muted hover:border-border-hover"
-=======
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                      : "border-slate-800 bg-slate-900/45 text-slate-400 hover:border-slate-700"
->>>>>>> 7548f6d (Update CivicPulse development features)
                   }`}
                 >
                   {lang.label}
@@ -242,9 +214,9 @@ export function Navbar() {
               <Link
                 href="/sign-in"
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-xs text-primary font-bold hover:underline py-1.5"
+                className="py-1.5 text-xs font-bold text-primary hover:underline"
               >
-                Sign In â†’
+                Sign In →
               </Link>
             )}
           </div>
@@ -253,9 +225,5 @@ export function Navbar() {
     </header>
   );
 }
-
-
-
-
 
 

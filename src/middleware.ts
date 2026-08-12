@@ -2,51 +2,23 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { Role } from "@prisma/client";
+import { ROLE_DASHBOARD } from "@/lib/auth";
 
-<<<<<<< HEAD
-// Public routes — no auth required
-const PUBLIC_ROUTES = [
-  "/",
-  "/sign-in",
-  "/sign-up",
-  "/dashboard",
-  "/modules",
-  "/onboarding",
-  "/callback",
-  "/api/webhooks",
-  "/api/dashboard",
-  "/api/onboarding",
-=======
-// ─── Role dashboard map ────────────────────────────────────────────────────
-// Single source of truth: where each role lands after login or a mismatch.
-const ROLE_DASHBOARD: Record<string, string> = {
-  CITIZEN: "/citizen",
-  VERIFIER: "/citizen",
-  VOLUNTEER: "/citizen",
-  NGO: "/ngo",
-  AGENCY: "/agency",
-  DS_OFFICER: "/ds-officer",
-  ADMIN: "/admin",
-};
-
-// ─── Route-to-allowed-roles map ───────────────────────────────────────────
-// Ordered: most-specific first. First match wins.
-const ROLE_ROUTES: Array<{ prefix: string; allowed: string[] }> = [
-  { prefix: "/admin",      allowed: ["ADMIN"] },
-  { prefix: "/ds-officer", allowed: ["DS_OFFICER", "ADMIN"] },
-  { prefix: "/agency",     allowed: ["AGENCY", "ADMIN"] },
-  { prefix: "/ngo",        allowed: ["NGO", "ADMIN"] },
-  // /citizen is accessible to all authenticated + onboarded roles
-  { prefix: "/citizen",    allowed: ["CITIZEN", "VERIFIER", "VOLUNTEER", "NGO", "AGENCY", "DS_OFFICER", "ADMIN"] },
->>>>>>> 7548f6d (Update CivicPulse development features)
+const ROLE_ROUTES: Array<{ prefix: string; allowed: Role[] }> = [
+  { prefix: "/admin", allowed: ["ADMIN"] },
+  { prefix: "/agency", allowed: ["AGENCY", "ADMIN"] },
+  { prefix: "/ngo", allowed: ["NGO", "ADMIN"] },
+  { prefix: "/ds-console", allowed: ["DS_OFFICER", "ADMIN"] },
+  { prefix: "/verify", allowed: ["VERIFIER", "VOLUNTEER", "NGO", "AGENCY", "DS_OFFICER", "ADMIN"] },
+  { prefix: "/reports", allowed: ["CITIZEN", "VERIFIER", "VOLUNTEER", "NGO", "AGENCY", "DS_OFFICER", "ADMIN"] },
 ];
 
 // ─── Public routes (no auth required) ─────────────────────────────────────
 const PUBLIC_PREFIXES = [
-  "/",          // landing page (exact)
+  "/",
   "/sign-in",
   "/sign-up",
-  "/dashboard", // public transparency dashboard
+  "/dashboard",
   "/api/webhooks",
   "/api/dashboard",
 ];
@@ -76,18 +48,17 @@ function isOnboardingExempt(pathname: string): boolean {
 function getRoleFromClaims(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sessionClaims: Record<string, any> | null | undefined
-): string | null {
+): Role | null {
   if (!sessionClaims) return null;
-  return (
-    sessionClaims?.publicMetadata?.role ??
-    sessionClaims?.metadata?.role ??
-    null
-  );
+  const role =
+    (sessionClaims.publicMetadata?.role as Role | undefined) ??
+    (sessionClaims.metadata?.role as Role | undefined) ??
+    null;
+
+  return role;
 }
 
-function matchRoleRoute(
-  pathname: string
-): { prefix: string; allowed: string[] } | null {
+function matchRoleRoute(pathname: string): { prefix: string; allowed: Role[] } | null {
   return (
     ROLE_ROUTES.find(
       (r) => pathname === r.prefix || pathname.startsWith(r.prefix + "/")
@@ -106,7 +77,6 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
 
   // 2. Protect: require authentication
   const { userId, sessionClaims } = await auth.protect({
-    // Unauthenticated → redirect to sign-in, preserving the intended destination
     unauthenticatedUrl: new URL(
       `/sign-in?redirect_url=${encodeURIComponent(pathname)}`,
       req.url
@@ -114,7 +84,6 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   });
 
   // 3. Onboarding gate: if not yet complete, force /onboarding
-  //    (skip for the onboarding page itself and its API calls)
   if (userId && !isOnboardingExempt(pathname)) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const claims = sessionClaims as any;
@@ -136,10 +105,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
     );
 
     if (!role || !roleRoute.allowed.includes(role)) {
-      // Send to their own dashboard root — don't 403, redirect usefully
-      const dashboardPath = role
-        ? (ROLE_DASHBOARD[role] ?? "/citizen")
-        : "/citizen";
+      const dashboardPath = role ? (ROLE_DASHBOARD[role] ?? "/citizen") : "/citizen";
       return NextResponse.redirect(new URL(dashboardPath, req.url));
     }
   }
