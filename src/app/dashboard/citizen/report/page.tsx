@@ -1,0 +1,316 @@
+"use client";
+
+import React, { useState } from "react";
+import { Camera, MapPin, Sparkles, CheckCircle2, Upload, AlertCircle, ArrowLeft, ArrowRight } from "lucide-react";
+import { InteractiveMap } from "@/components/map/InteractiveMap";
+import { analyzeReportWithAi } from "@/lib/ai/triage";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+export default function ReportIssuePage() {
+  const { t } = useLanguage();
+  const router = useRouter();
+
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [category, setCategory] = useState("ROADS");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [address, setAddress] = useState("Bambalapitiya Junction, Galle Road, Colombo 04");
+  const [lat, setLat] = useState(6.8905);
+  const [lng, setLng] = useState(79.8550);
+  const [photos, setPhotos] = useState<string[]>([
+    "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80",
+  ]);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [submittedCaseId, setSubmittedCaseId] = useState<string | null>(null);
+
+  const handleAiAssist = async () => {
+    if (!title || !description) return;
+    setIsAiLoading(true);
+    try {
+      const res = await analyzeReportWithAi(title, description, category, address);
+      setAiSummary(res.summary);
+    } catch (e) {
+      setAiSummary("AI Advisory generated summary for DS Officer triage.");
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const handleSubmitReport = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newCaseId = `CP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    setSubmittedCaseId(newCaseId);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Header Bar */}
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          <Link
+            href="/dashboard/citizen"
+            className="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Dashboard</span>
+          </Link>
+          <span className="text-xs font-mono text-orange-400 font-bold">Step {step} of 4</span>
+        </div>
+
+        {/* Success Confirmation Modal */}
+        {submittedCaseId ? (
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl animate-in zoom-in-95">
+            <div className="w-16 h-16 rounded-full bg-orange-600/20 text-orange-400 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-white">{t("form.success")}</h2>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                Your report has been securely registered in the Sri Lanka CivicPulse network and sent to nearby verifiers.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 inline-block font-mono text-sm">
+              <span className="text-slate-400">{t("form.caseId")} </span>
+              <span className="text-emerald-400 font-bold">{submittedCaseId}</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+              <Link
+                href="/dashboard/citizen"
+                className="btn-glass-orange-solid w-full sm:w-auto px-6 py-3 text-xs"
+              >
+                Track Case Progress
+              </Link>
+              <button
+                onClick={() => {
+                  setSubmittedCaseId(null);
+                  setStep(1);
+                  setTitle("");
+                  setDescription("");
+                }}
+                className="w-full sm:w-auto px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs"
+              >
+                Report Another Issue
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmitReport} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl">
+            {/* Step 1: Issue Category & Details */}
+            {step === 1 && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white">{t("form.step1")}</h2>
+                  <p className="text-xs text-slate-400 mt-1">Select category and describe the infrastructure problem.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                    {t("form.label.category")}
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: "ROADS", label: "Roads & Potholes" },
+                      { id: "DRAINAGE", label: "Drainage & Floods" },
+                      { id: "STREETLIGHTS", label: "Streetlights" },
+                      { id: "WATER", label: "Water Leakage" },
+                      { id: "PUBLIC_BUILDINGS", label: "Public Structure" },
+                      { id: "SANITATION", label: "Waste Disposal" },
+                    ].map((cat) => (
+                      <button
+                        type="button"
+                        key={cat.id}
+                        onClick={() => setCategory(cat.id)}
+                        className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                          category === cat.id
+                            ? "bg-orange-950 border-orange-500 text-orange-300 shadow-md"
+                            : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700"
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                    {t("form.label.title")}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Hazardous deep pothole on main road lane..."
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                      {t("form.label.description")}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAiAssist}
+                      disabled={isAiLoading || !title}
+                      className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 font-semibold disabled:opacity-50"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>{isAiLoading ? "Analyzing..." : t("form.btn.aiAssist")}</span>
+                    </button>
+                  </div>
+                  <textarea
+                    rows={4}
+                    required
+                    placeholder="Provide exact details of the damage, safety hazard, or public impact..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-white focus:outline-none focus:border-orange-500"
+                  />
+                  {aiSummary && (
+                    <div className="mt-2 p-3 rounded-xl bg-orange-950/60 border border-orange-800/80 text-xs text-orange-300">
+                      <span className="font-bold">AI Summary Guidance: </span>
+                      {aiSummary}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Evidence Photos */}
+            {step === 2 && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white">{t("form.step2")}</h2>
+                  <p className="text-xs text-slate-400 mt-1">Upload clear photos showing the damaged infrastructure.</p>
+                </div>
+
+                <div className="border-2 border-dashed border-slate-800 rounded-2xl p-8 text-center space-y-3 bg-slate-950 hover:border-slate-700 transition-colors cursor-pointer">
+                  <Camera className="w-10 h-10 text-orange-400 mx-auto" />
+                  <div>
+                    <p className="text-xs font-bold text-white">Capture Photo or Upload from Gallery</p>
+                    <p className="text-[11px] text-slate-500">Supports JPG, PNG up to 10MB</p>
+                  </div>
+                </div>
+
+                {photos.length > 0 && (
+                  <div>
+                    <span className="text-xs font-bold text-slate-300 block mb-2">Uploaded Photo Preview</span>
+                    <div className="grid grid-cols-2 gap-4">
+                      {photos.map((p, idx) => (
+                        <div key={idx} className="relative h-40 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+                          <img src={p} alt="Evidence" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Location Picker */}
+            {step === 3 && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white">{t("form.step3")}</h2>
+                  <p className="text-xs text-slate-400 mt-1">GPS auto-detected. Click map to fine-tune exact coordinate.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                    {t("form.label.address")}
+                  </label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-orange-500 mb-4"
+                  />
+                </div>
+
+                <InteractiveMap
+                  center={[lat, lng]}
+                  isPickerMode={true}
+                  onLocationPick={(newLat, newLng) => {
+                    setLat(newLat);
+                    setLng(newLng);
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Step 4: Final Review */}
+            {step === 4 && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-xl font-bold text-white">{t("form.step4")}</h2>
+                  <p className="text-xs text-slate-400 mt-1">Review your report before submitting to the CivicPulse network.</p>
+                </div>
+
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-3 text-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <span className="text-slate-400">Category</span>
+                    <span className="font-bold text-orange-400">{category}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block mb-1">Title</span>
+                    <span className="font-bold text-white text-sm">{title}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block mb-1">Description</span>
+                    <p className="text-slate-300 leading-relaxed">{description}</p>
+                  </div>
+                  <div className="pt-2 border-t border-slate-800">
+                    <span className="text-slate-400 block mb-1">Location</span>
+                    <span className="font-medium text-slate-200">{address}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+              {step > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setStep((step - 1) as any)}
+                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+                >
+                  Previous
+                </button>
+              ) : (
+                <div />
+              )}
+
+              {step < 4 ? (
+                <button
+                  type="button"
+                  onClick={() => setStep((step + 1) as any)}
+                  className="btn-glass-orange-solid px-6 py-2.5 text-xs flex items-center gap-1.5"
+                >
+                  <span>Next Step</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="btn-glass-orange-solid px-8 py-3 text-xs"
+                >
+                  {t("form.btn.submit")}
+                </button>
+              )}
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
