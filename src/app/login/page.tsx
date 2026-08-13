@@ -20,22 +20,24 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { useUser } from "@clerk/nextjs";
 import { UserRole } from "@/lib/auth/rbac";
 
 type AuthTab = "signin" | "signup";
 
 const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = [
   { value: "CITIZEN", label: "Citizen", description: "Report infrastructure issues in your community" },
-  { value: "COMMUNITY_VERIFIER", label: "Community Verifier", description: "Verify reports submitted by citizens nearby" },
+  { value: "VERIFIER", label: "Community Verifier", description: "Verify reports submitted by citizens nearby" },
   { value: "VOLUNTEER", label: "Field Volunteer", description: "Conduct physical inspections and collect evidence" },
   { value: "NGO", label: "NGO Partner", description: "Pledge support for high-priority civic projects" },
-  { value: "GOVT_AGENCY", label: "Government Agency", description: "Manage and resolve assigned infrastructure cases" },
+  { value: "AGENCY", label: "Government Agency", description: "Manage and resolve assigned infrastructure cases" },
   { value: "DS_OFFICER", label: "DS Officer", description: "Triage cases and coordinate agency assignments" },
 ];
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, register, isAuthenticated, currentRole } = useAuth();
+  const { isLoaded: isClerkLoaded, isSignedIn } = useUser();
   const { t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<AuthTab>("signin");
@@ -57,15 +59,19 @@ export default function LoginPage() {
   const [registerRole, setRegisterRole] = useState<UserRole>("CITIZEN");
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
-  // Redirect if already authenticated
+  // Redirect immediately once Clerk confirms a session exists — don't wait for
+  // the DB sync to finish, so the "You're already signed in" Clerk error can't
+  // happen from a stale form still being interactive.
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!isClerkLoaded) return;
+
+    if (isSignedIn && isAuthenticated) {
       const getDashPath = (role: string) => {
         switch (role) {
-          case "COMMUNITY_VERIFIER": return "/dashboard/verifier";
+          case "VERIFIER": return "/dashboard/verifier";
           case "VOLUNTEER": return "/dashboard/volunteer";
           case "NGO": return "/dashboard/ngo";
-          case "GOVT_AGENCY": return "/dashboard/agency";
+          case "AGENCY": return "/dashboard/agency";
           case "DS_OFFICER": return "/dashboard/ds-officer";
           case "ADMIN": return "/dashboard/admin";
           default: return "/dashboard/citizen";
@@ -73,7 +79,7 @@ export default function LoginPage() {
       };
       router.push(getDashPath(currentRole));
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isClerkLoaded, isSignedIn, isAuthenticated, currentRole, router]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,10 +133,41 @@ export default function LoginPage() {
       setError(result.error || "Registration failed. Please try again.");
     } else {
       setSuccess("Account created successfully! Redirecting...");
+      router.push("/welcome");
     }
   };
 
   const selectedRoleOption = ROLE_OPTIONS.find((r) => r.value === registerRole);
+
+  // While Clerk is confirming session state, show a spinner — but never get
+  // stuck if the DB sync fails; only wait on isSignedIn, not isAuthenticated.
+  if (!isClerkLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-orange-300 border-t-[#F97316] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (isSignedIn && !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="w-8 h-8 border-2 border-orange-300 border-t-[#F97316] rounded-full animate-spin" />
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
+          Confirming your session… if this takes more than a few seconds, there may be a
+          sync issue — check the terminal for a <code>/api/auth/sync</code> error.
+        </p>
+      </div>
+    );
+  }
+
+  if (isSignedIn && isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-orange-300 border-t-[#F97316] rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 py-12">
