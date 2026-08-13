@@ -1,0 +1,355 @@
+export type Language = "en" | "si" | "ta";
+
+export const translations: Record<Language, Record<string, string>> = {
+  en: {
+    // Brand & Taglines
+    "app.title": "CivicPulse LK",
+    "app.tagline": "Community-Verified Public Infrastructure Reporting for Sri Lanka",
+    "app.subtitle": "Transforming citizen complaints into trusted, verifiable, and actionable institutional cases across Sri Lanka.",
+    
+    // Navigation
+    "nav.home": "Home",
+    "nav.transparency": "Public Transparency",
+    "nav.reportIssue": "Report an Issue",
+    "nav.dashboard": "Dashboard",
+    "nav.switchRole": "Switch Role",
+    "nav.signIn": "Sign In",
+    "nav.signOut": "Sign Out",
+    "nav.onboarding": "Onboarding",
+
+    // Roles
+    "role.citizen": "Citizen",
+    "role.community_verifier": "Community Verifier",
+    "role.volunteer": "Field Volunteer",
+    "role.ngo": "NGO Partner",
+    "role.govt_agency": "Government Agency",
+    "role.ds_officer": "DS Officer",
+    "role.admin": "System Administrator",
+
+    // Case Statuses
+    "status.pending": "Pending Verification",
+    "status.under_verification": "Under Verification",
+    "status.verified": "Community Verified",
+    "status.assigned": "Assigned to Agency",
+    "status.in_progress": "Work In Progress",
+    "status.resolved": "Resolved & Published",
+    "status.disputed": "Disputed / Needs Info",
+    "status.rejected": "Rejected",
+    "status.withdrawn": "Withdrawn",
+
+    // Categories
+    "cat.roads": "Roads & Highways",
+    "cat.drainage": "Drainage & Flood Control",
+    "cat.streetlights": "Streetlights & Electricity",
+    "cat.water": "Water & Sanitation",
+    "cat.public_buildings": "Public Infrastructure",
+    "cat.sanitation": "Waste Management",
+    "cat.other": "Other Civic Issue",
+
+    // Landing Page
+    "hero.cta.report": "Report Infrastructure Problem",
+    "hero.cta.explore": "Explore Transparency Map",
+    "stats.reported": "Issues Reported",
+    "stats.verified": "Community Verified",
+    "stats.assigned": "Agencies Assigned",
+    "stats.resolved": "Resolved Cases",
+
+    // Workflow Stages
+    "workflow.step1.title": "1. Report",
+    "workflow.step1.desc": "Citizens submit photos, GPS location, and issue details.",
+    "workflow.step2.title": "2. Verify",
+    "workflow.step2.desc": "Nearby community members confirm or dispute the report.",
+    "workflow.step3.title": "3. Coordinate",
+    "workflow.step3.desc": "DS Office triages verified cases using AI priority scoring.",
+    "workflow.step4.title": "4. Resolve",
+    "workflow.step4.desc": "Assigned agencies repair issues and publish photographic proof.",
+
+    // Report Form
+    "form.title": "Report a Public Infrastructure Issue",
+    "form.step1": "Issue Details",
+    "form.step2": "Photos & Evidence",
+    "form.step3": "Location & Division",
+    "form.step4": "Review & Submit",
+    "form.label.category": "Select Category",
+    "form.label.title": "Brief Issue Title",
+    "form.label.description": "Detailed Description",
+    "form.label.address": "Street Address / Landmark",
+    "form.label.division": "Divisional Secretariat",
+    "form.label.photos": "Upload Photos (Camera / Gallery)",
+    "form.btn.aiAssist": "AI Assist Summary",
+    "form.btn.submit": "Submit Case Report",
+    "form.success": "Case Reported Successfully!",
+    "form.caseId": "Your Case ID:",
+
+    // Dashboard Headers
+    "dash.citizen.title": "Citizen Civic Portal",
+    "dash.verifier.title": "Community Verification Queue",
+    "dash.ds.title": "Divisional Secretariat Triage Console",
+    "dash.agency.title": "Government Agency Workstation",
+    "dash.volunteer.title": "Field Volunteer Verification Hub",
+    "dash.ngo.title": "NGO Civic Opportunity Board",
+    "dash.admin.title": "Platform Governance & Audit Console",
+
+    // Common Buttons & Actions
+    "btn.confirm": "Confirm Issue",
+    "btn.dispute": "Dispute Report",
+    "btn.assign": "Assign Agency",
+    "btn.updateStatus": "Update Progress",
+    "btn.pledge": "Pledge Support",
+    "btn.filter": "Apply Filters",
+    "btn.reset": "Reset",
+    "btn.viewDetails": "View Case Details",
+    "btn.close": "Close",
+
+    // Auth & Login System
+    "auth.subtitle": "Sign in to access your civic dashboard and track community reports",
+    "auth.signIn": "Sign In",
+    "auth.createAccount": "Create Account",
+    "auth.email": "Email Address",
+    "auth.password": "Password",
+    "auth.fullName": "Full Name",
+    "auth.confirmPassword": "Confirm Password",
+    "auth.selectRole": "Select Account Role",
+    "auth.signInBtn": "Sign In to Account",
+    "auth.signingIn": "Signing in...",
+    "auth.createAccountBtn": "Create Civic Account",
+    "auth.creatingAccount": "Creating account...",
+    "auth.backToHome": "Back to Home",
+    "auth.demoHintTitle": "Demo Quick Login",
+    "auth.demoHintDesc": "Register a new user or use any existing email (e.g. citizen.anusha@civicpulse.lk) with any password for demo access.",
+  },
+  si: {
+    // Brand & Taglines
+    "app.title": "සිවික්පල්ස් ශ්‍රී ලංකා",
+    "app.tagline": "ශ්‍රී ලංකාවේ ප්‍රජා-සත්‍යාපිත රාජ්‍ය යටිතල පහසුකම් වාර්තාකරණ පද්ධතිය",
+    "app.subtitle": "ජනතා පැමිණිලි විශ්වාසනීය, සත්‍යාපනය කළ හැකි ක්‍රියාකාරී රාජ්‍ය නඩුවලට පරිවර්තනය කිරීම.",
+    
+    // Navigation
+    "nav.home": "මුල් පිටුව",
+    "nav.transparency": "මහජන පාරදෘශ්‍යතාව",
+    "nav.reportIssue": "ගැටලුවක් වාර්තා කරන්න",
+    "nav.dashboard": "පාලක පුවරුව",
+    "nav.switchRole": "කාර්යභාරය වෙනස් කරන්න",
+    "nav.signIn": "ඇතුල් වන්න",
+    "nav.signOut": "ඉවත් වන්න",
+    "nav.onboarding": "පරිශීලක ලියාපදිංචිය",
+
+    // Roles
+    "role.citizen": "පුරවැසියා",
+    "role.community_verifier": "ප්‍රජා සත්‍යාපක",
+    "role.volunteer": "ක්ෂේත්‍ර ස්වේච්ඡාසේවක",
+    "role.ngo": "රාජ්‍ය නොවන සංවිධානය",
+    "role.govt_agency": "රාජ්‍ය ආයතනය",
+    "role.ds_officer": "ප්‍රාදේශීය ලේකම් නිලධාරී",
+    "role.admin": "පද්ධති පරිපාලක",
+
+    // Case Statuses
+    "status.pending": "සත්‍යාපනය අපේක්ෂාවෙන්",
+    "status.under_verification": "සත්‍යාපනය වෙමින් පවතී",
+    "status.verified": "ප්‍රජා සත්‍යාපිතයි",
+    "status.assigned": "ආයතනයට පවරා ඇත",
+    "status.in_progress": "වැඩ කටයුතු සිදුකෙරේ",
+    "status.resolved": "විසඳා ප්‍රකාශයට පත්කර ඇත",
+    "status.disputed": "තොරතුරු අවශ්‍යයි / අභියෝගිතයි",
+    "status.rejected": "ප්‍රතික්ෂේපිතයි",
+    "status.withdrawn": "ඉවත් කරගන්නා ලදී",
+
+    // Categories
+    "cat.roads": "මාර්ග සහ මහාමාර්ග",
+    "cat.drainage": "කානු පද්ධති සහ ගංවතුර",
+    "cat.streetlights": "විදුලි පහන් සහ විදුලිය",
+    "cat.water": "ජල සම්පාදනය සහ සනීපාරක්ෂාව",
+    "cat.public_buildings": "මහජන යටිතල පහසුකම්",
+    "cat.sanitation": "කඩිනම් අපද්‍රව්‍ය කළමනාකරණය",
+    "cat.other": "වෙනත් සිවිල් ගැටලු",
+
+    // Landing Page
+    "hero.cta.report": "ගැටලුවක් වාර්තා කරන්න",
+    "hero.cta.explore": "පාරදෘශ්‍ය සිතියම බලන්න",
+    "stats.reported": "වාර්තා වූ ගැටලු",
+    "stats.verified": "සත්‍යාපිත ගැටලු",
+    "stats.assigned": "පවරන ලද ආයතන",
+    "stats.resolved": "විසඳූ නඩු",
+
+    // Workflow Stages
+    "workflow.step1.title": "1. වාර්තා කරන්න",
+    "workflow.step1.desc": "ඡායාරූප, GPS ස්ථානය සහ විස්තර ලබා දෙන්න.",
+    "workflow.step2.title": "2. සත්‍යාපනය",
+    "workflow.step2.desc": "ප්‍රදේශයේ ප්‍රජාව විසින් තහවුරු කරනු ලබයි.",
+    "workflow.step3.title": "3. සම්බන්ධීකරණය",
+    "workflow.step3.desc": "ප්‍රාදේශීය ලේකම් කාර්යාලය මගින් ප්‍රමුඛතාවය දෙයි.",
+    "workflow.step4.title": "4. විසඳීම",
+    "workflow.step4.desc": "අදාළ ආයතනය විසඳා සාක්ෂි ප්‍රකාශයට පත් කරයි.",
+
+    // Report Form
+    "form.title": "රාජ්‍ය යටිතල පහසුකම් ගැටලුවක් වාර්තා කරන්න",
+    "form.step1": "විස්තර",
+    "form.step2": "ඡායාරූප",
+    "form.step3": "ස්ථානය",
+    "form.step4": "තහවුරු කිරීම",
+    "form.label.category": "වර්ගය තෝරන්න",
+    "form.label.title": "කෙටි මාතෘකාව",
+    "form.label.description": "සම්පූර්ණ විස්තරය",
+    "form.label.address": "ලිපිනය / ආසන්න ස්ථානය",
+    "form.label.division": "ප්‍රාදේශීය ලේකම් කොට්ඨාසය",
+    "form.label.photos": "ඡායාරූප එක් කරන්න",
+    "form.btn.aiAssist": "AI සහාය ලබාගන්න",
+    "form.btn.submit": "වාර්තාව යොමු කරන්න",
+    "form.success": "වාර්තාව සාර්ථකව යොමු කරන ලදී!",
+    "form.caseId": "ඔබේ නඩු අංකය:",
+
+    // Dashboard Headers
+    "dash.citizen.title": "පුරවැසි පාලක පුවරුව",
+    "dash.verifier.title": "ප්‍රජා සත්‍යාපන පෝලිම",
+    "dash.ds.title": "ප්‍රාදේශීය ලේකම් මෙහෙයුම් කොන්සෝලය",
+    "dash.agency.title": "රාජ්‍ය ආයතන වැඩපොළ",
+    "dash.volunteer.title": "ස්වේච්ඡාසේවක පරීක්ෂණ මධ්‍යස්ථානය",
+    "dash.ngo.title": "රාජ්‍ය නොවන සංවිධාන පාලක පුවරුව",
+    "dash.admin.title": "පද්ධති පාලන කොන්සෝලය",
+
+    // Common Buttons & Actions
+    "btn.confirm": "තහවුරු කරන්න",
+    "btn.dispute": "අභියෝග කරන්න",
+    "btn.assign": "ආයතනයට පවරන්න",
+    "btn.updateStatus": "තත්ත්වය යාවත්කාලීන කරන්න",
+    "btn.pledge": "සහාය දීමට පොරොන්දු වන්න",
+    "btn.filter": "පෙරහන් යොදන්න",
+    "btn.reset": "නැවත සකසන්න",
+    "btn.viewDetails": "විස්තර බලන්න",
+    "btn.close": "වසා දමන්න",
+
+    // Auth & Login System
+    "auth.subtitle": "ඔබගේ පාලක පුවරුවට ඇතුළු වී ප්‍රජා වාර්තා නිරීක්ෂණය කරන්න",
+    "auth.signIn": "ඇතුල් වන්න",
+    "auth.createAccount": "ගිණුමක් සාදන්න",
+    "auth.email": "විද්‍යුත් තැපෑල",
+    "auth.password": "මුරපදය",
+    "auth.fullName": "සම්පූර්ණ නම",
+    "auth.confirmPassword": "මුරපදය තහවුරු කරන්න",
+    "auth.selectRole": "ගිණුම් කාර්යභාරය තෝරන්න",
+    "auth.signInBtn": "ඇතුල් වන්න",
+    "auth.signingIn": "ඇතුල් වෙමින්...",
+    "auth.createAccountBtn": "ගිණුම සාදන්න",
+    "auth.creatingAccount": "ගිණුම සෑදෙමින්...",
+    "auth.backToHome": "මුල් පිටුවට",
+    "auth.demoHintTitle": "ආදර්ශ ඇතුළුවීම",
+    "auth.demoHintDesc": "නව ගිණුමක් සාදන්න හෝ පවතින විද්‍යුත් තැපෑලක් භාවිත කරන්න (උදා: citizen.anusha@civicpulse.lk).",
+  },
+  ta: {
+    // Brand & Taglines
+    "app.title": "சிவிக்பல்ஸ் இலங்கை",
+    "app.tagline": "இலங்கைக்கான சமூகம்-உறுதிப்படுத்திய பொது உள்கட்டமைப்பு அறிக்கை தளம்",
+    "app.subtitle": "குடிமக்களின் புகார்களை நம்பகமான மற்றும் நடவடிக்கை எடுக்கக்கூடிய அரசு வழக்குகளாக மாற்றுகிறது.",
+    
+    // Navigation
+    "nav.home": "முகப்பு",
+    "nav.transparency": "பொது வெளிப்படைத்தன்மை",
+    "nav.reportIssue": "சிக்கலை அறிவிக்கவும்",
+    "nav.dashboard": "டாஷ்போர்டு",
+    "nav.switchRole": "பாத்திரத்தை மாற்றவும்",
+    "nav.signIn": "உள்நுழைக",
+    "nav.signOut": "வெளியேறு",
+    "nav.onboarding": "பதிவு முறைமை",
+
+    // Roles
+    "role.citizen": "குடிமகன்",
+    "role.community_verifier": "சமூக சரிபார்ப்பாளர்",
+    "role.volunteer": "கள தன்னார்வலர்",
+    "role.ngo": "அரசார்பற்ற நிறுவனம்",
+    "role.govt_agency": "அரசு முகமை",
+    "role.ds_officer": "பிரதேச செயலக அதிகாரி",
+    "role.admin": "முறைமை நிர்வாகி",
+
+    // Case Statuses
+    "status.pending": "சரிபார்ப்பு நிலுவையில் உள்ளது",
+    "status.under_verification": "சரிபார்க்கப்படுகிறது",
+    "status.verified": "சமூகத்தால் உறுதிப்படுத்தப்பட்டது",
+    "status.assigned": "முகமைக்கு ஒதுக்கப்பட்டுள்ளது",
+    "status.in_progress": "வேலை நடைபெறுகிறது",
+    "status.resolved": "தீர்வு காணப்பட்டது",
+    "status.disputed": "சவாலுக்குட்பட்டது",
+    "status.rejected": "நிராகரிக்கப்பட்டது",
+    "status.withdrawn": "திரும்பப் பெறப்பட்டது",
+
+    // Categories
+    "cat.roads": "சாலைகள் மற்றும் நெடுஞ்சாலைகள்",
+    "cat.drainage": "வடிகால் மற்றும் வெள்ளக் கட்டுப்பாடு",
+    "cat.streetlights": "தெரு விளக்குகள்",
+    "cat.water": "குடிநீர் வழங்கல்",
+    "cat.public_buildings": "பொதுக் கட்டிடங்கள்",
+    "cat.sanitation": "கழிவு மேலாண்மை",
+    "cat.other": "பிற குடிமை சிக்கல்கள்",
+
+    // Landing Page
+    "hero.cta.report": "சிக்கலைப் புகாரளிக்கவும்",
+    "hero.cta.explore": "வெளிப்படைத்தன்மை வரைபடம்",
+    "stats.reported": "அறிவிக்கப்பட்ட சிக்கல்கள்",
+    "stats.verified": "உறுதிப்படுத்தப்பட்டவை",
+    "stats.assigned": "ஒதுக்கப்பட்ட முகமைகள்",
+    "stats.resolved": "தீர்வு காணப்பட்ட வழக்குகள்",
+
+    // Workflow Stages
+    "workflow.step1.title": "1. புகாரளிக்கவும்",
+    "workflow.step1.desc": "புகைப்படங்கள், GPS இருப்பிடம் மற்றும் விவரங்களை அளிக்கவும்.",
+    "workflow.step2.title": "2. சரிபார்க்கவும்",
+    "workflow.step2.desc": "அருகிலுள்ள சமூக உறுப்பினர்கள் உறுதிப்படுத்துகிறார்கள்.",
+    "workflow.step3.title": "3. ஒருங்கிணைக்கவும்",
+    "workflow.step3.desc": "பிரதேச செயலகம் முன்னுரிமை அளிக்கிறது.",
+    "workflow.step4.title": "4. தீர்வுகாணவும்",
+    "workflow.step4.desc": "ஒதுக்கப்பட்ட முகமை சீரமைத்து ஆதாரங்களை வெளியிடுகிறது.",
+
+    // Report Form
+    "form.title": "பொது உள்கட்டமைப்பு சிக்கலை அறிவிக்கவும்",
+    "form.step1": "விவரங்கள்",
+    "form.step2": "புகைப்படங்கள்",
+    "form.step3": "இருப்பிடம்",
+    "form.step4": "உறுதிப்படுத்தல்",
+    "form.label.category": "வகையைத் தேர்ந்தெடுக்கவும்",
+    "form.label.title": "தலைப்பு",
+    "form.label.description": "விவரமான விளக்கம்",
+    "form.label.address": "முகவரி",
+    "form.label.division": "பிரதேச செயலகம்",
+    "form.label.photos": "புகைப்படங்களைப் பதிவேற்றவும்",
+    "form.btn.aiAssist": "AI உதவி பெறவும்",
+    "form.btn.submit": "அறிக்கையைச் சமர்ப்பிக்கவும்",
+    "form.success": "அறிக்கை வெற்றிகரமாகச் சமர்ப்பிக்கப்பட்டது!",
+    "form.caseId": "உங்கள் வழக்கு எண்:",
+
+    // Dashboard Headers
+    "dash.citizen.title": "குடிமகன் டாஷ்போர்டு",
+    "dash.verifier.title": "சமூக சரிபார்ப்பு வரிசை",
+    "dash.ds.title": "பிரதேச செயலக அதிகாரி கன்சோல்",
+    "dash.agency.title": "அரசு முகமை பணிநிலையம்",
+    "dash.volunteer.title": "தன்னார்வலர் சரிபார்ப்பு மையம்",
+    "dash.ngo.title": "அரசார்பற்ற நிறுவன வாய்ப்பு பலகை",
+    "dash.admin.title": "முறைமை ஆளுகை கன்சோல்",
+
+    // Common Buttons & Actions
+    "btn.confirm": "உறுதிப்படுத்தவும்",
+    "btn.dispute": "சவாலிடவும்",
+    "btn.assign": "முகமையை ஒதுக்கவும்",
+    "btn.updateStatus": "நிலையைப் புதுப்பிக்கவும்",
+    "btn.pledge": "ஆதரவு அளிக்கவும்",
+    "btn.filter": "வடிகட்டிகளைப் பயன்படுத்தவும்",
+    "btn.reset": "மீட்டமைக்கவும்",
+    "btn.viewDetails": "விவரங்களைப் பார்க்கவும்",
+    "btn.close": "மூடவும்",
+
+    // Auth & Login System
+    "auth.subtitle": "டாஷ்போர்டை அணுகி அறிக்கைகளைக் கண்காணிக்க உள்நுழைக",
+    "auth.signIn": "உள்நுழைக",
+    "auth.createAccount": "கணக்கை உருவாக்கு",
+    "auth.email": "மின்னஞ்சல் முகவரி",
+    "auth.password": "கடவுச்சொல்",
+    "auth.fullName": "முழு பெயர்",
+    "auth.confirmPassword": "கடவுச்சொல்லை உறுதிப்படுத்து",
+    "auth.selectRole": "கணக்கு பாத்திரத்தைத் தேர்ந்தெடுக்கவும்",
+    "auth.signInBtn": "உள்நுழைக",
+    "auth.signingIn": "உள்நுழைகிறது...",
+    "auth.createAccountBtn": "கணக்கை உருவாக்கு",
+    "auth.creatingAccount": "உருவாக்கப்படுகிறது...",
+    "auth.backToHome": "முகப்பிற்குச் செல்",
+    "auth.demoHintTitle": "மாதிரி உள்நுழைவு",
+    "auth.demoHintDesc": "புதிய கணக்கை உருவாக்கவும் அல்லது மின்னஞ்சலைப் பயன்படுத்தவும் (எ.கா. citizen.anusha@civicpulse.lk).",
+  },
+};
