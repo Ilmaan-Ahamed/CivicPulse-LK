@@ -5,49 +5,75 @@ import type { Role } from "@prisma/client";
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-    console.log("SYNC Auth Debug:", { userId });
+    let body: any = {};
+    try {
+      body = await request.json();
+    } catch {
+      // Body may be empty
+    }
 
-    if (!userId) {
+    const { userId: authUserId } = await auth();
+    const effectiveClerkId = authUserId || body?.clerkId;
+    console.log("SYNC Auth Debug:", { authUserId, bodyClerkId: body?.clerkId, effectiveClerkId });
+
+    if (!effectiveClerkId) {
       return NextResponse.json({ success: false, error: "Not signed in" }, { status: 401 });
     }
 
-    // Optional body: { role: "CITIZEN" } — only used on first-time sync (registration)
-    let requestedRole: Role | undefined;
-    try {
-      const body = await request.json();
-      requestedRole = body?.role;
-    } catch {
-      // no body sent (e.g. plain login sync) — that's fine
-    }
+    const requestedRole: Role | undefined = body?.role;
 
     let user = await db.user.findUnique({
-      where: { clerkId: userId },
+      where: { clerkId: effectiveClerkId },
     });
 
     if (!user) {
-      const clerkUser = await currentUser();
+      let email = body?.email;
+      let firstName = body?.firstName || null;
+      let lastName = body?.lastName || null;
+      let avatarUrl = body?.imageUrl || null;
 
-      if (!clerkUser) {
-        return NextResponse.json({ success: false, error: "Clerk user not found" }, { status: 404 });
+      if (!email && authUserId) {
+        const clerkUser = await currentUser();
+        if (clerkUser) {
+          email = clerkUser.emailAddresses[0]?.emailAddress;
+          firstName = clerkUser.firstName || firstName;
+          lastName = clerkUser.lastName || lastName;
+          avatarUrl = clerkUser.imageUrl || avatarUrl;
+        }
       }
-
-      const email = clerkUser.emailAddresses[0]?.emailAddress;
 
       if (!email) {
-        return NextResponse.json({ success: false, error: "No email on Clerk account" }, { status: 400 });
+        return NextResponse.json({ success: false, error: "No email provided for user sync" }, { status: 400 });
       }
 
-      user = await db.user.create({
-        data: {
-          clerkId: userId,
-          email,
-          firstName: clerkUser.firstName || null,
-          lastName: clerkUser.lastName || null,
-          avatarUrl: clerkUser.imageUrl || null,
-          role: requestedRole || "CITIZEN",
-        },
+      // Check if user exists by email (to avoid unique constraint issues)
+      const existingByEmail = await db.user.findUnique({
+        where: { email },
       });
+
+      if (existingByEmail) {
+        user = await db.user.update({
+          where: { id: existingByEmail.id },
+          data: {
+            clerkId: effectiveClerkId,
+            firstName: firstName || existingByEmail.firstName,
+            lastName: lastName || existingByEmail.lastName,
+            avatarUrl: avatarUrl || existingByEmail.avatarUrl,
+            role: requestedRole || existingByEmail.role,
+          },
+        });
+      } else {
+        user = await db.user.create({
+          data: {
+            clerkId: effectiveClerkId,
+            email,
+            firstName,
+            lastName,
+            avatarUrl,
+            role: requestedRole || "CITIZEN",
+          },
+        });
+      }
     }
 
     return NextResponse.json({
@@ -68,4 +94,4 @@ export async function POST(request: Request) {
     console.error("Auth sync error:", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
-}
+}

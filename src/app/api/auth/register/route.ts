@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-<<<<<<< HEAD
 import { db } from "@/lib/db";
 import { UserRole } from "@/lib/auth/rbac";
 import { Role, Language } from "@prisma/client";
-=======
-import  db  from "@/lib/db";
->>>>>>> a253dab1c1f8db182681f8148dd1ce1fe67cda92
 
 export async function POST(request: NextRequest) {
   try {
