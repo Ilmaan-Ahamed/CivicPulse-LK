@@ -67,29 +67,14 @@ export default function LoginPage() {
   const [registerRole, setRegisterRole] = useState<UserRole>("CITIZEN");
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
-  // Redirect immediately once Clerk confirms a session exists — don't wait for
-  // the DB sync to finish, so the "You're already signed in" Clerk error can't
-  // happen from a stale form still being interactive.
+  // Redirect to Role Selection page as soon as Clerk confirms user is signed in
   useEffect(() => {
     if (!isClerkLoaded) return;
 
-    if (isSignedIn && isAuthenticated) {
-      const getDashPath = (role: string) => {
-        switch (role) {
-          case "COMMUNITY_VERIFIER":
-          case "VERIFIER": return "/dashboard/verifier";
-          case "VOLUNTEER": return "/dashboard/volunteer";
-          case "NGO": return "/dashboard/ngo";
-          case "GOVT_AGENCY":
-          case "AGENCY": return "/dashboard/agency";
-          case "DS_OFFICER": return "/dashboard/ds-officer";
-          case "ADMIN": return "/dashboard/admin";
-          default: return "/dashboard/citizen";
-        }
-      };
-      router.push(getDashPath(currentRole));
+    if (isSignedIn) {
+      router.push("/select-role");
     }
-  }, [isClerkLoaded, isSignedIn, isAuthenticated, currentRole, router]);
+  }, [isClerkLoaded, isSignedIn, router]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,6 +99,8 @@ export default function LoginPage() {
 
     if (!result.success) {
       setError(result.error || "Login failed. Please check your credentials.");
+    } else {
+      router.push("/select-role");
     }
   };
 
@@ -132,8 +119,9 @@ export default function LoginPage() {
 
     if (!result.success) {
       setError(result.error || "Verification failed. Please try again.");
+    } else {
+      router.push("/select-role");
     }
-    // On success, the Clerk session fires → useEffect redirects automatically
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -168,15 +156,14 @@ export default function LoginPage() {
     if (!result.success) {
       setError(result.error || "Registration failed. Please try again.");
     } else {
-      setSuccess("Account created successfully! Redirecting...");
-      router.push("/welcome");
+      setSuccess("Account created successfully! Redirecting to Role Selection...");
+      router.push("/select-role");
     }
   };
 
   const selectedRoleOption = ROLE_OPTIONS.find((r) => r.value === registerRole);
 
-  // While Clerk is confirming session state, show a spinner — but never get
-  // stuck if the DB sync fails; only wait on isSignedIn, not isAuthenticated.
+  // While Clerk is loading, show loading spinner
   if (!isClerkLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -185,21 +172,14 @@ export default function LoginPage() {
     );
   }
 
-  if (isSignedIn && !isAuthenticated) {
+  // If already signed in, show redirecting state and redirect
+  if (isSignedIn) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center">
         <div className="w-8 h-8 border-2 border-orange-300 border-t-[#F97316] rounded-full animate-spin" />
-        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
-          Confirming your session…
+        <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+          Redirecting to Role Selection…
         </p>
-      </div>
-    );
-  }
-
-  if (isSignedIn && isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-orange-300 border-t-[#F97316] rounded-full animate-spin" />
       </div>
     );
   }

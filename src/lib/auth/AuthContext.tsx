@@ -200,7 +200,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAuthenticated(true);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
             localStorage.setItem(ROLE_KEY, dbUser.role);
+          } else {
+            setIsAuthenticated(true);
           }
+          setIsLoading(false);
           return { success: true };
 
         } else if (signIn.status === "needs_client_trust") {
@@ -311,7 +314,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAuthenticated(true);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
             localStorage.setItem(ROLE_KEY, dbUser.role);
+          } else {
+            setIsAuthenticated(true);
           }
+          setIsLoading(false);
           return { success: true };
         }
 
@@ -373,8 +379,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAuthenticated(true);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
             localStorage.setItem(ROLE_KEY, dbUser.role);
+          } else {
+            setIsAuthenticated(true);
           }
-
+          setIsLoading(false);
           return { success: true };
         } else if (signUp.status === "missing_requirements") {
           return {
