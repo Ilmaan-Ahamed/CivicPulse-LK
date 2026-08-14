@@ -1,5 +1,4 @@
 import React from "react";
-import { CaseStatus } from "@prisma/client";
 import {
   Clock,
   ShieldCheck,
@@ -13,7 +12,7 @@ import {
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 interface StatusBadgeProps {
-  status: CaseStatus | string;
+  status: string;
   size?: "sm" | "md" | "lg";
 }
 

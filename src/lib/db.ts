@@ -1,7 +1,10 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { Pool } from "pg";
 
-const adapter = new PrismaBetterSqlite3({ url: "file:dev.db" });
+const connectionString = process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/civicpulse?schema=public";
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

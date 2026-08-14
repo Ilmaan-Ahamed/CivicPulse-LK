@@ -4,21 +4,17 @@ import { db } from "@/lib/db";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const { email } = body;
 
-    if (!email || !password) {
+    if (!email) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Email is required" },
         { status: 400 }
       );
     }
 
-    // Find user by email
     const user = await db.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-      include: {
-        dsDivision: true,
-      },
+      where: { email: String(email).toLowerCase().trim() },
     });
 
     if (!user) {
@@ -28,27 +24,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Demo-grade password check (simple comparison, NOT production-secure)
-    if (user.passwordHash !== password) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
-    }
-
-    // Return user profile (exclude passwordHash)
     return NextResponse.json({
       success: true,
       user: {
         id: user.id,
-        name: user.name,
+        name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
         email: user.email,
         role: user.role,
         trustScore: user.trustScore,
-        organization: user.organization,
-        dsDivisionCode: user.dsDivision?.code || "",
-        dsDivisionName: user.dsDivision?.nameEn || "",
-        preferredLanguage: user.preferredLanguage,
+        preferredLanguage: user.preferredLang,
         avatarUrl: user.avatarUrl,
       },
     });

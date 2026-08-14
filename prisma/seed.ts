@@ -1,25 +1,25 @@
-// prisma/seed.ts
+﻿// prisma/seed.ts
 // This script seeds the CivicPulse LK database with initial data for development and testing purposes.
 // It creates users, agencies, reports, verifications, and photos in a specific order to maintain referential integrity.
 // Note: This script is intended for development and testing only. Do not run in production environments.
 
 import { Role, Language, Category, ReportStatus, Priority, VerificationStatus, AssignmentStatus, InspectionResult } from '@prisma/client';
-import prisma from '../src/lib/db';
+import { db } from '../src/lib/db';
 
 async function main() {
   console.log('Seeding CivicPulse LK database...');
 
   // Clean existing data in reverse-dependency order
-  await prisma.auditLog.deleteMany();
-  await prisma.notification.deleteMany();
-  await prisma.statusHistory.deleteMany();
-  await prisma.fieldInspection.deleteMany();
-  await prisma.photo.deleteMany();
-  await prisma.verification.deleteMany();
-  await prisma.assignment.deleteMany();
-  await prisma.report.deleteMany();
-  await prisma.agency.deleteMany();
-  await prisma.user.deleteMany();
+  await db.auditLog.deleteMany();
+  await db.notification.deleteMany();
+  await db.statusHistory.deleteMany();
+  await db.fieldInspection.deleteMany();
+  await db.photo.deleteMany();
+  await db.verification.deleteMany();
+  await db.assignment.deleteMany();
+  await db.report.deleteMany();
+  await db.agency.deleteMany();
+  await db.user.deleteMany();
 
   // ---------------- 1. USERS (20 records - all 7 Role values covered) ----------------
   const userSeed = [
@@ -47,7 +47,7 @@ async function main() {
 
   const users = [];
   for (const u of userSeed) {
-    const created = await prisma.user.create({ data: u });
+    const created = await db.user.create({ data: u });
     users.push(created);
   }
 
@@ -84,7 +84,7 @@ async function main() {
 
   const agencies = [];
   for (const a of agencySeed) {
-    const created = await prisma.agency.create({ data: a });
+    const created = await db.agency.create({ data: a });
     agencies.push(created);
   }
 
@@ -115,12 +115,12 @@ async function main() {
   const reports = [];
   for (const r of reportSeed) {
     const { citizenIdx, ...data } = r;
-    const created = await prisma.report.create({ data: { ...data, citizenId: citizens[citizenIdx % citizens.length].id } });
+    const created = await db.report.create({ data: { ...data, citizenId: citizens[citizenIdx % citizens.length].id } });
     reports.push(created);
   }
 
   // Mark report #20 (index 19) as a duplicate of report #6 (index 5), matching the Trinco Road note above
-  await prisma.report.update({ where: { id: reports[19].id }, data: { duplicateOfId: reports[5].id } });
+  await db.report.update({ where: { id: reports[19].id }, data: { duplicateOfId: reports[5].id } });
 
   // ---------------- 4. VERIFICATIONS (20 records) ----------------
   const verificationSeed = [
@@ -152,7 +152,7 @@ async function main() {
     const key = `${v.reportIdx}-${v.verifierIdx}`;
     if (usedPairs.has(key)) continue; // enforce @@unique([reportId, verifierId])
     usedPairs.add(key);
-    const created = await prisma.verification.create({
+    const created = await db.verification.create({
       data: {
         reportId: reports[v.reportIdx].id,
         verifierId: verifiers[v.verifierIdx].id,
@@ -188,7 +188,7 @@ async function main() {
   ];
 
   for (const p of photoSeed) {
-    await prisma.photo.create({
+    await db.photo.create({
       data: { reportId: reports[p.reportIdx].id, caption: p.caption, key: p.key, url: p.url },
     });
   }
@@ -219,7 +219,7 @@ async function main() {
   for (const a of assignmentSeed) {
     const dsOfficer = dsOfficers[a.reportIdx % dsOfficers.length];
     const agent = fieldAgents[a.agentIdx % fieldAgents.length];
-    const created = await prisma.assignment.create({
+    const created = await db.assignment.create({
       data: {
         reportId: reports[a.reportIdx].id,
         dsOfficerId: dsOfficer.id,
@@ -257,7 +257,7 @@ async function main() {
   for (const ins of inspectionSeed) {
     const assignment = assignments[ins.assignmentIdx % assignments.length];
     const inspector = fieldAgents[ins.assignmentIdx % fieldAgents.length];
-    await prisma.fieldInspection.create({
+    await db.fieldInspection.create({
       data: {
         assignmentId: assignment.id,
         inspectorId: inspector.id,
@@ -294,7 +294,7 @@ async function main() {
   ];
 
   for (const [i, sh] of statusHistorySeed.entries()) {
-    await prisma.statusHistory.create({
+    await db.statusHistory.create({
       data: {
         reportId: reports[sh.reportIdx].id,
         fromStatus: sh.fromStatus,
@@ -326,7 +326,7 @@ async function main() {
   ];
 
   for (const n of notificationSeed) {
-    await prisma.notification.create({
+    await db.notification.create({
       data: {
         userId: users[n.userIdx].id,
         title: n.title,
@@ -365,7 +365,7 @@ async function main() {
     else if (log.entity === 'User') entityId = users[log.entityRefIdx % users.length].id;
     else if (log.entity === 'Agency') entityId = agencies[log.entityRefIdx % agencies.length].id;
 
-    await prisma.auditLog.create({
+    await db.auditLog.create({
       data: {
         userId: users[log.userIdx].id,
         action: log.action,
@@ -395,5 +395,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    await db.$disconnect();
   });

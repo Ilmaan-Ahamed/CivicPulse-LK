@@ -1,21 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Language, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password, role, dsDivisionId } = body;
+    const { name, email, role, firstName, lastName, clerkId } = body;
 
-    if (!name || !email || !password) {
+    const finalEmail = String(email || "").toLowerCase().trim();
+    const fullName = String(name || "").trim();
+    const resolvedFirstName = String(firstName || fullName.split(" ")[0] || "").trim();
+    const resolvedLastName = String(lastName || fullName.split(" ").slice(1).join(" ") || "").trim();
+
+    if (!finalEmail || (!resolvedFirstName && !resolvedLastName && !fullName)) {
       return NextResponse.json(
-        { error: "Name, email, and password are required" },
+        { error: "Name and email are required" },
         { status: 400 }
       );
     }
 
-    // Check if email already exists
     const existingUser = await db.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: finalEmail },
     });
 
     if (existingUser) {
@@ -25,37 +30,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate role
-    const validRoles = [
-      "CITIZEN",
-      "COMMUNITY_VERIFIER",
-      "VOLUNTEER",
-      "NGO",
-      "GOVT_AGENCY",
-      "DS_OFFICER",
-      "ADMIN",
-    ];
-    const userRole = validRoles.includes(role) ? role : "CITIZEN";
+    const validRoles = Object.values(Role);
+    const userRole = validRoles.includes(role as Role) ? (role as Role) : Role.CITIZEN;
 
-    // Find a default DS division if none provided
-    let divisionId = dsDivisionId;
-    if (!divisionId) {
-      const defaultDivision = await db.dsDivision.findFirst();
-      divisionId = defaultDivision?.id;
-    }
-
-    // Create user (demo-grade: storing password as plain text)
     const user = await db.user.create({
       data: {
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        passwordHash: password,
+        clerkId: String(clerkId || `local_${Date.now()}`),
+        email: finalEmail,
+        firstName: resolvedFirstName || fullName,
+        lastName: resolvedLastName || null,
         role: userRole,
-        dsDivisionId: divisionId || undefined,
-        preferredLanguage: "en",
-      },
-      include: {
-        dsDivision: true,
+        preferredLang: Language.EN,
       },
     });
 
@@ -63,14 +48,11 @@ export async function POST(request: NextRequest) {
       success: true,
       user: {
         id: user.id,
-        name: user.name,
+        name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
         email: user.email,
         role: user.role,
         trustScore: user.trustScore,
-        organization: user.organization,
-        dsDivisionCode: user.dsDivision?.code || "",
-        dsDivisionName: user.dsDivision?.nameEn || "",
-        preferredLanguage: user.preferredLanguage,
+        preferredLanguage: user.preferredLang,
         avatarUrl: user.avatarUrl,
       },
     });

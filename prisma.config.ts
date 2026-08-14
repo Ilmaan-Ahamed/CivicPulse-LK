@@ -1,6 +1,6 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import path from "node:path";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 import { normalizeDatabaseUrl } from "./src/lib/database-url";
 
 export default defineConfig({
@@ -10,6 +10,6 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: normalizeDatabaseUrl(env("DATABASE_URL")),
+    url: normalizeDatabaseUrl(process.env.DATABASE_URL),
   },
 });
