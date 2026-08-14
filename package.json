@@ -12,6 +12,7 @@
     "@clerk/nextjs": "^7.6.1",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.5.7",
+    "@prisma/adapter-better-sqlite3": "^7.9.1",
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
     "@types/pg": "^8.20.0",
