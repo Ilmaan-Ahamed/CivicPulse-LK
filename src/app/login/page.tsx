@@ -57,23 +57,12 @@ export default function LoginPage() {
   const [registerRole, setRegisterRole] = useState<UserRole>("CITIZEN");
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
-  // Redirect if already authenticated
+  // Redirect to Role Selection page if authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const getDashPath = (role: string) => {
-        switch (role) {
-          case "COMMUNITY_VERIFIER": return "/dashboard/verifier";
-          case "VOLUNTEER": return "/dashboard/volunteer";
-          case "NGO": return "/dashboard/ngo";
-          case "GOVT_AGENCY": return "/dashboard/agency";
-          case "DS_OFFICER": return "/dashboard/ds-officer";
-          case "ADMIN": return "/dashboard/admin";
-          default: return "/dashboard/citizen";
-        }
-      };
-      router.push(getDashPath(currentRole));
+      router.push("/select-role");
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isAuthenticated, router]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

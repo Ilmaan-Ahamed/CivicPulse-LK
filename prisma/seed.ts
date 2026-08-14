@@ -4,7 +4,7 @@
 // Note: This script is intended for development and testing only. Do not run in production environments.
 
 import { Role, Language, Category, ReportStatus, Priority, VerificationStatus, AssignmentStatus, InspectionResult } from '@prisma/client';
-import prisma from '../src/lib/db';
+import { db as prisma } from '../src/lib/db';
 
 async function main() {
   console.log('Seeding CivicPulse LK database...');
