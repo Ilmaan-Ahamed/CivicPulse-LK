@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/lib/theme/ThemeContext";
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
 import { RoleSwitcherModal } from "@/components/shared/RoleSwitcherModal";
+import { ClerkProvider, Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,6 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
+  <ClerkProvider>
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
@@ -47,5 +50,7 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
+  </ClerkProvider>
+
   );
 }

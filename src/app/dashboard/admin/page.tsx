@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ShieldAlert, Users, Settings, FileText, Search, CheckCircle2, XCircle, ShieldCheck, Lock, Sparkles } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { RoleBadge } from "@/components/ui/RoleBadge";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -34,7 +34,7 @@ export default function AdminConsole() {
   const [verificationThreshold, setVerificationThreshold] = useState("3");
   const [autoAiEnabled, setAutoAiEnabled] = useState(true);
 
-  const [auditLogs, setAuditLogs] = useState([
+  const [auditLogs] = useState([
     { id: "log-1", user: "K. Perera (DS Officer)", action: "CASE_ASSIGNED", entity: "Report #CP-2026-1043", ip: "127.0.0.1", time: "Aug 12, 2026 10:14 AM" },
     { id: "log-2", user: "Nimal Silva (Verifier)", action: "REPORT_VERIFIED", entity: "Report #CP-2026-1042", ip: "127.0.0.1", time: "Aug 11, 2026 04:30 PM" },
     { id: "log-3", user: "Anusha Fernando (Citizen)", action: "REPORT_SUBMITTED", entity: "Report #CP-2026-1042", ip: "127.0.0.1", time: "Aug 10, 2026 02:15 PM" },
@@ -60,7 +60,7 @@ export default function AdminConsole() {
             <h1 className="text-2xl page-title dark:text-white">{t("dash.admin.title")}</h1>
           </div>
           <p className="text-xs body-text dark:text-[#B0B0B0]">
-            CivicPulse LK System Administration • Security, RBAC Enforcement & Immutable Audit Logs
+            Signed in as {currentUser.name} • CivicPulse LK System Administration • Security, RBAC Enforcement & Immutable Audit Logs
           </p>
         </div>
 
@@ -134,7 +134,7 @@ export default function AdminConsole() {
                       <td className="py-3 font-bold card-heading dark:text-white">{u.name}</td>
                       <td className="py-3 body-text dark:text-slate-400">{u.email}</td>
                       <td className="py-3">
-                        <RoleBadge role={u.role as any} />
+                        <RoleBadge role={u.role as "CITIZEN" | "COMMUNITY_VERIFIER" | "VOLUNTEER" | "NGO" | "GOVT_AGENCY" | "DS_OFFICER" | "ADMIN"} />
                       </td>
                       <td className="py-3 font-mono font-bold text-emerald-400">{u.trustScore}%</td>
                       <td className="py-3">
@@ -176,7 +176,7 @@ export default function AdminConsole() {
                     <div>
                       <h4 className="font-bold card-heading dark:text-white">{req.name} ({req.email})</h4>
                       <p className="body-text dark:text-slate-400 mt-0.5">Requested Role: <strong className="text-emerald-400">{req.requestedRole}</strong></p>
-                      <p className="text-slate-500 italic mt-1 font-mono">"{req.reason}"</p>
+                      <p className="text-slate-500 italic mt-1 font-mono">“{req.reason}”</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button

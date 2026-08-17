@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { MOCK_ROLE_USERS, UserRole } from "@/lib/auth/rbac";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,43 +14,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by email
-    const user = await db.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-      include: {
-        dsDivision: true,
-      },
-    });
+    const cleanEmail = email.toLowerCase().trim();
 
-    if (!user) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
+    // Check mock role users first for seamless demo experience
+    const matchingMock = Object.values(MOCK_ROLE_USERS).find(
+      (u) => u.email.toLowerCase() === cleanEmail
+    );
+
+    if (matchingMock) {
+      return NextResponse.json({
+        success: true,
+        user: matchingMock,
+      });
     }
 
-    // Demo-grade password check (simple comparison, NOT production-secure)
-    if (user.passwordHash !== password) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
+    // Attempt DB lookup if configured
+    try {
+      const user = await db.user.findUnique({
+        where: { email: cleanEmail },
+      });
+
+      if (user) {
+        return NextResponse.json({
+          success: true,
+          user: {
+            id: user.id,
+            name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email.split("@")[0],
+            email: user.email,
+            role: user.role as UserRole,
+            trustScore: user.trustScore,
+            dsDivisionCode: user.dsDivision || "DS-COL-01",
+            dsDivisionName: user.district ? `${user.district} DS Office` : "Colombo DS Office",
+            preferredLanguage: user.preferredLang.toLowerCase(),
+            avatarUrl: user.avatarUrl,
+          },
+        });
+      }
+    } catch {
+      // If db fails, continue to mock fallback
     }
 
-    // Return user profile (exclude passwordHash)
+    // Default mock user for custom email
+    const namePart = cleanEmail.split("@")[0];
+    const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
     return NextResponse.json({
       success: true,
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        trustScore: user.trustScore,
-        organization: user.organization,
-        dsDivisionCode: user.dsDivision?.code || "",
-        dsDivisionName: user.dsDivision?.nameEn || "",
-        preferredLanguage: user.preferredLanguage,
-        avatarUrl: user.avatarUrl,
+        id: `user-${Date.now()}`,
+        name: formattedName || "Civic User",
+        email: cleanEmail,
+        role: "CITIZEN" as UserRole,
+        trustScore: 75.0,
+        dsDivisionCode: "DS-COL-01",
+        dsDivisionName: "Colombo DS Office",
+        preferredLanguage: "en",
       },
     });
   } catch (error) {
@@ -60,3 +78,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

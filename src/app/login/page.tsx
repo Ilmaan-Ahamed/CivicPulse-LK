@@ -17,9 +17,13 @@ import {
   CheckCircle2,
   Sparkles,
   ChevronDown,
+  KeyRound,
+  SmartphoneNfc,
+  RotateCcw,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { useUser } from "@clerk/nextjs";
 import { UserRole } from "@/lib/auth/rbac";
 
 type AuthTab = "signin" | "signup";
@@ -35,7 +39,8 @@ const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = 
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, register, isAuthenticated, currentRole } = useAuth();
+  const { login, register, verifySignIn, isAuthenticated, currentRole } = useAuth();
+  const { isLoaded: isClerkLoaded, isSignedIn } = useUser();
   const { t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<AuthTab>("signin");
@@ -49,6 +54,11 @@ export default function LoginPage() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
+  // Verification step (needs_client_trust / needs_second_factor)
+  type VerifyType = "email_code" | "totp" | "phone_code";
+  const [verificationStep, setVerificationStep] = useState<VerifyType | null>(null);
+  const [verificationCode, setVerificationCode] = useState("");
+
   // Sign Up form
   const [registerName, setRegisterName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
@@ -57,23 +67,14 @@ export default function LoginPage() {
   const [registerRole, setRegisterRole] = useState<UserRole>("CITIZEN");
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
-  // Redirect if already authenticated
+  // Redirect to Role Selection page as soon as Clerk confirms user is signed in
   useEffect(() => {
-    if (isAuthenticated) {
-      const getDashPath = (role: string) => {
-        switch (role) {
-          case "COMMUNITY_VERIFIER": return "/dashboard/verifier";
-          case "VOLUNTEER": return "/dashboard/volunteer";
-          case "NGO": return "/dashboard/ngo";
-          case "GOVT_AGENCY": return "/dashboard/agency";
-          case "DS_OFFICER": return "/dashboard/ds-officer";
-          case "ADMIN": return "/dashboard/admin";
-          default: return "/dashboard/citizen";
-        }
-      };
-      router.push(getDashPath(currentRole));
+    if (!isClerkLoaded) return;
+
+    if (isSignedIn) {
+      router.push("/select-role");
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isClerkLoaded, isSignedIn, router]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,8 +90,37 @@ export default function LoginPage() {
     const result = await login({ email: loginEmail, password: loginPassword });
     setIsSubmitting(false);
 
+    if (result.needsVerification && result.verificationType) {
+      setVerificationStep(result.verificationType);
+      setVerificationCode("");
+      setError(null);
+      return;
+    }
+
     if (!result.success) {
       setError(result.error || "Login failed. Please check your credentials.");
+    } else {
+      router.push("/select-role");
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!verificationCode.trim()) {
+      setError("Please enter the verification code.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const result = await verifySignIn(verificationCode.trim());
+    setIsSubmitting(false);
+
+    if (!result.success) {
+      setError(result.error || "Verification failed. Please try again.");
+    } else {
+      router.push("/select-role");
     }
   };
 
@@ -126,11 +156,33 @@ export default function LoginPage() {
     if (!result.success) {
       setError(result.error || "Registration failed. Please try again.");
     } else {
-      setSuccess("Account created successfully! Redirecting...");
+      setSuccess("Account created successfully! Redirecting to Role Selection...");
+      router.push("/select-role");
     }
   };
 
   const selectedRoleOption = ROLE_OPTIONS.find((r) => r.value === registerRole);
+
+  // While Clerk is loading, show loading spinner
+  if (!isClerkLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-orange-300 border-t-[#F97316] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // If already signed in, show redirecting state and redirect
+  if (isSignedIn) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="w-8 h-8 border-2 border-orange-300 border-t-[#F97316] rounded-full animate-spin" />
+        <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+          Redirecting to Role Selection…
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 py-12">
@@ -201,7 +253,7 @@ export default function LoginPage() {
             )}
 
             {/* SIGN IN FORM */}
-            {activeTab === "signin" && (
+            {activeTab === "signin" && !verificationStep && (
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div>
                   <label htmlFor="login-email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -272,6 +324,84 @@ export default function LoginPage() {
                   </div>
                   <p className="text-amber-600 dark:text-amber-500">{t("auth.demoHintDesc")}</p>
                 </div>
+              </form>
+            )}
+
+            {/* VERIFICATION STEP — needs_client_trust / needs_second_factor */}
+            {activeTab === "signin" && verificationStep && (
+              <form onSubmit={handleVerifyCode} className="space-y-5">
+                {/* Icon + heading */}
+                <div className="flex flex-col items-center gap-3 py-2">
+                  <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/40 flex items-center justify-center">
+                    {verificationStep === "totp" ? (
+                      <SmartphoneNfc className="w-7 h-7 text-[#F97316] dark:text-orange-400" />
+                    ) : (
+                      <KeyRound className="w-7 h-7 text-[#F97316] dark:text-orange-400" />
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      {verificationStep === "totp"
+                        ? "Authenticator Code"
+                        : verificationStep === "phone_code"
+                        ? "SMS Verification"
+                        : "Check Your Email"}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-[260px]">
+                      {verificationStep === "totp"
+                        ? "Open your authenticator app and enter the 6-digit code."
+                        : verificationStep === "phone_code"
+                        ? "We sent a code to your phone number. Enter it below."
+                        : `A verification code was sent to ${loginEmail}. Enter it below to continue.`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* OTP input */}
+                <div>
+                  <label htmlFor="verify-code" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Verification Code
+                  </label>
+                  <input
+                    id="verify-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                    placeholder={verificationStep === "totp" ? "000000" : "Enter code"}
+                    className="w-full text-center text-2xl font-mono tracking-[0.5em] px-4 py-4 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316] transition-all"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || verificationCode.length < 6}
+                  className="btn-primary-orange w-full py-3 text-sm flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Verifying…</span>
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound className="w-4 h-4" />
+                      <span>Verify & Sign In</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Back to sign-in */}
+                <button
+                  type="button"
+                  onClick={() => { setVerificationStep(null); setVerificationCode(""); setError(null); }}
+                  className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors py-1"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Back — enter a different account</span>
+                </button>
               </form>
             )}
 
@@ -393,6 +523,9 @@ export default function LoginPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Required anchor for Clerk's Smart CAPTCHA widget */}
+                <div id="clerk-captcha" />
 
                 <button
                   type="submit"

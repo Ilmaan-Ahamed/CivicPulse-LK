@@ -1,11 +1,15 @@
+import "server-only";
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { normalizeDatabaseUrl } from "./database-url";
 
-const adapter = new PrismaBetterSqlite3({ url: "file:dev.db" });
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+const connectionString = normalizeDatabaseUrl(
+  process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/civicpulse"
+);
+
+const adapter = new PrismaPg({ connectionString });
 
 export const db =
   globalForPrisma.prisma ??
@@ -15,3 +19,5 @@ export const db =
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+
+export default db;

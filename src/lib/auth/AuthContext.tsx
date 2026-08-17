@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useUser, useSignIn, useSignUp, useClerk } from "@clerk/nextjs";
 import { UserRole, UserProfile, MOCK_ROLE_USERS } from "./rbac";
 
 interface LoginData {
@@ -17,13 +18,25 @@ interface RegisterData {
   dsDivisionId?: string;
 }
 
+type VerificationType = "email_code" | "totp" | "phone_code";
+
+interface LoginResult {
+  success: boolean;
+  error?: string;
+  /** True when Clerk needs a verification code before completing sign-in */
+  needsVerification?: boolean;
+  /** Which factor strategy is waiting for a code */
+  verificationType?: VerificationType;
+}
+
 interface AuthContextType {
   currentUser: UserProfile;
   currentRole: UserRole;
   switchRole: (role: UserRole) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (data: LoginData) => Promise<{ success: boolean; error?: string }>;
+  login: (data: LoginData) => Promise<LoginResult>;
+  verifySignIn: (code: string) => Promise<{ success: boolean; error?: string }>;
   register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
@@ -34,137 +47,382 @@ const STORAGE_KEY = "civicpulse_auth";
 const ROLE_KEY = "civicpulse_role";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { isLoaded: isUserLoaded, isSignedIn, user } = useUser();
+  // Clerk v7 Future API: useSignIn returns { fetchStatus, signIn, errors }
+  const { fetchStatus: signInFetchStatus, signIn } = useSignIn();
+  const { fetchStatus: signUpFetchStatus, signUp } = useSignUp();
+  const clerk = useClerk();
+
   const [currentRole, setCurrentRole] = useState<UserRole>("CITIZEN");
   const [currentUser, setCurrentUser] = useState<UserProfile>(MOCK_ROLE_USERS.CITIZEN);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
-  // Restore session from localStorage on mount
-  useEffect(() => {
+  // Helper: sync the Clerk session with our PostgreSQL user record
+  const syncWithDb = useCallback(async (role?: UserRole) => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as UserProfile;
-        setCurrentUser(parsed);
-        setCurrentRole(parsed.role);
-        setIsAuthenticated(true);
-      } else {
-        // Check for legacy role-only storage
-        const savedRole = localStorage.getItem(ROLE_KEY) as UserRole;
-        if (savedRole && MOCK_ROLE_USERS[savedRole]) {
-          setCurrentRole(savedRole);
-          setCurrentUser(MOCK_ROLE_USERS[savedRole]);
-        }
+      const token = await clerk.session?.getToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
       }
+
+      const payload = {
+        role,
+        clerkId: user?.id,
+        email: user?.primaryEmailAddress?.emailAddress,
+        firstName: user?.firstName,
+        lastName: user?.lastName,
+        imageUrl: user?.imageUrl,
+      };
+
+      const res = await fetch("/api/auth/sync", {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.success && data.user) return data.user as UserProfile;
     } catch {
-      // Ignore parse errors
+      // DB sync is non-critical; silently ignore
     }
-    setIsLoading(false);
-  }, []);
+    return null;
+  }, [clerk, user]);
 
-  const switchRole = useCallback((role: UserRole) => {
-    setCurrentRole(role);
-    localStorage.setItem(ROLE_KEY, role);
+  // Restore session when Clerk state loads
+  useEffect(() => {
+    async function syncSession() {
+      if (!isUserLoaded) return;
 
-    // If authenticated, update the user's displayed role
-    if (isAuthenticated) {
-      setCurrentUser((prev) => {
-        const updated = { ...prev, role };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        return updated;
-      });
-    } else {
-      setCurrentUser(MOCK_ROLE_USERS[role] || MOCK_ROLE_USERS.CITIZEN);
+      if (isSignedIn && user) {
+        try {
+          const savedRole = localStorage.getItem(ROLE_KEY) as UserRole | null;
+          const dbUser = await syncWithDb(savedRole || undefined);
+
+          if (dbUser) {
+            const activeRole = savedRole || dbUser.role;
+            setCurrentRole(activeRole);
+            setCurrentUser({ ...dbUser, role: activeRole });
+            setIsAuthenticated(true);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
+            if (!savedRole) localStorage.setItem(ROLE_KEY, dbUser.role);
+          } else {
+            // Robust fallback if DB sync is temporarily slow or failing
+            const activeRole: UserRole = savedRole || "CITIZEN";
+            const fallbackUser: UserProfile = {
+              id: user.id,
+              name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.primaryEmailAddress?.emailAddress || "Citizen",
+              email: user.primaryEmailAddress?.emailAddress || "",
+              role: activeRole,
+              trustScore: 80.0,
+              dsDivisionCode: "DS-COL-01",
+              dsDivisionName: "Colombo DS Office",
+              preferredLanguage: "en",
+            };
+            setCurrentRole(activeRole);
+            setCurrentUser(fallbackUser);
+            setIsAuthenticated(true);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(fallbackUser));
+            if (!savedRole) localStorage.setItem(ROLE_KEY, activeRole);
+          }
+        } catch (err) {
+          console.error("Failed to sync auth session with DB:", err);
+          setIsAuthenticated(true);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser(MOCK_ROLE_USERS.CITIZEN);
+        setCurrentRole("CITIZEN");
+        setIsLoading(false);
+      }
     }
-  }, [isAuthenticated]);
 
-  const login = useCallback(async (data: LoginData): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+    syncSession();
+  }, [isUserLoaded, isSignedIn, user, syncWithDb]);
 
-      const result = await res.json();
+  const switchRole = useCallback(
+    (role: UserRole) => {
+      setCurrentRole(role);
+      localStorage.setItem(ROLE_KEY, role);
 
-      if (!res.ok || !result.success) {
-        return { success: false, error: result.error || "Login failed" };
+      if (isAuthenticated) {
+        setCurrentUser((prev) => {
+          const updated = { ...prev, role };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          return updated;
+        });
+      } else {
+        setCurrentUser(MOCK_ROLE_USERS[role] || MOCK_ROLE_USERS.CITIZEN);
+      }
+    },
+    [isAuthenticated]
+  );
+
+  const login = useCallback(
+    async (data: LoginData): Promise<LoginResult> => {
+      if (!signIn || signInFetchStatus === "fetching") {
+        return { success: false, error: "Authentication system is initializing. Please try again." };
       }
 
-      const userProfile: UserProfile = {
-        id: result.user.id,
-        name: result.user.name,
-        email: result.user.email,
-        role: result.user.role as UserRole,
-        trustScore: result.user.trustScore,
-        organization: result.user.organization,
-        dsDivisionCode: result.user.dsDivisionCode,
-        dsDivisionName: result.user.dsDivisionName,
-        preferredLanguage: result.user.preferredLanguage,
-      };
+      try {
+        // Clerk v7: create() returns { error }; final status lives on signIn resource
+        const { error: createError } = await signIn.create({
+          identifier: data.email,
+          password: data.password,
+        });
 
-      setCurrentUser(userProfile);
-      setCurrentRole(userProfile.role);
-      setIsAuthenticated(true);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userProfile));
-      localStorage.setItem(ROLE_KEY, userProfile.role);
+        if (createError) {
+          const msg =
+            (createError as any).longMessage ||
+            (createError as any).message ||
+            "Login failed. Please check your credentials.";
+          return { success: false, error: msg };
+        }
 
-      return { success: true };
-    } catch (error) {
-      console.error("Login error:", error);
-      return { success: false, error: "Network error. Please try again." };
-    }
-  }, []);
+        if (signIn.status === "complete") {
+          // finalize() sets the active session (replaces setActive in v7)
+          const { error: finalizeError } = await signIn.finalize();
+          if (finalizeError) {
+            const msg = (finalizeError as any).message || "Failed to establish session.";
+            return { success: false, error: msg };
+          }
 
-  const register = useCallback(async (data: RegisterData): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+          const dbUser = await syncWithDb();
+          if (dbUser) {
+            setCurrentUser(dbUser);
+            setCurrentRole(dbUser.role);
+            setIsAuthenticated(true);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
+            localStorage.setItem(ROLE_KEY, dbUser.role);
+          } else {
+            setIsAuthenticated(true);
+          }
+          setIsLoading(false);
+          return { success: true };
 
-      const result = await res.json();
+        } else if (signIn.status === "needs_client_trust") {
+          // Device not yet trusted — Clerk emails a verification code.
+          // prepareFirstFactor lives on the classic SignInResource (clerk.client.signIn),
+          // NOT on the v7 Future SignInFutureResource returned by useSignIn().
+          const classicSignIn = (clerk as any).client?.signIn;
+          const factors = classicSignIn?.supportedFirstFactors ?? (signIn as any).supportedFirstFactors;
+          const emailFactor = (factors as any[])?.find((f: any) => f.strategy === "email_code");
+          if (emailFactor && classicSignIn?.prepareFirstFactor) {
+            await classicSignIn.prepareFirstFactor({
+              strategy: "email_code",
+              emailAddressId: emailFactor.emailAddressId,
+            });
+          }
+          return { success: false, needsVerification: true, verificationType: "email_code" };
 
-      if (!res.ok || !result.success) {
-        return { success: false, error: result.error || "Registration failed" };
+        } else if (signIn.status === "needs_second_factor") {
+          // MFA is enabled — use the classic resource for prepare (future resource lacks it).
+          const classicSignIn = (clerk as any).client?.signIn;
+          const factors = classicSignIn?.supportedSecondFactors ?? (signIn as any).supportedSecondFactors;
+          const totpFactor   = (factors as any[])?.find((f: any) => f.strategy === "totp");
+          const phoneFactor  = (factors as any[])?.find((f: any) => f.strategy === "phone_code");
+
+          if (totpFactor) {
+            // TOTP: user opens their authenticator app — no prepare step needed
+            return { success: false, needsVerification: true, verificationType: "totp" };
+          } else if (phoneFactor && classicSignIn?.prepareSecondFactor) {
+            await classicSignIn.prepareSecondFactor({
+              strategy: "phone_code",
+              phoneNumberId: phoneFactor.phoneNumberId,
+            });
+            return { success: false, needsVerification: true, verificationType: "phone_code" };
+          }
+          return { success: false, error: "Multi-factor authentication required but no supported method found." };
+
+        } else if (signIn.status === "needs_first_factor") {
+          return {
+            success: false,
+            error: "Additional verification required. Please try again.",
+          };
+        } else {
+          return {
+            success: false,
+            error: `Sign-in requires additional steps (status: ${signIn.status}).`,
+          };
+        }
+      } catch (error: any) {
+        console.error("Login error:", error);
+        const errorMessage =
+          error?.errors?.[0]?.longMessage ||
+          error?.errors?.[0]?.message ||
+          error?.message ||
+          "Login failed. Please check your credentials.";
+        return { success: false, error: errorMessage };
+      }
+    },
+    [signIn, signInFetchStatus, syncWithDb, clerk]
+  );
+
+  /**
+   * Submit the verification code after `login()` returns `needsVerification: true`.
+   *
+   * All prepare/attempt calls go through `clerk.client.signIn` (the classic
+   * SignInResource) because the v7 Future `SignInFutureResource` from `useSignIn()`
+   * does not expose those methods at runtime. After a successful attempt the
+   * returned resource contains `createdSessionId`; we call `clerk.setActive` to
+   * establish the session (works in both Clerk v6 and v7).
+   */
+  const verifySignIn = useCallback(
+    async (code: string): Promise<{ success: boolean; error?: string }> => {
+      // Classic SignInResource — has prepareFirstFactor / attemptFirstFactor etc.
+      const classicSignIn = (clerk as any).client?.signIn;
+
+      if (!classicSignIn) {
+        return { success: false, error: "No active sign-in session. Please start over." };
       }
 
-      const userProfile: UserProfile = {
-        id: result.user.id,
-        name: result.user.name,
-        email: result.user.email,
-        role: result.user.role as UserRole,
-        trustScore: result.user.trustScore,
-        organization: result.user.organization,
-        dsDivisionCode: result.user.dsDivisionCode,
-        dsDivisionName: result.user.dsDivisionName,
-        preferredLanguage: result.user.preferredLanguage,
-      };
+      try {
+        const currentStatus: string = classicSignIn.status ?? signIn?.status ?? "";
+        let updatedResource: any = null;
 
-      setCurrentUser(userProfile);
-      setCurrentRole(userProfile.role);
-      setIsAuthenticated(true);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userProfile));
-      localStorage.setItem(ROLE_KEY, userProfile.role);
+        if (currentStatus === "needs_client_trust" || currentStatus === "needs_first_factor") {
+          updatedResource = await classicSignIn.attemptFirstFactor({
+            strategy: "email_code",
+            code,
+          });
+        } else if (currentStatus === "needs_second_factor") {
+          const isTotp = classicSignIn.supportedSecondFactors?.some(
+            (f: any) => f.strategy === "totp"
+          );
+          const strategy = isTotp ? "totp" : "phone_code";
+          updatedResource = await classicSignIn.attemptSecondFactor({ strategy, code });
+        } else {
+          return { success: false, error: "No pending verification step. Please sign in again." };
+        }
 
-      return { success: true };
+        // Classic resource methods throw on error rather than returning { error }.
+        // If we reach here without an exception, check the updated status.
+        if (updatedResource?.status === "complete") {
+          // Establish the Clerk session via setActive (classic API — works in v6 & v7)
+          await (clerk as any).setActive({ session: updatedResource.createdSessionId });
+
+          const dbUser = await syncWithDb();
+          if (dbUser) {
+            setCurrentUser(dbUser);
+            setCurrentRole(dbUser.role);
+            setIsAuthenticated(true);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
+            localStorage.setItem(ROLE_KEY, dbUser.role);
+          } else {
+            setIsAuthenticated(true);
+          }
+          setIsLoading(false);
+          return { success: true };
+        }
+
+        return {
+          success: false,
+          error: `Unexpected sign-in state after verification: ${updatedResource?.status ?? "unknown"}`,
+        };
+      } catch (error: any) {
+        console.error("Verify sign-in error:", error);
+        const errorMessage =
+          error?.errors?.[0]?.longMessage ||
+          error?.errors?.[0]?.message ||
+          error?.message ||
+          "Verification failed. Please try again.";
+        return { success: false, error: errorMessage };
+      }
+    },
+    [clerk, signIn, syncWithDb]
+  );
+
+  const register = useCallback(
+    async (data: RegisterData): Promise<{ success: boolean; error?: string }> => {
+      if (!signUp || signUpFetchStatus === "fetching") {
+        return { success: false, error: "Authentication system is initializing. Please try again." };
+      }
+
+      try {
+        const nameParts = data.name.trim().split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+
+        // Clerk v7 Future API: create() returns { error }; status is on signUp resource
+        const { error: createError } = await signUp.create({
+          emailAddress: data.email,
+          password: data.password,
+          firstName,
+          lastName,
+        });
+
+        if (createError) {
+          const msg =
+            (createError as any).longMessage ||
+            (createError as any).message ||
+            "Registration failed. Please try again.";
+          return { success: false, error: msg };
+        }
+
+        if (signUp.status === "complete") {
+          const { error: finalizeError } = await signUp.finalize();
+          if (finalizeError) {
+            const msg = (finalizeError as any).message || "Failed to establish session.";
+            return { success: false, error: msg };
+          }
+
+          const dbUser = await syncWithDb(data.role || "CITIZEN");
+          if (dbUser) {
+            setCurrentUser(dbUser);
+            setCurrentRole(dbUser.role);
+            setIsAuthenticated(true);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
+            localStorage.setItem(ROLE_KEY, dbUser.role);
+          } else {
+            setIsAuthenticated(true);
+          }
+          setIsLoading(false);
+          return { success: true };
+        } else if (signUp.status === "missing_requirements") {
+          return {
+            success: false,
+            error:
+              "Please verify your email address. Check your inbox for a verification link from Clerk.",
+          };
+        } else {
+          return {
+            success: false,
+            error: `Sign-up requires additional steps (status: ${signUp.status}).`,
+          };
+        }
+      } catch (error: any) {
+        console.error("Register error:", error);
+        const errorMessage =
+          error?.errors?.[0]?.longMessage ||
+          error?.errors?.[0]?.message ||
+          error?.message ||
+          "Registration failed. Please try again.";
+        return { success: false, error: errorMessage };
+      }
+    },
+    [signUp, signUpFetchStatus, syncWithDb]
+  );
+
+  const logout = useCallback(async () => {
+    try {
+      await clerk.signOut();
     } catch (error) {
-      console.error("Register error:", error);
-      return { success: false, error: "Network error. Please try again." };
+      console.error("Logout error:", error);
+    } finally {
+      setIsAuthenticated(false);
+      setCurrentUser(MOCK_ROLE_USERS.CITIZEN);
+      setCurrentRole("CITIZEN");
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(ROLE_KEY);
+      router.push("/login");
     }
-  }, []);
-
-  const logout = useCallback(() => {
-    setIsAuthenticated(false);
-    setCurrentUser(MOCK_ROLE_USERS.CITIZEN);
-    setCurrentRole("CITIZEN");
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(ROLE_KEY);
-    router.push("/login");
-  }, [router]);
+  }, [clerk, router]);
 
   return (
     <AuthContext.Provider
@@ -175,6 +433,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated,
         isLoading,
         login,
+        verifySignIn,
         register,
         logout,
       }}
