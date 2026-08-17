@@ -3,12 +3,12 @@ import { db } from "@/lib/db";
 import { Category, ReportStatus } from "@prisma/client";
 
 export async function deleteIssue(issueId: string) {
-  await requireRole(["department_admin", "super_admin"]);
+  await requireRole(["ADMIN"]);
   return await db.report.delete({ where: { id: issueId } });
 }
 
 export async function createIssue(data: { title: string; description: string }) {
-  const { userId } = await requireRole(["citizen", "field_officer", "department_admin", "super_admin"]);
+  const { userId } = await requireRole(["CITIZEN", "DS_OFFICER", "ADMIN"]);
   return await db.report.create({
     data: {
       title: data.title,
@@ -22,7 +22,7 @@ export async function createIssue(data: { title: string; description: string }) 
 }
 
 export async function updateIssueStatus(issueId: string, status: ReportStatus) {
-  await requireRole(["field_officer", "department_admin", "super_admin"]);
+  await requireRole(["DS_OFFICER", "ADMIN"]);
   return await db.report.update({
     where: { id: issueId },
     data: { status },

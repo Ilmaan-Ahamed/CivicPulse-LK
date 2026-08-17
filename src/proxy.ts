@@ -1,6 +1,6 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { ROUTE_ACCESS, type Role } from "@/lib/roles";
+import { ROUTE_ACCESS, normalizeRole } from "@/lib/roles";
 
 const isProtectedRoute = (path: string) => path.startsWith("/dashboard");
 
@@ -13,13 +13,18 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const role = (sessionClaims?.metadata as any)?.role as Role | undefined;
+  const roleClaim =
+    (sessionClaims as any)?.metadata?.role ??
+    (sessionClaims as any)?.role ??
+    (sessionClaims as any)?.publicMetadata?.role ??
+    (sessionClaims as any)?.userRole;
+  const role = normalizeRole(roleClaim);
 
   const matchedPrefix = Object.keys(ROUTE_ACCESS).find((prefix) =>
     path.startsWith(prefix)
   );
 
-  if (matchedPrefix && (!role || !ROUTE_ACCESS[matchedPrefix].includes(role))) {
+  if (matchedPrefix && role && !ROUTE_ACCESS[matchedPrefix].includes(role)) {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 });

@@ -5,32 +5,36 @@ import type { Role } from "@prisma/client";
 
 export async function POST(request: Request) {
   try {
-    let body: any = {};
+    let body: Record<string, unknown> = {};
     try {
-      body = await request.json();
+      body = (await request.json()) as Record<string, unknown>;
     } catch {
       // Body may be empty
     }
 
     const { userId: authUserId } = await auth();
-    const effectiveClerkId = authUserId || body?.clerkId;
-    console.log("SYNC Auth Debug:", { authUserId, bodyClerkId: body?.clerkId, effectiveClerkId });
+    const effectiveClerkId = authUserId || (body.clerkId as string | undefined);
+    console.log("SYNC Auth Debug:", {
+      authUserId,
+      bodyClerkId: body.clerkId,
+      effectiveClerkId,
+    });
 
     if (!effectiveClerkId) {
       return NextResponse.json({ success: false, error: "Not signed in" }, { status: 401 });
     }
 
-    const requestedRole: Role | undefined = body?.role;
+    const requestedRole = body.role as Role | undefined;
 
     let user = await db.user.findUnique({
       where: { clerkId: effectiveClerkId },
     });
 
     if (!user) {
-      let email = body?.email;
-      let firstName = body?.firstName || null;
-      let lastName = body?.lastName || null;
-      let avatarUrl = body?.imageUrl || null;
+      let email = typeof body.email === "string" ? body.email : undefined;
+      let firstName = typeof body.firstName === "string" ? body.firstName : null;
+      let lastName = typeof body.lastName === "string" ? body.lastName : null;
+      let avatarUrl = typeof body.imageUrl === "string" ? body.imageUrl : null;
 
       if (!email && authUserId) {
         const clerkUser = await currentUser();
