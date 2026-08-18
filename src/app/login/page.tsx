@@ -39,7 +39,10 @@ const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = 
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, register, verifySignIn, isAuthenticated, currentRole } = useAuth();
+  const { login, register, verifySignIn, verifySignUp, resendSignUpVerification, isAuthenticated, currentRole } = useAuth();
+  const [signupVerificationEmail, setSignupVerificationEmail] = useState<string | null>(null);
+  const [signupVerificationCode, setSignupVerificationCode] = useState("");
+  const [isResendProcessing, setIsResendProcessing] = useState(false);
   const { isLoaded: isClerkLoaded, isSignedIn } = useUser();
   const { t } = useLanguage();
 
@@ -152,6 +155,15 @@ export default function LoginPage() {
       role: registerRole,
     });
     setIsSubmitting(false);
+
+    // If Clerk requested email verification before completing sign-up, show verification screen
+    if (result?.needsVerification) {
+      setSignupVerificationEmail(result?.email || registerEmail);
+      setSignupVerificationCode("");
+      setError(null);
+      setSuccess(null);
+      return;
+    }
 
     if (!result.success) {
       setError(result.error || "Registration failed. Please try again.");
@@ -405,146 +417,252 @@ export default function LoginPage() {
               </form>
             )}
 
-            {/* SIGN UP FORM */}
+            {/* SIGN UP FORM or SIGN-UP VERIFICATION SCREEN */}
             {activeTab === "signup" && (
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div>
-                  <label htmlFor="register-name" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    {t("auth.fullName")}
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              signupVerificationEmail ? (
+                <div className="space-y-5">
+                  <div className="flex flex-col items-center gap-3 py-2">
+                    <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/40 flex items-center justify-center">
+                      <Mail className="w-7 h-7 text-[#F97316] dark:text-orange-400" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">Verify Your Email</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-[260px]">
+                        We've sent a verification link to:
+                      </p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 font-mono">{signupVerificationEmail}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                        Please check your inbox and click the verification link to continue.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="signup-verify-code" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Verification Code (if provided)</label>
                     <input
-                      id="register-name"
+                      id="signup-verify-code"
                       type="text"
-                      value={registerName}
-                      onChange={(e) => setRegisterName(e.target.value)}
-                      placeholder="Anusha Fernando"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316] transition-all"
-                      autoComplete="name"
+                      value={signupVerificationCode}
+                      onChange={(e) => setSignupVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                      placeholder="Enter verification code (if any)"
+                      className="w-full text-center text-lg font-mono tracking-[0.2em] px-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316] transition-all"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label htmlFor="register-email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    {t("auth.email")}
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      id="register-email"
-                      type="email"
-                      value={registerEmail}
-                      onChange={(e) => setRegisterEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316] transition-all"
-                      autoComplete="email"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="register-password" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      {t("auth.password")}
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input
-                        id="register-password"
-                        type={showPassword ? "text" : "password"}
-                        value={registerPassword}
-                        onChange={(e) => setRegisterPassword(e.target.value)}
-                        placeholder="••••••"
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316] transition-all"
-                        autoComplete="new-password"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="register-confirm" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      {t("auth.confirmPassword")}
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input
-                        id="register-confirm"
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={registerConfirmPassword}
-                        onChange={(e) => setRegisterConfirmPassword(e.target.value)}
-                        placeholder="••••••"
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316] transition-all"
-                        autoComplete="new-password"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Role Selector */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    {t("auth.selectRole")}
-                  </label>
-                  <div className="relative">
+                  <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
-                      onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-                      className="w-full px-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-left text-sm flex items-center justify-between transition-all focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316]"
+                      onClick={async () => {
+                        setError(null);
+                        setSuccess(null);
+                        if (!signupVerificationCode.trim()) {
+                          // If no code provided, prompt the user to resend or check email
+                          setError("No code entered. Use Resend Verification Email if you didn't receive it, or click the link in your email.");
+                          return;
+                        }
+                        setIsSubmitting(true);
+                        const res = await verifySignUp(signupVerificationCode.trim());
+                        setIsSubmitting(false);
+                        if (!res.success) {
+                          setError(res.error || "Verification failed. Please try again.");
+                        } else {
+                          router.push("/select-role");
+                        }
+                      }}
+                      disabled={isSubmitting}
+                      className="btn-primary-orange w-full py-3 text-sm flex items-center justify-center gap-2"
                     >
-                      <div>
-                        <span className="text-slate-900 dark:text-white font-medium">{selectedRoleOption?.label}</span>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400 block">{selectedRoleOption?.description}</span>
-                      </div>
-                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${roleDropdownOpen ? "rotate-180" : ""}`} />
+                      {isSubmitting ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <KeyRound className="w-4 h-4" />
+                      )}
+                      <span>{isSubmitting ? "Verifying…" : "Verify & Continue"}</span>
                     </button>
 
-                    {roleDropdownOpen && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setRoleDropdownOpen(false)} />
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-[#E8D5B5] dark:border-slate-800 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto p-1">
-                          {ROLE_OPTIONS.map((opt) => (
-                            <button
-                              type="button"
-                              key={opt.value}
-                              onClick={() => { setRegisterRole(opt.value); setRoleDropdownOpen(false); }}
-                              className={`w-full text-left px-3 py-2.5 rounded-lg text-xs transition-colors ${
-                                registerRole === opt.value
-                                  ? "bg-[#FFE4C4] dark:bg-orange-950/40 text-[#F97316] dark:text-orange-400"
-                                  : "text-slate-700 dark:text-slate-300 hover:bg-[#FDEEDC] dark:hover:bg-slate-800"
-                              }`}
-                            >
-                              <span className="font-bold block">{opt.label}</span>
-                              <span className="text-[11px] text-slate-500 dark:text-slate-400">{opt.description}</span>
-                            </button>
-                          ))}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setError(null);
+                        setSuccess(null);
+                        try {
+                          setIsResendProcessing(true);
+                          const res = await resendSignUpVerification();
+                          setIsResendProcessing(false);
+                          if (!res.success) setError(res.error || "Failed to resend verification email.");
+                          else setSuccess("Verification email resent. Check your inbox.");
+                        } catch (e) {
+                          setIsResendProcessing(false);
+                          setError((e as any)?.message || "Failed to resend verification email.");
+                        }
+                      }}
+                      disabled={isResendProcessing}
+                      className="w-full py-3 text-sm flex items-center justify-center gap-2 bg-white/5 rounded-xl border border-[#E8D5B5] dark:border-slate-800"
+                    >
+                      {isResendProcessing ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <RotateCcw className="w-4 h-4" />
+                      )}
+                      <span>{isResendProcessing ? "Resending…" : "Resend Verification Email"}</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSignupVerificationEmail(null);
+                      setSignupVerificationCode("");
+                      setActiveTab("signin");
+                      setError(null);
+                      setSuccess(null);
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors py-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Back to Sign In</span>
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div>
+                    <label htmlFor="register-name" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      {t("auth.fullName")}
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        id="register-name"
+                        type="text"
+                        value={registerName}
+                        onChange={(e) => setRegisterName(e.target.value)}
+                        placeholder="Anusha Fernando"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316] transition-all"
+                        autoComplete="name"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="register-email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      {t("auth.email")}
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        id="register-email"
+                        type="email"
+                        value={registerEmail}
+                        onChange={(e) => setRegisterEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316] transition-all"
+                        autoComplete="email"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="register-password" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        {t("auth.password")}
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          id="register-password"
+                          type={showPassword ? "text" : "password"}
+                          value={registerPassword}
+                          onChange={(e) => setRegisterPassword(e.target.value)}
+                          placeholder="••••••"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316] transition-all"
+                          autoComplete="new-password"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="register-confirm" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        {t("auth.confirmPassword")}
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          id="register-confirm"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={registerConfirmPassword}
+                          onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                          placeholder="••••••"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316] transition-all"
+                          autoComplete="new-password"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Role Selector */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      {t("auth.selectRole")}
+                    </label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
+                        className="w-full px-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-left text-sm flex items-center justify-between transition-all focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316]"
+                      >
+                        <div>
+                          <span className="text-slate-900 dark:text-white font-medium">{selectedRoleOption?.label}</span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block">{selectedRoleOption?.description}</span>
                         </div>
+                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${roleDropdownOpen ? "rotate-180" : ""}`} />
+                      </button>
+
+                      {roleDropdownOpen && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setRoleDropdownOpen(false)} />
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-[#E8D5B5] dark:border-slate-800 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto p-1">
+                            {ROLE_OPTIONS.map((opt) => (
+                              <button
+                                type="button"
+                                key={opt.value}
+                                onClick={() => { setRegisterRole(opt.value); setRoleDropdownOpen(false); }}
+                                className={`w-full text-left px-3 py-2.5 rounded-lg text-xs transition-colors ${
+                                  registerRole === opt.value
+                                    ? "bg-[#FFE4C4] dark:bg-orange-950/40 text-[#F97316] dark:text-orange-400"
+                                    : "text-slate-700 dark:text-slate-300 hover:bg-[#FDEEDC] dark:hover:bg-slate-800"
+                                }`}
+                              >
+                                <span className="font-bold block">{opt.label}</span>
+                                <span className="text-[11px] text-slate-500 dark:text-slate-400">{opt.description}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Required anchor for Clerk's Smart CAPTCHA widget */}
+                  <div id="clerk-captcha" />
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="btn-primary-orange w-full py-3 text-sm flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>{t("auth.creatingAccount")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4" />
+                        <span>{t("auth.createAccountBtn")}</span>
                       </>
                     )}
-                  </div>
-                </div>
-
-                {/* Required anchor for Clerk's Smart CAPTCHA widget */}
-                <div id="clerk-captcha" />
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="btn-primary-orange w-full py-3 text-sm flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>{t("auth.creatingAccount")}</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-4 h-4" />
-                      <span>{t("auth.createAccountBtn")}</span>
-                    </>
-                  )}
-                </button>
-              </form>
+                  </button>
+                </form>
+              )
             )}
           </div>
         </div>

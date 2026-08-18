@@ -37,7 +37,10 @@ interface AuthContextType {
   isLoading: boolean;
   login: (data: LoginData) => Promise<LoginResult>;
   verifySignIn: (code: string) => Promise<{ success: boolean; error?: string }>;
-  register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>;
+  register: (data: RegisterData) => Promise<{ success: boolean; error?: string } | any>;
+  // Verify and resend helpers for the sign-up email verification flow
+  verifySignUp: (code: string) => Promise<{ success: boolean; error?: string }>;
+  resendSignUpVerification: () => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -339,7 +342,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const register = useCallback(
-    async (data: RegisterData): Promise<{ success: boolean; error?: string }> => {
+    async (data: RegisterData): Promise<{ success: boolean; error?: string } | any> => {
       if (!signUp || signUpFetchStatus === "fetching") {
         return { success: false, error: "Authentication system is initializing. Please try again." };
       }
@@ -365,6 +368,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { success: false, error: msg };
         }
 
+        // If signUp is complete immediately, finalize and create DB user
         if (signUp.status === "complete") {
           const { error: finalizeError } = await signUp.finalize();
           if (finalizeError) {
@@ -384,18 +388,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           setIsLoading(false);
           return { success: true };
-        } else if (signUp.status === "missing_requirements") {
-          return {
-            success: false,
-            error:
-              "Please verify your email address. Check your inbox for a verification link from Clerk.",
-          };
-        } else {
-          return {
-            success: false,
-            error: `Sign-up requires additional steps (status: ${signUp.status}).`,
-          };
         }
+
+        // If Clerk signals missing_requirements, we need email verification before completing sign-up
+        if (signUp.status === "missing_requirements") {
+          try {
+            // Persist selected role and pending email so we can complete DB sync after verification
+            const roleToSave = data.role || "CITIZEN";
+            localStorage.setItem(ROLE_KEY, roleToSave);
+            localStorage.setItem("civicpulse_pending_signup_email", data.email);
+
+            // Try to send verification email using the future signUp resource if available
+            if ((signUp as any).prepareEmailAddressVerification) {
+              try {
+                await (signUp as any).prepareEmailAddressVerification({ strategy: "email_code" });
+              } catch (e) {
+                // ignore — we'll fallback to classic client below
+              }
+            }
+
+            // Fallback: use classic client signUp resource if available
+            const classicSignUp = (clerk as any).client?.signUp;
+            if (classicSignUp?.prepareEmailAddressVerification) {
+              try {
+                await classicSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
+              } catch (e) {
+                // ignore
+              }
+            }
+          } catch (e) {
+            // best-effort — do not fail the whole flow
+            console.warn("prepareEmailAddressVerification failed", e);
+          }
+
+          // Return a signal to the UI to show a verification screen (don't treat as fatal error)
+          return { success: false, needsVerification: true, email: data.email };
+        }
+
+        return {
+          success: false,
+          error: `Sign-up requires additional steps (status: ${signUp.status}).`,
+        };
       } catch (error: any) {
         console.error("Register error:", error);
         const errorMessage =
@@ -406,8 +439,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: errorMessage };
       }
     },
-    [signUp, signUpFetchStatus, syncWithDb]
+    [signUp, signUpFetchStatus, syncWithDb, clerk]
   );
+
+  // Resend a sign-up verification email (tries future resource then classic client)
+  const resendSignUpVerification = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (signUp && (signUp as any).prepareEmailAddressVerification) {
+        await (signUp as any).prepareEmailAddressVerification({ strategy: "email_code" });
+        return { success: true };
+      }
+
+      const classicSignUp = (clerk as any).client?.signUp;
+      if (classicSignUp && classicSignUp.prepareEmailAddressVerification) {
+        await classicSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        return { success: true };
+      }
+
+      return { success: false, error: "Unable to send verification email. Please try again." };
+    } catch (error: any) {
+      console.error("Resend sign-up verification error:", error);
+      const errorMessage = error?.message || "Failed to resend verification email.";
+      return { success: false, error: errorMessage };
+    }
+  }, [signUp, clerk]);
+
+  // Attempt to verify the sign-up email with code and finalize the sign-up
+  const verifySignUp = useCallback(async (code: string): Promise<{ success: boolean; error?: string }> => {
+    // Try future resource first, then classic client
+    try {
+      let updatedResource: any = null;
+
+      if (signUp && (signUp as any).attemptEmailAddressVerification) {
+        updatedResource = await (signUp as any).attemptEmailAddressVerification({ code });
+      } else {
+        const classicSignUp = (clerk as any).client?.signUp;
+        if (!classicSignUp) {
+          return { success: false, error: "No active sign-up session. Please start over." };
+        }
+        updatedResource = await classicSignUp.attemptEmailAddressVerification({ code });
+      }
+
+      if (updatedResource?.status === "complete") {
+        // Establish the Clerk session — classic & future setActive compatible
+        await (clerk as any).setActive({ session: updatedResource.createdSessionId });
+
+        // Use the saved role (stored at register time) to sync with DB
+        const savedRole = (localStorage.getItem(ROLE_KEY) as UserRole) || undefined;
+        const dbUser = await syncWithDb(savedRole as any);
+        if (dbUser) {
+          setCurrentUser(dbUser);
+          setCurrentRole(dbUser.role);
+          setIsAuthenticated(true);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
+          localStorage.setItem(ROLE_KEY, dbUser.role);
+        } else {
+          setIsAuthenticated(true);
+        }
+
+        // cleanup
+        localStorage.removeItem("civicpulse_pending_signup_email");
+        setIsLoading(false);
+        return { success: true };
+      }
+
+      return { success: false, error: `Unexpected sign-up state after verification: ${updatedResource?.status ?? "unknown"}` };
+    } catch (error: any) {
+      console.error("Verify sign-up error:", error);
+      const errorMessage =
+        error?.errors?.[0]?.longMessage || error?.errors?.[0]?.message || error?.message || "Verification failed. Please try again.";
+      return { success: false, error: errorMessage };
+    }
+  }, [signUp, clerk, syncWithDb]);
+
 
   const logout = useCallback(async () => {
     try {
@@ -435,6 +539,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         verifySignIn,
         register,
+        // Added sign-up verification helpers
+        verifySignUp,
+        resendSignUpVerification,
         logout,
       }}
     >
