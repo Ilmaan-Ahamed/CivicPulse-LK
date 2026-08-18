@@ -598,49 +598,7 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  {/* Role Selector */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      {t("auth.selectRole")}
-                    </label>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-                        className="w-full px-4 py-3 rounded-xl bg-[#FDEEDC] dark:bg-slate-800/60 border border-[#E8D5B5] dark:border-slate-700 text-left text-sm flex items-center justify-between transition-all focus:outline-none focus:ring-2 focus:ring-[#F97316]/50 focus:border-[#F97316]"
-                      >
-                        <div>
-                          <span className="text-slate-900 dark:text-white font-medium">{selectedRoleOption?.label}</span>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block">{selectedRoleOption?.description}</span>
-                        </div>
-                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${roleDropdownOpen ? "rotate-180" : ""}`} />
-                      </button>
-
-                      {roleDropdownOpen && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setRoleDropdownOpen(false)} />
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-[#E8D5B5] dark:border-slate-800 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto p-1">
-                            {ROLE_OPTIONS.map((opt) => (
-                              <button
-                                type="button"
-                                key={opt.value}
-                                onClick={() => { setRegisterRole(opt.value); setRoleDropdownOpen(false); }}
-                                className={`w-full text-left px-3 py-2.5 rounded-lg text-xs transition-colors ${
-                                  registerRole === opt.value
-                                    ? "bg-[#FFE4C4] dark:bg-orange-950/40 text-[#F97316] dark:text-orange-400"
-                                    : "text-slate-700 dark:text-slate-300 hover:bg-[#FDEEDC] dark:hover:bg-slate-800"
-                                }`}
-                              >
-                                <span className="font-bold block">{opt.label}</span>
-                                <span className="text-[11px] text-slate-500 dark:text-slate-400">{opt.description}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
+                 
                   {/* Required anchor for Clerk's Smart CAPTCHA widget */}
                   <div id="clerk-captcha" />
 
