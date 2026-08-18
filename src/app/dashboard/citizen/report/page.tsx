@@ -19,9 +19,13 @@ export default function ReportIssuePage() {
   const [address, setAddress] = useState("Bambalapitiya Junction, Galle Road, Colombo 04");
   const [lat, setLat] = useState(6.8905);
   const [lng, setLng] = useState(79.8550);
-  const [photos, setPhotos] = useState<string[]>([
-    "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80",
+  const [photos, setPhotos] = useState<Array<{ id: string; src: string; file?: File }>>([
+    { id: "sample-1", src: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80" },
   ]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [submittedCaseId, setSubmittedCaseId] = useState<string | null>(null);
@@ -193,12 +197,67 @@ export default function ReportIssuePage() {
                   <p className="text-xs text-slate-400 mt-1">Upload clear photos showing the damaged infrastructure.</p>
                 </div>
 
-                <div className="border-2 border-dashed border-slate-800 rounded-2xl p-8 text-center space-y-3 bg-slate-950 hover:border-slate-700 transition-colors cursor-pointer">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { fileInputRef.current?.click(); } }}
+                  onClick={() => { setUploadError(null); fileInputRef.current?.click(); }}
+                  className="relative border-2 border-dashed border-slate-800 rounded-2xl p-8 text-center space-y-3 bg-slate-950 hover:border-slate-700 transition-colors cursor-pointer"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    capture="environment"
+                    className="sr-only"
+                    onChange={(e) => {
+                      setUploadError(null);
+                      const files = e.target.files;
+                      if (!files || files.length === 0) return;
+
+                      const newItems: Array<{ id: string; src: string; file?: File }> = [];
+                      for (let i = 0; i < files.length; i++) {
+                        const f = files[i];
+                        // Validate type
+                        if (!ACCEPTED_TYPES.includes(f.type)) {
+                          setUploadError("Unsupported file type. Please upload JPG, PNG, or WebP images.");
+                          continue;
+                        }
+                        // Validate size
+                        if (f.size > MAX_FILE_SIZE) {
+                          setUploadError("File is too large. Maximum allowed size is 10 MB.");
+                          continue;
+                        }
+                        // Prevent duplicates by name+size
+                        const exists = photos.some((p) => p.file?.name === f.name && p.file?.size === f.size);
+                        if (exists) continue;
+
+                        const objectUrl = URL.createObjectURL(f);
+                        newItems.push({ id: `${Date.now()}-${i}`, src: objectUrl, file: f });
+                      }
+
+                      if (newItems.length > 0) {
+                        setPhotos((prev) => [...prev, ...newItems]);
+                      }
+
+                      // Reset input to allow same file selection again
+                      e.currentTarget.value = "";
+                    }}
+                  />
+
                   <Camera className="w-10 h-10 text-orange-400 mx-auto" />
                   <div>
                     <p className="text-xs font-bold text-white">Capture Photo or Upload from Gallery</p>
-                    <p className="text-[11px] text-slate-500">Supports JPG, PNG up to 10MB</p>
+                    <p className="text-[11px] text-slate-500">Supports JPG, PNG, WebP up to 10MB</p>
                   </div>
+
+                  {uploadError && (
+                    <div className="absolute left-4 right-4 -bottom-10 text-xs text-red-400">
+                      <AlertCircle className="w-4 h-4 inline-block mr-1 align-middle" />
+                      <span>{uploadError}</span>
+                    </div>
+                  )}
                 </div>
 
                 {photos.length > 0 && (
@@ -206,8 +265,24 @@ export default function ReportIssuePage() {
                     <span className="text-xs font-bold text-slate-300 block mb-2">Uploaded Photo Preview</span>
                     <div className="grid grid-cols-2 gap-4">
                       {photos.map((p, idx) => (
-                        <div key={idx} className="relative h-40 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
-                          <img src={p} alt="Evidence" className="w-full h-full object-cover" />
+                        <div key={p.id} className="relative h-40 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+                          <img src={p.src} alt={`Evidence ${idx + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Revoke object URL if created from file
+                              try {
+                                if (p.file) URL.revokeObjectURL(p.src);
+                              } catch (e) {}
+                              setPhotos((prev) => prev.filter((x) => x.id !== p.id));
+                            }}
+                            className="absolute top-2 right-2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1"
+                            aria-label={`Remove photo ${idx + 1}`}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M6.707 5.293a1 1 0 00-1.414 1.414L8.586 10l-3.293 3.293a1 1 0 001.414 1.414L10 11.414l3.293 3.293a1 1 0 001.414-1.414L11.414 10l3.293-3.293a1 1 0 00-1.414-1.414L10 8.586 6.707 5.293z" clipRule="evenodd" />
+                            </svg>
+                          </button>
                         </div>
                       ))}
                     </div>
