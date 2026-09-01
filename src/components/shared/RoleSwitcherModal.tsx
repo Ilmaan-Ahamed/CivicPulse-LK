@@ -8,19 +8,11 @@ import { Shuffle, X, Check, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function RoleSwitcherModal() {
-  const { currentRole, switchRole, currentUser } = useAuth();
+  const { currentRole, switchRole } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
-  const rolesList: UserRole[] = [
-    "CITIZEN",
-    "COMMUNITY_VERIFIER",
-    "VOLUNTEER",
-    "NGO",
-    "GOVT_AGENCY",
-    "DS_OFFICER",
-    "ADMIN",
-  ];
+  const rolesList: UserRole[] = ["CITIZEN", "NGO", "DS_OFFICER", "ADMIN"];
 
   const handleRoleSelect = (role: UserRole) => {
     switchRole(role);
@@ -31,17 +23,8 @@ export function RoleSwitcherModal() {
       case "CITIZEN":
         router.push("/dashboard/citizen");
         break;
-      case "COMMUNITY_VERIFIER":
-        router.push("/dashboard/verifier");
-        break;
-      case "VOLUNTEER":
-        router.push("/dashboard/volunteer");
-        break;
       case "NGO":
         router.push("/dashboard/ngo");
-        break;
-      case "GOVT_AGENCY":
-        router.push("/dashboard/agency");
         break;
       case "DS_OFFICER":
         router.push("/dashboard/ds-officer");
@@ -85,7 +68,7 @@ export function RoleSwitcherModal() {
               </h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-orange-200/70 mb-4">
-              Select any of the 7 role personas below to evaluate role-specific dashboards and workflows.
+              Select any of the 4 role personas below to evaluate role-specific dashboards and workflows.
             </p>
 
             <div className="space-y-2 max-h-96 overflow-y-auto pr-1">

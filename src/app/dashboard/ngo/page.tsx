@@ -4,12 +4,15 @@ import React, { useState } from "react";
 import { Building, HeartHandshake, CheckCircle2, DollarSign, Users, Package, Sparkles } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PriorityIndicator } from "@/components/ui/PriorityIndicator";
+import { InteractiveMap } from "@/components/map/InteractiveMap";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { useSharedIssues } from "@/lib/report-sync";
 
 export default function NgoDashboard() {
   const { currentUser } = useAuth();
   const { t } = useLanguage();
+  const sharedIssues = useSharedIssues();
 
   const [opportunities, setOpportunities] = useState([
     {
@@ -23,6 +26,27 @@ export default function NgoDashboard() {
       supportNeeded: "Volunteer cleaning crew & safety gear required",
     },
   ]);
+
+  React.useEffect(() => {
+    const syncedOpportunities = sharedIssues
+      .filter((issue) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(issue.status))
+      .map((issue) => ({
+        id: issue.id,
+        caseNumber: issue.caseNumber,
+        title: issue.title,
+        description: issue.description,
+        category: issue.category,
+        priorityScore: issue.priorityScore,
+        address: issue.address,
+        supportNeeded: "Volunteer mobilization and on-ground support required",
+      }));
+
+    setOpportunities((previous) => {
+      const seen = new Set(previous.map((item) => item.caseNumber));
+      const freshItems = syncedOpportunities.filter((item) => !seen.has(item.caseNumber));
+      return [...freshItems, ...previous];
+    });
+  }, [sharedIssues]);
 
   const [commitments, setCommitments] = useState([
     {
@@ -59,7 +83,7 @@ export default function NgoDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
       {/* Header Banner */}
       <div className="max-w-7xl mx-auto card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
@@ -78,6 +102,29 @@ export default function NgoDashboard() {
             <span className="text-lg card-stat dark:text-teal-400 font-mono">{commitments.length}</span>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-4 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base card-heading dark:text-white">MapCN.dev support map</h2>
+            <p className="text-[11px] body-text dark:text-slate-400">All newly reported issues visible to NGO partners for coordination and mobilization.</p>
+          </div>
+          <span className="text-[10px] font-mono text-teal-400">{opportunities.length} opportunities</span>
+        </div>
+        <InteractiveMap
+          markers={opportunities.map((item) => ({
+            id: item.id,
+            title: item.title,
+            category: item.category,
+            status: "SUBMITTED",
+            latitude: item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625,
+            longitude: item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972,
+            address: item.address,
+          }))}
+          center={[6.9271, 79.8612]}
+          zoom={11}
+        />
       </div>
 
       {/* Opportunity Board */}
@@ -102,7 +149,7 @@ export default function NgoDashboard() {
                 <span>{opp.supportNeeded}</span>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-[var(--border)] dark:border-slate-800">
+              <div className="flex items-center justify-between pt-3 border-t border-border dark:border-slate-800">
                 <span className="text-xs body-text dark:text-slate-400">{opp.address}</span>
                 <button
                   onClick={() => setPledgingCase(opp)}

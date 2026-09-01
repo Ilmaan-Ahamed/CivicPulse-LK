@@ -3,12 +3,15 @@
 import React, { useState } from "react";
 import { ShieldAlert } from "lucide-react";
 import { RoleBadge } from "@/components/ui/RoleBadge";
+import { InteractiveMap } from "@/components/map/InteractiveMap";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { useSharedIssues } from "@/lib/report-sync";
 
 export default function AdminConsole() {
   const { currentUser } = useAuth();
   const { t } = useLanguage();
+  const sharedIssues = useSharedIssues();
   const [activeAdminTab, setActiveAdminTab] = useState<"users" | "role-requests" | "settings" | "audit">("users");
 
   const [users, setUsers] = useState([
@@ -51,7 +54,7 @@ export default function AdminConsole() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
       {/* Admin Header Banner */}
       <div className="max-w-7xl mx-auto card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
@@ -72,8 +75,45 @@ export default function AdminConsole() {
         </div>
       </div>
 
+      {sharedIssues.length > 0 && (
+        <div className="max-w-7xl mx-auto card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-6 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-base card-heading dark:text-white">Citizen Report Sync Feed</h3>
+            <span className="text-[10px] font-mono text-rose-400">{sharedIssues.length} synced issues</span>
+          </div>
+          <InteractiveMap
+            markers={sharedIssues.map((issue) => ({
+              id: issue.id,
+              title: issue.title,
+              category: issue.category,
+              status: issue.status,
+              latitude: issue.category === "ROADS" ? 6.8905 : issue.category === "DRAINAGE" ? 6.9344 : issue.category === "WATER" ? 6.0268 : 7.2625,
+              longitude: issue.category === "ROADS" ? 79.855 : issue.category === "DRAINAGE" ? 79.8519 : issue.category === "WATER" ? 80.217 : 80.5972,
+              address: issue.address,
+            }))}
+            center={[6.9271, 79.8612]}
+            zoom={11}
+          />
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {sharedIssues.slice(0, 6).map((issue) => (
+              <div key={issue.id} className="p-4 rounded-2xl card-light dark:bg-slate-950 dark:border-slate-800">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="font-mono text-[10px] text-rose-400 font-bold">{issue.caseNumber}</span>
+                  <span className="px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 text-[10px] font-bold border border-rose-800">
+                    {issue.status}
+                  </span>
+                </div>
+                <h4 className="text-sm font-bold card-heading dark:text-white line-clamp-1">{issue.title}</h4>
+                <p className="text-[11px] body-text dark:text-slate-400 mt-1 line-clamp-2">{issue.description}</p>
+                <p className="text-[11px] body-text dark:text-slate-500 mt-2">{issue.address}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Admin Navigation Tabs */}
-      <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-3 border-b border-[var(--border)] dark:border-slate-800 pb-3">
+      <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-3 border-b border-border dark:border-slate-800 pb-3">
         <button
           onClick={() => setActiveAdminTab("users")}
           className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${
@@ -119,7 +159,7 @@ export default function AdminConsole() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-[var(--border)] dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono">
+                  <tr className="border-b border-border dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono">
                     <th className="pb-3">User Name</th>
                     <th className="pb-3">Email</th>
                     <th className="pb-3">Role Persona</th>
@@ -128,7 +168,7 @@ export default function AdminConsole() {
                     <th className="pb-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--border)] dark:divide-slate-800">
+                <tbody className="divide-y divide-border dark:divide-slate-800">
                   {users.map((u) => (
                     <tr key={u.id}>
                       <td className="py-3 font-bold card-heading dark:text-white">{u.name}</td>

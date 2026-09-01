@@ -5,12 +5,15 @@ import { Landmark, Building2, Cpu, AlertTriangle, ShieldCheck, CheckCircle2, Use
 import { PriorityIndicator } from "@/components/ui/PriorityIndicator";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CaseTimeline } from "@/components/shared/CaseTimeline";
+import { InteractiveMap } from "@/components/map/InteractiveMap";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { useSharedIssues } from "@/lib/report-sync";
 
 export default function DsOfficerConsole() {
   const { currentUser } = useAuth();
   const { t } = useLanguage();
+  const sharedIssues = useSharedIssues();
 
   const [triageCases, setTriageCases] = useState([
     {
@@ -43,6 +46,31 @@ export default function DsOfficerConsole() {
     },
   ]);
 
+  React.useEffect(() => {
+    const syncedQueue = sharedIssues
+      .filter((issue) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(issue.status))
+      .map((issue) => ({
+        id: issue.id,
+        caseNumber: issue.caseNumber,
+        title: issue.title,
+        description: issue.description,
+        category: issue.category,
+        status: issue.status,
+        priorityScore: issue.priorityScore,
+        aiSummary: `Citizen-submitted ${issue.category.toLowerCase()} issue. This report is now visible to the DS Office dashboard for triage.`,
+        address: issue.address,
+        verificationCount: 1,
+        age: "Just submitted",
+        slaBreachRisk: issue.priorityScore >= 80,
+      }));
+
+    setTriageCases((previous) => {
+      const seen = new Set(previous.map((item) => item.caseNumber));
+      const freshItems = syncedQueue.filter((item) => !seen.has(item.caseNumber));
+      return [...freshItems, ...previous];
+    });
+  }, [sharedIssues]);
+
   const [assigningCase, setAssigningCase] = useState<any | null>(null);
   const [selectedAgency, setSelectedAgency] = useState("RDA Western Province");
   const [instructions, setInstructions] = useState("");
@@ -59,7 +87,7 @@ export default function DsOfficerConsole() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
       {/* DS Console Header */}
       <div className="max-w-7xl mx-auto card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
@@ -102,6 +130,40 @@ export default function DsOfficerConsole() {
           <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">AI Accuracy Rate</span>
           <p className="text-xl card-stat dark:text-teal-400 font-mono mt-1">94.8% Advisory</p>
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-4 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base card-heading dark:text-white">MapCN.dev geospatial queue</h2>
+            <p className="text-[11px] body-text dark:text-slate-400">Submitted issues are synced to the DS Office map in near real time.</p>
+          </div>
+          <span className="text-[10px] font-mono text-amber-400">{[...triageCases, ...sharedIssues].length} mapped alerts</span>
+        </div>
+        <InteractiveMap
+          markers={[
+            ...sharedIssues.map((issue) => ({
+              id: issue.id,
+              title: issue.title,
+              category: issue.category,
+              status: issue.status,
+              latitude: issue.category === "ROADS" ? 6.8905 : issue.category === "DRAINAGE" ? 6.9344 : 7.2625,
+              longitude: issue.category === "ROADS" ? 79.855 : issue.category === "DRAINAGE" ? 79.8519 : 80.5972,
+              address: issue.address,
+            })),
+            ...triageCases.map((item) => ({
+              id: item.id,
+              title: item.title,
+              category: item.category,
+              status: item.status,
+              latitude: item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625,
+              longitude: item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972,
+              address: item.address,
+            })),
+          ]}
+          center={[6.9271, 79.8612]}
+          zoom={11}
+        />
       </div>
 
       {/* Triage Queue Worklist */}
@@ -155,7 +217,7 @@ export default function DsOfficerConsole() {
                 </div>
 
                 {/* Action Bar */}
-                <div className="flex items-center justify-between pt-2 border-t border-[var(--border)] dark:border-slate-800">
+                <div className="flex items-center justify-between pt-2 border-t border-border dark:border-slate-800">
                   <span className="text-xs body-text dark:text-slate-400">{item.address} • {item.verificationCount} Verifications</span>
 
                   <button

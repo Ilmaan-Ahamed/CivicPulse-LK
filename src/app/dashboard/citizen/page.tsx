@@ -4,15 +4,18 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { PlusCircle, MapPin, Clock, CheckCircle2, ShieldCheck, Search, Filter } from "lucide-react";
 import { CaseCard, CaseCardData } from "@/components/shared/CaseCard";
+import { InteractiveMap } from "@/components/map/InteractiveMap";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { useSharedIssues } from "@/lib/report-sync";
 
 export default function CitizenDashboard() {
   const { currentUser } = useAuth();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"my-reports" | "nearby">("my-reports");
+  const sharedIssues = useSharedIssues();
 
-  const myReports: CaseCardData[] = [
+  const citizenSeedReports: CaseCardData[] = [
     {
       id: "case-1042",
       caseNumber: "CP-2026-1042",
@@ -30,7 +33,29 @@ export default function CitizenDashboard() {
     },
   ];
 
+  const sharedCitizenReports: CaseCardData[] = Array.from(
+    new Map(
+      sharedIssues.map((issue) => [issue.id, {
+        id: issue.id,
+        caseNumber: issue.caseNumber,
+        title: issue.title,
+        description: issue.description,
+        category: issue.category,
+        status: issue.status,
+        priorityScore: issue.priorityScore,
+        address: issue.address,
+        dsDivisionName: issue.dsDivisionName,
+        imageUrl: issue.imageUrl,
+        verificationCount: 1,
+        verificationThreshold: 3,
+        createdAt: issue.createdAt,
+      }]),
+    ).values(),
+  );
+
+  const myReports: CaseCardData[] = [...sharedCitizenReports, ...citizenSeedReports];
   const nearbyReports: CaseCardData[] = [
+    ...sharedCitizenReports,
     {
       id: "case-1043",
       caseNumber: "CP-2026-1043",
@@ -48,8 +73,32 @@ export default function CitizenDashboard() {
     },
   ];
 
+  const mapMarkers = [...sharedCitizenReports, ...nearbyReports].reduce<Array<{
+    id: string;
+    title: string;
+    category: string;
+    status: string;
+    latitude: number;
+    longitude: number;
+    address: string;
+  }>>((acc, report) => {
+    if (acc.some((item) => item.id === report.id)) return acc;
+
+    acc.push({
+      id: report.id,
+      title: report.title,
+      category: report.category,
+      status: report.status,
+      latitude: report.category === "ROADS" ? 6.8905 : report.category === "DRAINAGE" ? 6.9344 : report.category === "WATER" ? 6.0268 : 7.2625,
+      longitude: report.category === "ROADS" ? 79.855 : report.category === "DRAINAGE" ? 79.8519 : report.category === "WATER" ? 80.217 : 80.5972,
+      address: report.address,
+    });
+
+    return acc;
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
       {/* Header Banner */}
       <div className="max-w-7xl mx-auto card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
@@ -73,7 +122,7 @@ export default function CitizenDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="max-w-7xl mx-auto flex items-center gap-4 border-b border-[var(--border)] dark:border-[#333333] pb-3">
+      <div className="max-w-7xl mx-auto flex items-center gap-4 border-b border-border dark:border-[#333333] pb-3">
         <button
           onClick={() => setActiveTab("my-reports")}
           className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${
@@ -90,6 +139,17 @@ export default function CitizenDashboard() {
         >
           Nearby Community Activity ({nearbyReports.length})
         </button>
+      </div>
+
+      <div className="max-w-7xl mx-auto card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-4 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base card-heading dark:text-white">MapCN.dev issue map</h2>
+            <p className="text-[11px] body-text dark:text-slate-400">Live citizen reports visible to your dashboard with permission-based access.</p>
+          </div>
+          <span className="text-[10px] font-mono text-orange-400">{mapMarkers.length} visible issues</span>
+        </div>
+        <InteractiveMap markers={mapMarkers} center={[6.9271, 79.8612]} zoom={11} />
       </div>
 
       {/* Case Grid */}
