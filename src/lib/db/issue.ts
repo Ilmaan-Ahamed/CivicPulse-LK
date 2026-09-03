@@ -16,7 +16,13 @@ function toCategory(value?: CreateIssueInput["category"]): Category {
   if (!value) return Category.OTHER;
   if (typeof value === "string") {
     const normalized = value.toUpperCase();
-    return (Category as Record<string, Category>)[normalized] ?? Category.OTHER;
+    const aliases: Record<string, Category> = {
+      ROADS: Category.ROAD_DAMAGE,
+      ROAD: Category.ROAD_DAMAGE,
+      STREETLIGHTS: Category.STREETLIGHT,
+      WATER: Category.WATER_SUPPLY,
+    };
+    return aliases[normalized] ?? (Category as Record<string, Category>)[normalized] ?? Category.OTHER;
   }
   return value;
 }
@@ -37,12 +43,20 @@ export async function deleteIssue(issueId: string) {
 
 export async function createIssue(data: CreateIssueInput) {
   const { userId } = await requireRole(["CITIZEN", "DS_OFFICER", "ADMIN"]);
+  const user = await db.user.findUnique({
+    where: { clerkId: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    throw new Error("User profile is not synchronized with the database");
+  }
 
   return await db.report.create({
     data: {
       title: data.title,
       description: data.description,
-      citizenId: userId,
+      citizenId: user.id,
       category: toCategory(data.category),
       latitude: data.latitude ?? 6.9271,
       longitude: data.longitude ?? 79.8612,

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, X } from "lucide-react";
 import { RoleBadge } from "@/components/ui/RoleBadge";
 import { InteractiveMap } from "@/components/map/InteractiveMap";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -13,6 +13,7 @@ export default function AdminConsole() {
   const { t } = useLanguage();
   const sharedIssues = useSharedIssues();
   const [activeAdminTab, setActiveAdminTab] = useState<"users" | "role-requests" | "settings" | "audit">("users");
+  const [inspectingIssueId, setInspectingIssueId] = useState<string | null>(null);
 
   const [users, setUsers] = useState([
     { id: "u1", name: "Dinesh Abeywardena", email: "admin@civicpulse.lk", role: "ADMIN", status: "ACTIVE", trustScore: 100.0 },
@@ -84,6 +85,7 @@ export default function AdminConsole() {
           <InteractiveMap
             markers={sharedIssues.map((issue) => ({
               id: issue.id,
+              caseId: issue.caseNumber,
               title: issue.title,
               category: issue.category,
               status: issue.status,
@@ -93,6 +95,7 @@ export default function AdminConsole() {
             }))}
             center={[6.9271, 79.8612]}
             zoom={11}
+            onMarkerSelect={(marker) => setInspectingIssueId(marker.id)}
           />
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {sharedIssues.slice(0, 6).map((issue) => (
@@ -109,6 +112,50 @@ export default function AdminConsole() {
               </div>
             ))}
           </div>
+          {inspectingIssueId && (() => {
+            const issue = sharedIssues.find((item) => item.id === inspectingIssueId);
+            if (!issue) return null;
+
+            return (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="admin-report-inspection-title"
+                onClick={() => setInspectingIssueId(null)}
+              >
+                <div
+                  className="card-light dark:bg-slate-900 dark:border-slate-700 w-full max-w-lg rounded-3xl border p-6 shadow-2xl"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <span className="font-mono text-[10px] font-bold text-rose-400">{issue.caseNumber}</span>
+                      <h2 id="admin-report-inspection-title" className="mt-2 text-xl font-bold card-heading dark:text-white">
+                        {issue.title}
+                      </h2>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Close report inspection"
+                      onClick={() => setInspectingIssueId(null)}
+                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="mt-5 space-y-3 text-xs">
+                    <p className="body-text dark:text-slate-300">{issue.description}</p>
+                    <p className="text-slate-500">{issue.address}</p>
+                    <div className="flex items-center gap-3 font-mono text-[10px]">
+                      <span className="rounded border border-rose-800 bg-rose-950/80 px-2 py-1 text-rose-300">{issue.status}</span>
+                      <span className="text-slate-500">{issue.category}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
