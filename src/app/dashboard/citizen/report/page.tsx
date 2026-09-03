@@ -7,7 +7,6 @@ import { analyzeReportWithAi } from "@/lib/ai/triage";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { addSharedIssue } from "@/lib/report-sync";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 type NominatimResult = {
   display_name: string;
@@ -17,7 +16,6 @@ type NominatimResult = {
 
 export default function ReportIssuePage() {
   const { t } = useLanguage();
-  const router = useRouter();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [category, setCategory] = useState("ROADS");
@@ -105,25 +103,70 @@ export default function ReportIssuePage() {
     }
   };
 
-  const handleSubmitReport = (e: React.FormEvent) => {
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newCaseId = `CP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    setSubmitError(null);
+    setIsSubmitting(true);
 
-    addSharedIssue({
-      id: `issue-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
-      caseNumber: newCaseId,
-      title: title.trim(),
-      description: description.trim(),
-      category,
-      status: "SUBMITTED",
-      priorityScore: 66,
-      address: address || "Colombo, Sri Lanka",
-      dsDivisionName: "Colombo DS Office",
-      imageUrl: photos[0]?.src,
-      createdAt: new Date().toISOString(),
-    });
+    try {
+      const response = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          latitude: lat,
+          longitude: lng,
+          address: address.trim() || undefined,
+        }),
+      });
+      const result = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+        report?: {
+          id: string;
+          caseNumber: string;
+          title: string;
+          description: string;
+          category: string;
+          status: string;
+          latitude: number;
+          longitude: number;
+          address: string | null;
+          createdAt: string;
+        };
+      };
 
-    setSubmittedCaseId(newCaseId);
+      if (!response.ok || !result.success || !result.report) {
+        throw new Error(result.error || "Unable to submit report");
+      }
+
+      const report = result.report;
+      addSharedIssue({
+        id: report.id,
+        caseNumber: report.caseNumber,
+        title: report.title,
+        description: report.description,
+        category: report.category,
+        status: report.status,
+        priorityScore: 66,
+        address: report.address || "Colombo, Sri Lanka",
+        dsDivisionName: "Colombo DS Office",
+        imageUrl: photos[0]?.src,
+        createdAt: report.createdAt,
+      });
+      setSubmittedCaseId(report.caseNumber);
+    } catch (error) {
+      console.error("Report submission failed:", error);
+      setSubmitError(error instanceof Error ? error.message : "Unable to submit report");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -487,6 +530,12 @@ export default function ReportIssuePage() {
             )}
 
             {/* Navigation Buttons */}
+            {submitError && (
+              <div role="alert" className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-300">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{submitError}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between pt-4 border-t border-slate-800">
               {step > 1 ? (
                 <button
@@ -512,9 +561,10 @@ export default function ReportIssuePage() {
               ) : (
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="btn-glass-orange-solid px-8 py-3 text-xs"
                 >
-                  {t("form.btn.submit")}
+                  {isSubmitting ? "Submitting..." : t("form.btn.submit")}
                 </button>
               )}
             </div>

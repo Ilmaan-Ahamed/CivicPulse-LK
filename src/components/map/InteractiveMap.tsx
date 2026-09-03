@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, MapPin } from "lucide-react";
+import type { Map as MapLibreMap } from "maplibre-gl";
 import {
   Map,
   MapControls,
@@ -40,7 +41,16 @@ export function InteractiveMap({
   isPickerMode = false,
 }: InteractiveMapProps) {
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const uniqueMarkers = useMemo(() => {
+    const byId = new globalThis.Map<string, MapMarker>();
+    markers.forEach((marker) => {
+      if (!byId.has(marker.id)) {
+        byId.set(marker.id, marker);
+      }
+    });
+    return Array.from(byId.values());
+  }, [markers]);
 
   useEffect(() => {
     if (!mapRef.current || !isPickerMode || !onLocationPick) return;
@@ -85,7 +95,7 @@ export function InteractiveMap({
           showFullscreen={false}
         />
 
-        {markers.map((marker) => {
+        {uniqueMarkers.map((marker) => {
           const isSelected = selectedMarker?.id === marker.id;
           const colorClass = markerStyles[marker.status] ?? "bg-orange-500 ring-orange-400";
 
