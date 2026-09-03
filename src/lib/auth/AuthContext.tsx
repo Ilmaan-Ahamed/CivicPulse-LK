@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useRouter } from "next/navigation";
 import { useUser, useSignIn, useSignUp, useClerk } from "@clerk/nextjs";
 import { UserRole, UserProfile, MOCK_ROLE_USERS } from "./rbac";
+import { readAuthValue, removeAuthValue, writeAuthValue } from "./storage";
 
 interface LoginData {
   email: string;
@@ -103,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (isSignedIn && user) {
         try {
-          const savedRole = localStorage.getItem(ROLE_KEY) as UserRole | null;
+          const savedRole = readAuthValue(ROLE_KEY) as UserRole | null;
           const dbUser = await syncWithDb(savedRole || undefined);
 
           if (dbUser) {
@@ -111,8 +112,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setCurrentRole(activeRole);
             setCurrentUser({ ...dbUser, role: activeRole });
             setIsAuthenticated(true);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
-            if (!savedRole) localStorage.setItem(ROLE_KEY, dbUser.role);
+            writeAuthValue(STORAGE_KEY, JSON.stringify(dbUser));
+            if (!savedRole) writeAuthValue(ROLE_KEY, dbUser.role);
           } else {
             // Robust fallback if DB sync is temporarily slow or failing
             const activeRole: UserRole = savedRole || "CITIZEN";
@@ -129,8 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setCurrentRole(activeRole);
             setCurrentUser(fallbackUser);
             setIsAuthenticated(true);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(fallbackUser));
-            if (!savedRole) localStorage.setItem(ROLE_KEY, activeRole);
+            writeAuthValue(STORAGE_KEY, JSON.stringify(fallbackUser));
+            if (!savedRole) writeAuthValue(ROLE_KEY, activeRole);
           }
         } catch (err) {
           console.error("Failed to sync auth session with DB:", err);
@@ -151,18 +152,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const switchRole = useCallback(
     (role: UserRole) => {
+      console.info("[AUTH ROLE SWITCH] requested", {
+        role,
+        authenticated: isAuthenticated,
+        storageAvailable: typeof window !== "undefined",
+      });
       setCurrentRole(role);
-      localStorage.setItem(ROLE_KEY, role);
+      writeAuthValue(ROLE_KEY, role);
 
       if (isAuthenticated) {
         setCurrentUser((prev) => {
           const updated = { ...prev, role };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          writeAuthValue(STORAGE_KEY, JSON.stringify(updated));
           return updated;
         });
       } else {
         setCurrentUser(MOCK_ROLE_USERS[role] || MOCK_ROLE_USERS.CITIZEN);
       }
+      console.info("[AUTH ROLE SWITCH] applied", { role });
     },
     [isAuthenticated]
   );
@@ -201,8 +208,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setCurrentUser(dbUser);
             setCurrentRole(dbUser.role);
             setIsAuthenticated(true);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
-            localStorage.setItem(ROLE_KEY, dbUser.role);
+            writeAuthValue(STORAGE_KEY, JSON.stringify(dbUser));
+            writeAuthValue(ROLE_KEY, dbUser.role);
           } else {
             setIsAuthenticated(true);
           }
@@ -315,8 +322,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setCurrentUser(dbUser);
             setCurrentRole(dbUser.role);
             setIsAuthenticated(true);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
-            localStorage.setItem(ROLE_KEY, dbUser.role);
+            writeAuthValue(STORAGE_KEY, JSON.stringify(dbUser));
+            writeAuthValue(ROLE_KEY, dbUser.role);
           } else {
             setIsAuthenticated(true);
           }
@@ -381,8 +388,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setCurrentUser(dbUser);
             setCurrentRole(dbUser.role);
             setIsAuthenticated(true);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
-            localStorage.setItem(ROLE_KEY, dbUser.role);
+            writeAuthValue(STORAGE_KEY, JSON.stringify(dbUser));
+            writeAuthValue(ROLE_KEY, dbUser.role);
           } else {
             setIsAuthenticated(true);
           }
@@ -395,8 +402,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             // Persist selected role and pending email so we can complete DB sync after verification
             const roleToSave = data.role || "CITIZEN";
-            localStorage.setItem(ROLE_KEY, roleToSave);
-            localStorage.setItem("civicpulse_pending_signup_email", data.email);
+            writeAuthValue(ROLE_KEY, roleToSave);
+            writeAuthValue("civicpulse_pending_signup_email", data.email);
 
             // Try to send verification email using the future signUp resource if available
             if ((signUp as any).prepareEmailAddressVerification) {
@@ -485,20 +492,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await (clerk as any).setActive({ session: updatedResource.createdSessionId });
 
         // Use the saved role (stored at register time) to sync with DB
-        const savedRole = (localStorage.getItem(ROLE_KEY) as UserRole) || undefined;
+        const savedRole = (readAuthValue(ROLE_KEY) as UserRole) || undefined;
         const dbUser = await syncWithDb(savedRole as any);
         if (dbUser) {
           setCurrentUser(dbUser);
           setCurrentRole(dbUser.role);
           setIsAuthenticated(true);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(dbUser));
-          localStorage.setItem(ROLE_KEY, dbUser.role);
+          writeAuthValue(STORAGE_KEY, JSON.stringify(dbUser));
+          writeAuthValue(ROLE_KEY, dbUser.role);
         } else {
           setIsAuthenticated(true);
         }
 
         // cleanup
-        localStorage.removeItem("civicpulse_pending_signup_email");
+        removeAuthValue("civicpulse_pending_signup_email");
         setIsLoading(false);
         return { success: true };
       }
@@ -522,8 +529,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAuthenticated(false);
       setCurrentUser(MOCK_ROLE_USERS.CITIZEN);
       setCurrentRole("CITIZEN");
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(ROLE_KEY);
+      removeAuthValue(STORAGE_KEY);
+      removeAuthValue(ROLE_KEY);
       router.push("/login");
     }
   }, [clerk, router]);
