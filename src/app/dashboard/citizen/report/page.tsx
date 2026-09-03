@@ -1,12 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Camera, MapPin, Sparkles, CheckCircle2, Upload, AlertCircle, ArrowLeft, ArrowRight } from "lucide-react";
-import { InteractiveMap } from "@/components/map/InteractiveMap";
+import { Map, MapControls, MapMarker, MarkerContent } from "@/components/ui/map";
 import { analyzeReportWithAi } from "@/lib/ai/triage";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { addSharedIssue } from "@/lib/report-sync";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+type NominatimResult = {
+  display_name: string;
+  lat: string;
+  lon: string;
+};
 
 export default function ReportIssuePage() {
   const { t } = useLanguage();
@@ -19,6 +26,9 @@ export default function ReportIssuePage() {
   const [address, setAddress] = useState("Bambalapitiya Junction, Galle Road, Colombo 04");
   const [lat, setLat] = useState(6.8905);
   const [lng, setLng] = useState(79.8550);
+  const [locationSuggestions, setLocationSuggestions] = useState<NominatimResult[]>([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [isSelectionPending, setIsSelectionPending] = useState(false);
   const [photos, setPhotos] = useState<Array<{ id: string; src: string; file?: File }>>([
     { id: "sample-1", src: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80" },
   ]);
@@ -29,6 +39,58 @@ export default function ReportIssuePage() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [submittedCaseId, setSubmittedCaseId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!address.trim() || isSelectionPending) {
+      if (!address.trim()) {
+        setLocationSuggestions([]);
+      }
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      try {
+        setIsSearchingLocation(true);
+        const params = new URLSearchParams({
+          format: "jsonv2",
+          q: address.trim(),
+          countrycodes: "lk",
+          limit: "5",
+        });
+
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          setLocationSuggestions([]);
+          return;
+        }
+
+        const results = (await response.json()) as NominatimResult[];
+        setLocationSuggestions(results);
+      } catch (error) {
+        setLocationSuggestions([]);
+      } finally {
+        setIsSearchingLocation(false);
+      }
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [address, isSelectionPending]);
+
+  const handleLocationSuggestionSelect = (result: NominatimResult) => {
+    const nextLat = Number(result.lat);
+    const nextLng = Number(result.lon);
+    setAddress(result.display_name);
+    setLat(nextLat);
+    setLng(nextLng);
+    setLocationSuggestions([]);
+    setIsSelectionPending(true);
+    window.setTimeout(() => setIsSelectionPending(false), 0);
+  };
 
   const handleAiAssist = async () => {
     if (!title || !description) return;
@@ -46,6 +108,21 @@ export default function ReportIssuePage() {
   const handleSubmitReport = (e: React.FormEvent) => {
     e.preventDefault();
     const newCaseId = `CP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    addSharedIssue({
+      id: `issue-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+      caseNumber: newCaseId,
+      title: title.trim(),
+      description: description.trim(),
+      category,
+      status: "SUBMITTED",
+      priorityScore: 66,
+      address: address || "Colombo, Sri Lanka",
+      dsDivisionName: "Colombo DS Office",
+      imageUrl: photos[0]?.src,
+      createdAt: new Date().toISOString(),
+    });
+
     setSubmittedCaseId(newCaseId);
   };
 
@@ -296,29 +373,87 @@ export default function ReportIssuePage() {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-xl font-bold text-white">{t("form.step3")}</h2>
-                  <p className="text-xs text-slate-400 mt-1">GPS auto-detected. Click map to fine-tune exact coordinate.</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    GPS auto-detected: {lat.toFixed(5)}, {lng.toFixed(5)}. Drag the pin to fine-tune the exact coordinates.
+                  </p>
                 </div>
-
-                <div>
+  
+                <div className="relative">
                   <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
                     {t("form.label.address")}
                   </label>
                   <input
                     type="text"
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      setAddress(nextValue);
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-orange-500 mb-4"
+                    placeholder="Search for a place, landmark, or district in Sri Lanka..."
                   />
-                </div>
 
-                <InteractiveMap
-                  center={[lat, lng]}
-                  isPickerMode={true}
-                  onLocationPick={(newLat, newLng) => {
-                    setLat(newLat);
-                    setLng(newLng);
-                  }}
-                />
+                  {address.trim() && (
+                    <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-slate-700 bg-slate-950 shadow-2xl">
+                      {isSearchingLocation ? (
+                        <div className="px-3 py-2 text-xs text-slate-400">Searching locations...</div>
+                      ) : locationSuggestions.length > 0 ? (
+                        locationSuggestions.map((suggestion) => (
+                          <button
+                            key={`${suggestion.display_name}-${suggestion.lat}-${suggestion.lon}`}
+                            type="button"
+                            onClick={() => handleLocationSuggestionSelect(suggestion)}
+                            className="block w-full border-b border-slate-800 px-3 py-2 text-left text-xs text-slate-200 transition-colors last:border-b-0 hover:bg-slate-900"
+                          >
+                            <div className="font-medium text-white">{suggestion.display_name}</div>
+                            <div className="mt-0.5 text-[10px] text-slate-400">
+                              {Number(suggestion.lat).toFixed(5)}, {Number(suggestion.lon).toFixed(5)}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-xs text-slate-400">No matches found</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+  
+                <div className="h-[420px] w-full relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+                  <Map
+                    className="h-[420px] w-full"
+                    viewport={{ center: [lng, lat], zoom: 14 }}
+                    dragRotate={false}
+                    pitchWithRotate={false}
+                  >
+                    <MapControls
+                      position="bottom-right"
+                      showZoom={true}
+                      showLocate={false}
+                      showCompass={false}
+                      showFullscreen={false}
+                    />
+ 
+                    <MapMarker
+                      longitude={lng}
+                      latitude={lat}
+                      draggable={true}
+                      onDrag={({ lng: nextLng, lat: nextLat }) => {
+                        setLng(nextLng);
+                        setLat(nextLat);
+                      }}
+                      onDragEnd={({ lng: nextLng, lat: nextLat }) => {
+                        setLng(nextLng);
+                        setLat(nextLat);
+                      }}
+                    >
+                      <MarkerContent className="pointer-events-none">
+                        <div className="relative flex h-8 w-8 items-center justify-center rounded-full border-4 border-white bg-orange-500 shadow-lg shadow-orange-950/60">
+                          <MapPin className="h-4 w-4 text-white" />
+                        </div>
+                      </MarkerContent>
+                    </MapMarker>
+                  </Map>
+                </div>
               </div>
             )}
 

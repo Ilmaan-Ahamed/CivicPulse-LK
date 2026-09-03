@@ -24,7 +24,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "role.ngo": "NGO Partner",
     "role.govt_agency": "Government Agency",
     "role.ds_officer": "DS Officer",
-    "role.admin": "System Administrator",
+    "role.admin": "Admin",
 
     // Case Statuses
     "status.pending": "Pending Verification",
