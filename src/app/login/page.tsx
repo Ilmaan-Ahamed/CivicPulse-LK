@@ -30,11 +30,9 @@ type AuthTab = "signin" | "signup";
 
 const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = [
   { value: "CITIZEN", label: "Citizen", description: "Report infrastructure issues in your community" },
-  { value: "COMMUNITY_VERIFIER", label: "Community Verifier", description: "Verify reports submitted by citizens nearby" },
-  { value: "VOLUNTEER", label: "Field Volunteer", description: "Conduct physical inspections and collect evidence" },
-  { value: "NGO", label: "NGO Partner", description: "Pledge support for high-priority civic projects" },
-  { value: "GOVT_AGENCY", label: "Government Agency", description: "Manage and resolve assigned infrastructure cases" },
+  { value: "NGO_PARTNER", label: "NGO Partner", description: "Pledge support and manage assigned infrastructure cases" },
   { value: "DS_OFFICER", label: "DS Officer", description: "Triage cases and coordinate agency assignments" },
+  { value: "ADMIN", label: "Administrator", description: "Manage users and system configuration" },
 ];
 
 export default function LoginPage() {

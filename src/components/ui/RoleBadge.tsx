@@ -19,29 +19,11 @@ export function RoleBadge({ role, showIcon = true }: RoleBadgeProps) {
           bg: "bg-orange-50 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800",
           icon: User,
         };
-      case "COMMUNITY_VERIFIER":
+      case "NGO_PARTNER":
         return {
-          label: t("role.community_verifier"),
-          bg: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-          icon: ShieldCheck,
-        };
-      case "VOLUNTEER":
-        return {
-          label: t("role.volunteer"),
-          bg: "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
-          icon: HeartHandshake,
-        };
-      case "NGO":
-        return {
-          label: t("role.ngo"),
+          label: t("role.ngo_partner"),
           bg: "bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800",
           icon: Building,
-        };
-      case "GOVT_AGENCY":
-        return {
-          label: t("role.govt_agency"),
-          bg: "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
-          icon: Landmark,
         };
       case "DS_OFFICER":
         return {

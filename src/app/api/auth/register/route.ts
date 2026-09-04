@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { UserRole } from "@/lib/auth/rbac";
-import { Role, Language } from "@prisma/client";
+import { Language } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,10 +18,7 @@ export async function POST(request: NextRequest) {
     const cleanEmail = email.toLowerCase().trim();
     const validRoles: UserRole[] = [
       "CITIZEN",
-      "COMMUNITY_VERIFIER",
-      "VOLUNTEER",
-      "NGO",
-      "GOVT_AGENCY",
+      "NGO_PARTNER",
       "DS_OFFICER",
       "ADMIN",
     ];
@@ -39,7 +36,7 @@ export async function POST(request: NextRequest) {
           email: cleanEmail,
           firstName,
           lastName,
-          role: (userRole as Role) || Role.CITIZEN,
+          role: userRole as any,
           preferredLang: Language.EN,
           dsDivision: "DS-COL-01",
           district: "Colombo",

@@ -65,7 +65,7 @@ const ROLE_CARDS: RoleCardConfig[] = [
     btnClass: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 dark:shadow-emerald-900/30",
   },
   {
-    role: "NGO",
+    role: "NGO_PARTNER",
     titleKey: "roleSelect.ngo.title",
     subtitleKey: "roleSelect.ngo.subtitle",
     descKey: "roleSelect.ngo.desc",

@@ -19,10 +19,7 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Roles
     "role.citizen": "Citizen",
-    "role.community_verifier": "Community Verifier",
-    "role.volunteer": "Field Volunteer",
-    "role.ngo": "NGO Partner",
-    "role.govt_agency": "Government Agency",
+    "role.ngo_partner": "NGO Partner",
     "role.ds_officer": "DS Officer",
     "role.admin": "Admin",
 
@@ -82,12 +79,9 @@ export const translations: Record<Language, Record<string, string>> = {
     "form.caseId": "Your Case ID:",
 
     // Dashboard Headers
-    "dash.citizen.title": "Citizen Civic Portal",
-    "dash.verifier.title": "Community Verification Queue",
+    "dash.citizen.title": "Citizen Dashboard",
     "dash.ds.title": "Divisional Secretariat Triage Console",
-    "dash.agency.title": "Government Agency Workstation",
-    "dash.volunteer.title": "Field Volunteer Verification Hub",
-    "dash.ngo.title": "NGO Civic Opportunity Board",
+    "dash.ngo_partner.title": "NGO Partner Dashboard",
     "dash.admin.title": "Platform Governance & Audit Console",
 
     // Common Buttons & Actions
@@ -195,10 +189,7 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Roles
     "role.citizen": "පුරවැසියා",
-    "role.community_verifier": "ප්‍රජා සත්‍යාපක",
-    "role.volunteer": "ක්ෂේත්‍ර ස්වේච්ඡාසේවක",
-    "role.ngo": "රාජ්‍ය නොවන සංවිධානය",
-    "role.govt_agency": "රාජ්‍ය ආයතනය",
+    "role.ngo_partner": "රාජ්‍ය නොවන සංවිධානය",
     "role.ds_officer": "ප්‍රාදේශීය ලේකම් නිලධාරී",
     "role.admin": "පද්ධති පරිපාලක",
 
@@ -259,11 +250,8 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Dashboard Headers
     "dash.citizen.title": "පුරවැසි පාලක පුවරුව",
-    "dash.verifier.title": "ප්‍රජා සත්‍යාපන පෝලිම",
     "dash.ds.title": "ප්‍රාදේශීය ලේකම් මෙහෙයුම් කොන්සෝලය",
-    "dash.agency.title": "රාජ්‍ය ආයතන වැඩපොළ",
-    "dash.volunteer.title": "ස්වේච්ඡාසේවක පරීක්ෂණ මධ්‍යස්ථානය",
-    "dash.ngo.title": "රාජ්‍ය නොවන සංවිධාන පාලක පුවරුව",
+    "dash.ngo_partner.title": "රාජ්‍ය නොවන සංවිධාන පාලක පුවරුව",
     "dash.admin.title": "පද්ධති පාලන කොන්සෝලය",
 
     // Common Buttons & Actions
@@ -371,10 +359,7 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Roles
     "role.citizen": "குடிமகன்",
-    "role.community_verifier": "சமூக சரிபார்ப்பாளர்",
-    "role.volunteer": "கள தன்னார்வலர்",
-    "role.ngo": "அரசார்பற்ற நிறுவனம்",
-    "role.govt_agency": "அரசு முகமை",
+    "role.ngo_partner": "அரசார்பற்ற நிறுவனம்",
     "role.ds_officer": "பிரதேச செயலக அதிகாரி",
     "role.admin": "முறைமை நிர்வாகி",
 
@@ -435,11 +420,8 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Dashboard Headers
     "dash.citizen.title": "குடிமகன் டாஷ்போர்டு",
-    "dash.verifier.title": "சமூக சரிபார்ப்பு வரிசை",
     "dash.ds.title": "பிரதேச செயலக அதிகாரி கன்சோல்",
-    "dash.agency.title": "அரசு முகமை பணிநிலையம்",
-    "dash.volunteer.title": "தன்னார்வலர் சரிபார்ப்பு மையம்",
-    "dash.ngo.title": "அரசார்பற்ற நிறுவன வாய்ப்பு பலகை",
+    "dash.ngo_partner.title": "அரசார்பற்ற நிறுவன டாஷ்போர்டு",
     "dash.admin.title": "முறைமை ஆளுகை கன்சோல்",
 
     // Common Buttons & Actions

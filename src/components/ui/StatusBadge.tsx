@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { ReportStatus } from "@prisma/client";
 import {

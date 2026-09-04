@@ -103,7 +103,7 @@ export function CaseCard({ caseData, onSelect, onVerify, onAssign }: CaseCardPro
 
       {/* Action Bar */}
       <div className="pt-2 border-t border-[#E8D5B5] dark:border-[#333333]/60 flex items-center justify-between gap-2">
-        {currentRole === "COMMUNITY_VERIFIER" && caseData.status === "PENDING" && onVerify && (
+        {currentRole === "CITIZEN" && caseData.status === "PENDING" && onVerify && (
           <button
             onClick={() => onVerify(caseData.id)}
             className="btn-primary-orange w-full py-1.5 px-3 text-xs flex items-center justify-center gap-1.5"
