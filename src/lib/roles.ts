@@ -1,9 +1,6 @@
 export const ROLES = [
   "CITIZEN",
-  "COMMUNITY_VERIFIER",
-  "VOLUNTEER",
-  "NGO",
-  "GOVT_AGENCY",
+  "NGO_PARTNER",
   "DS_OFFICER",
   "ADMIN",
 ] as const;
@@ -18,10 +15,13 @@ export const normalizeRole = (role?: string | null): Role | undefined => {
 
   const aliases: Record<string, Role> = {
     CITIZEN: "CITIZEN",
-    COMMUNITY_VERIFIER: "COMMUNITY_VERIFIER",
-    VOLUNTEER: "VOLUNTEER",
-    NGO: "NGO",
-    GOVT_AGENCY: "GOVT_AGENCY",
+    COMMUNITY_VERIFIER: "CITIZEN",
+    VERIFIER: "CITIZEN",
+    VOLUNTEER: "CITIZEN",
+    NGO: "NGO_PARTNER",
+    NGO_PARTNER: "NGO_PARTNER",
+    GOVT_AGENCY: "NGO_PARTNER",
+    GOVERNMENT_AGENCY: "NGO_PARTNER",
     DS_OFFICER: "DS_OFFICER",
     DEPARTMENT_ADMIN: "ADMIN",
     SUPER_ADMIN: "ADMIN",
@@ -35,11 +35,13 @@ export const normalizeRole = (role?: string | null): Role | undefined => {
 // Which roles can access which route prefixes. Keep route checks permissive during the demo
 // login flow when Clerk metadata has not yet been populated for the selected role.
 export const ROUTE_ACCESS: Record<string, Role[]> = {
-  "/dashboard/citizen": ["CITIZEN", "COMMUNITY_VERIFIER", "VOLUNTEER", "NGO", "GOVT_AGENCY", "DS_OFFICER", "ADMIN"],
-  "/dashboard/verifier": ["COMMUNITY_VERIFIER", "DS_OFFICER", "ADMIN"],
-  "/dashboard/volunteer": ["VOLUNTEER", "DS_OFFICER", "ADMIN"],
-  "/dashboard/ngo": ["NGO", "DS_OFFICER", "ADMIN"],
-  "/dashboard/agency": ["GOVT_AGENCY", "DS_OFFICER", "ADMIN"],
+  "/dashboard/citizen": ["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"],
+  "/dashboard/verifier": ["CITIZEN", "DS_OFFICER", "ADMIN"],
+  "/dashboard/volunteer": ["CITIZEN", "DS_OFFICER", "ADMIN"],
+  "/dashboard/ngo": ["NGO_PARTNER", "DS_OFFICER", "ADMIN"],
+  "/dashboard/agency": ["NGO_PARTNER", "DS_OFFICER", "ADMIN"],
   "/dashboard/ds-officer": ["DS_OFFICER", "ADMIN"],
   "/dashboard/admin": ["ADMIN"],
+  "/ds-console": ["DS_OFFICER", "ADMIN"],
+  "/ds-console/agencies": ["DS_OFFICER", "ADMIN"],
 };

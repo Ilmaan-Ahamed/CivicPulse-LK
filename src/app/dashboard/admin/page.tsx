@@ -18,11 +18,9 @@ export default function AdminConsole() {
   const [users, setUsers] = useState([
     { id: "u1", name: "Dinesh Abeywardena", email: "admin@civicpulse.lk", role: "ADMIN", status: "ACTIVE", trustScore: 100.0 },
     { id: "u2", name: "K. Perera", email: "dso.colombo@civicpulse.lk", role: "DS_OFFICER", status: "ACTIVE", trustScore: 98.0 },
-    { id: "u3", name: "RDA Western Province", email: "agency.rda@civicpulse.lk", role: "GOVT_AGENCY", status: "ACTIVE", trustScore: 95.0 },
-    { id: "u4", name: "Rotary Sri Lanka", email: "ngo.rotary@civicpulse.lk", role: "NGO", status: "ACTIVE", trustScore: 92.0 },
-    { id: "u5", name: "Kasun Jayawardena", email: "volunteer.kasun@civicpulse.lk", role: "VOLUNTEER", status: "ACTIVE", trustScore: 89.0 },
-    { id: "u6", name: "Nimal Silva", email: "verifier.nimal@civicpulse.lk", role: "COMMUNITY_VERIFIER", status: "ACTIVE", trustScore: 88.0 },
-    { id: "u7", name: "Anusha Fernando", email: "citizen.anusha@civicpulse.lk", role: "CITIZEN", status: "ACTIVE", trustScore: 82.0 },
+    { id: "u3", name: "RDA Western Province", email: "agency.rda@civicpulse.lk", role: "NGO_PARTNER", status: "ACTIVE", trustScore: 95.0 },
+    { id: "u4", name: "Rotary Sri Lanka", email: "ngo.rotary@civicpulse.lk", role: "NGO_PARTNER", status: "ACTIVE", trustScore: 92.0 },
+    { id: "u5", name: "Anusha Fernando", email: "citizen.anusha@civicpulse.lk", role: "CITIZEN", status: "ACTIVE", trustScore: 82.0 },
   ]);
 
   const [roleRequests, setRoleRequests] = useState([
@@ -30,7 +28,7 @@ export default function AdminConsole() {
       id: "req-1",
       name: "Saman Kumara",
       email: "saman.verifier@civicpulse.lk",
-      requestedRole: "COMMUNITY_VERIFIER",
+      requestedRole: "CITIZEN",
       reason: "Local resident in Bambalapitiya area with community background.",
     },
   ]);
@@ -72,6 +70,148 @@ export default function AdminConsole() {
           <div className="card-light dark:bg-slate-950 dark:border-slate-800 px-4 py-2 rounded-2xl border text-center">
             <span className="text-[10px] card-subtext dark:text-slate-500 font-medium block">Total Platform Users</span>
             <span className="text-lg card-stat dark:text-white font-mono">{users.length}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Chart Dashboard Section */}
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Reports by Category Chart */}
+        <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
+          <h4 className="text-sm font-bold card-heading dark:text-white">Reports by Category</h4>
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="body-text dark:text-slate-400">Roads</span>
+                <span className="font-mono icon-orange">45%</span>
+              </div>
+              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-orange-500 dark:bg-orange-400 rounded-full" style={{ width: "45%" }}></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="body-text dark:text-slate-400">Drainage</span>
+                <span className="font-mono text-blue-400">28%</span>
+              </div>
+              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 dark:bg-blue-400 rounded-full" style={{ width: "28%" }}></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="body-text dark:text-slate-400">Water</span>
+                <span className="font-mono text-cyan-400">18%</span>
+              </div>
+              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-cyan-500 dark:bg-cyan-400 rounded-full" style={{ width: "18%" }}></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="body-text dark:text-slate-400">Streetlights</span>
+                <span className="font-mono text-amber-400">9%</span>
+              </div>
+              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-amber-500 dark:bg-amber-400 rounded-full" style={{ width: "9%" }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Resolution Status Chart */}
+        <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
+          <h4 className="text-sm font-bold card-heading dark:text-white">Resolution Status</h4>
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="body-text dark:text-slate-400">Resolved</span>
+                <span className="font-mono text-emerald-400">82%</span>
+              </div>
+              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full" style={{ width: "82%" }}></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="body-text dark:text-slate-400">In Progress</span>
+                <span className="font-mono text-blue-400">12%</span>
+              </div>
+              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 dark:bg-blue-400 rounded-full" style={{ width: "12%" }}></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="body-text dark:text-slate-400">Pending</span>
+                <span className="font-mono text-amber-400">6%</span>
+              </div>
+              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-amber-500 dark:bg-amber-400 rounded-full" style={{ width: "6%" }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Top Divisional Secretariats */}
+        <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
+          <h4 className="text-sm font-bold card-heading dark:text-white">Top DS Divisions</h4>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs body-text dark:text-slate-400">Colombo</span>
+              <span className="text-xs font-mono icon-orange font-bold">245</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs body-text dark:text-slate-400">Gampaha</span>
+              <span className="text-xs font-mono text-blue-400 font-bold">189</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs body-text dark:text-slate-400">Kandy</span>
+              <span className="text-xs font-mono text-cyan-400 font-bold">156</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs body-text dark:text-slate-400">Galle</span>
+              <span className="text-xs font-mono text-amber-400 font-bold">134</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs body-text dark:text-slate-400">Kurunegala</span>
+              <span className="text-xs font-mono text-purple-400 font-bold">98</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Weekly Trend */}
+        <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
+          <h4 className="text-sm font-bold card-heading dark:text-white">Weekly Trend</h4>
+          <div className="flex items-end justify-between h-24 gap-2">
+            <div className="flex flex-col items-center gap-1 flex-1">
+              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "60%" }}></div>
+              <span className="text-[10px] body-text dark:text-slate-400">Mon</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 flex-1">
+              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "80%" }}></div>
+              <span className="text-[10px] body-text dark:text-slate-400">Tue</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 flex-1">
+              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "45%" }}></div>
+              <span className="text-[10px] body-text dark:text-slate-400">Wed</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 flex-1">
+              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "90%" }}></div>
+              <span className="text-[10px] body-text dark:text-slate-400">Thu</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 flex-1">
+              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "70%" }}></div>
+              <span className="text-[10px] body-text dark:text-slate-400">Fri</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 flex-1">
+              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "40%" }}></div>
+              <span className="text-[10px] body-text dark:text-slate-400">Sat</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 flex-1">
+              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "30%" }}></div>
+              <span className="text-[10px] body-text dark:text-slate-400">Sun</span>
+            </div>
           </div>
         </div>
       </div>
@@ -221,7 +361,7 @@ export default function AdminConsole() {
                       <td className="py-3 font-bold card-heading dark:text-white">{u.name}</td>
                       <td className="py-3 body-text dark:text-slate-400">{u.email}</td>
                       <td className="py-3">
-                        <RoleBadge role={u.role as "CITIZEN" | "COMMUNITY_VERIFIER" | "VOLUNTEER" | "NGO" | "GOVT_AGENCY" | "DS_OFFICER" | "ADMIN"} />
+                        <RoleBadge role={u.role as "CITIZEN" | "NGO_PARTNER" | "DS_OFFICER" | "ADMIN"} />
                       </td>
                       <td className="py-3 font-mono font-bold text-emerald-400">{u.trustScore}%</td>
                       <td className="py-3">

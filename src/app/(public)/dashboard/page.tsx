@@ -1,7 +1,9 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { Category, ReportStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import { requireRole } from "@/lib/auth-guard";
 import type {
   DashboardStats,
   StatusCount,
@@ -178,6 +180,9 @@ async function generateResolutionTimeline(where: any): Promise<ResolutionTimelin
 }
 
 export default async function DashboardPage() {
+  // Restrict access to ADMIN and DS_OFFICER only
+  const user = await requireRole(["ADMIN", "DS_OFFICER"]);
+
   const initialData = await getDashboardData({});
 
   return <DashboardClient initialData={initialData} />;

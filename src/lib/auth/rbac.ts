@@ -1,9 +1,6 @@
 export type UserRole =
   | "CITIZEN"
-  | "COMMUNITY_VERIFIER"
-  | "VOLUNTEER"
-  | "NGO"
-  | "GOVT_AGENCY"
+  | "NGO_PARTNER"
   | "DS_OFFICER"
   | "ADMIN";
 
@@ -30,45 +27,13 @@ export const MOCK_ROLE_USERS: Record<UserRole, UserProfile> = {
     dsDivisionName: "Colombo DS Office",
     preferredLanguage: "en",
   },
-  COMMUNITY_VERIFIER: {
-    id: "user-verifier-01",
-    name: "Nimal Silva",
-    email: "verifier.nimal@civicpulse.lk",
-    role: "COMMUNITY_VERIFIER",
-    trustScore: 88.0,
-    dsDivisionCode: "DS-COL-01",
-    dsDivisionName: "Colombo DS Office",
-    preferredLanguage: "en",
-  },
-  VOLUNTEER: {
-    id: "user-volunteer-01",
-    name: "Kasun Jayawardena",
-    email: "volunteer.kasun@civicpulse.lk",
-    role: "VOLUNTEER",
-    trustScore: 89.0,
-    organization: "Civic Action Youth Volunteer Network",
-    dsDivisionCode: "DS-COL-01",
-    dsDivisionName: "Colombo DS Office",
-    preferredLanguage: "si",
-  },
-  NGO: {
+  NGO_PARTNER: {
     id: "user-ngo-01",
     name: "Rotary Community Sri Lanka",
     email: "ngo.rotary@civicpulse.lk",
-    role: "NGO",
+    role: "NGO_PARTNER",
     trustScore: 92.0,
     organization: "Rotary Sri Lanka District 3220",
-    dsDivisionCode: "DS-COL-01",
-    dsDivisionName: "Colombo DS Office",
-    preferredLanguage: "en",
-  },
-  GOVT_AGENCY: {
-    id: "user-agency-01",
-    name: "Road Development Authority (RDA)",
-    email: "agency.rda@civicpulse.lk",
-    role: "GOVT_AGENCY",
-    trustScore: 95.0,
-    organization: "RDA Western Province Division",
     dsDivisionCode: "DS-COL-01",
     dsDivisionName: "Colombo DS Office",
     preferredLanguage: "en",
@@ -104,23 +69,17 @@ export function hasPermission(role: UserRole, action: string): boolean {
     case "REPORT_ISSUE":
     case "VIEW_MY_REPORTS":
     case "PROVIDE_FEEDBACK":
-      return true;
-
     case "VERIFY_REPORT":
     case "VIEW_VERIFICATION_QUEUE":
-      return role === "COMMUNITY_VERIFIER" || role === "DS_OFFICER";
-
     case "PERFORM_FIELD_INSPECTION":
     case "SUBMIT_FIELD_EVIDENCE":
-      return role === "VOLUNTEER" || role === "DS_OFFICER";
+      return true;
 
     case "PLEDGE_SUPPORT":
     case "VIEW_NGO_BOARD":
-      return role === "NGO" || role === "DS_OFFICER";
-
     case "UPDATE_CASE_WORK":
     case "REPORT_BLOCKER":
-      return role === "GOVT_AGENCY";
+      return role === "NGO_PARTNER" || role === "DS_OFFICER";
 
     case "TRIAGE_CASES":
     case "ASSIGN_AGENCY":

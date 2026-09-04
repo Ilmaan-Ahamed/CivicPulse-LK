@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createIssue } from "@/lib/db/issue";
+import { db } from "@/lib/db";
+import { ReportStatus } from "@prisma/client";
 
 const createReportSchema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -10,6 +12,45 @@ const createReportSchema = z.object({
   longitude: z.number().finite().optional(),
   address: z.string().trim().max(500).optional(),
 });
+
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const status = url.searchParams.get("status");
+
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
+
+    const reports = await db.report.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        summary: true,
+        category: true,
+        status: true,
+        district: true,
+        createdAt: true,
+        aiConfidence: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: reports,
+    });
+  } catch (error) {
+    console.error("[REPORT GET ERROR]", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch reports" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: Request) {
   try {

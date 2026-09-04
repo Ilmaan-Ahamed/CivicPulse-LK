@@ -6,21 +6,15 @@ import type { Role } from "@prisma/client";
  */
 export const ROLE_HOME_ROUTES: Record<Role, string> = {
   CITIZEN: "/dashboard/citizen",
-  VERIFIER: "/dashboard/verifier",
+  NGO_PARTNER: "/dashboard/ngo",
   DS_OFFICER: "/dashboard/ds-officer",
-  AGENCY: "/dashboard/agency",
-  NGO: "/dashboard/ngo",
-  VOLUNTEER: "/dashboard/volunteer",
   ADMIN: "/dashboard/admin",
 };
 
 /** Human-readable labels, matching the ROLE_OPTIONS on the login/register page */
 export const ROLE_LABELS: Record<Role, string> = {
   CITIZEN: "Citizen",
-  VERIFIER: "Community Verifier",
+  NGO_PARTNER: "NGO Partner",
   DS_OFFICER: "DS Officer",
-  AGENCY: "Government Agency",
-  NGO: "NGO Partner",
-  VOLUNTEER: "Field Volunteer",
   ADMIN: "Administrator",
 };

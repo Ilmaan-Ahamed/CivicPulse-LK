@@ -35,14 +35,8 @@ export function Navbar() {
 
   const getDashboardPath = (role: string) => {
     switch (role) {
-      case "COMMUNITY_VERIFIER":
-        return "/dashboard/verifier";
-      case "VOLUNTEER":
-        return "/dashboard/volunteer";
-      case "NGO":
+      case "NGO_PARTNER":
         return "/dashboard/ngo";
-      case "GOVT_AGENCY":
-        return "/dashboard/agency";
       case "DS_OFFICER":
         return "/dashboard/ds-officer";
       case "ADMIN":
