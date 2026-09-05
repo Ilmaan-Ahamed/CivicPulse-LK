@@ -1,124 +1,243 @@
-﻿import { prisma } from "@/lib/db";
-import {
-  BarChart3,
-  CheckCircle2,
-  Clock,
-  ShieldAlert,
-  Building2,
-  TrendingUp,
-  MapPin,
-} from "lucide-react";
-import { CATEGORY_LABELS } from "@/lib/utils";
+import React from "react";
+import { redirect } from "next/navigation";
+import { Category, ReportStatus } from "@prisma/client";
+import { db } from "@/lib/db";
+import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import { requireRole } from "@/lib/auth-guard";
+import type {
+  DashboardStats,
+  StatusCount,
+  CategoryCount,
+  ResolutionTimelinePoint,
+  RecentActivity,
+  ReportLocation,
+  DivisionCount,
+  WeeklyTrendPoint,
+} from "@/types/dashboard";
 
-export default async function PublicDashboardPage() {
-  // Aggregate real database stats
-  const [totalReports, verifiedCount, resolvedCount, categoryCounts] =
-    await Promise.all([
-      prisma.report.count(),
-      prisma.report.count({ where: { status: "VERIFIED" } }),
-      prisma.report.count({ where: { status: "RESOLVED" } }),
-      prisma.report.groupBy({
-        by: ["category"],
-        _count: { category: true },
-      }),
-    ]);
+async function getDashboardData(filters: {
+  district?: string;
+  category?: Category;
+  status?: ReportStatus;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  const where: any = {};
+  if (filters.district) where.district = filters.district;
+  if (filters.category) where.category = filters.category;
+  if (filters.status) where.status = filters.status;
+  if (filters.dateFrom || filters.dateTo) {
+    where.createdAt = {};
+    if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
+    if (filters.dateTo) where.createdAt.lte = new Date(filters.dateTo);
+  }
 
-  const resolutionRate =
-    totalReports > 0 ? Math.round((resolvedCount / totalReports) * 100) : 0;
+  const [
+    totalReports,
+    verifiedCount,
+    resolvedCount,
+    statusDistribution,
+    categoryBreakdown,
+    recentActivity,
+    reportLocations,
+    topDivisions,
+    weeklyTrend,
+    availableDistricts,
+  ] = await Promise.all([
+    db.report.count({ where }),
+    db.report.count({ where: { ...where, status: { in: ["VERIFIED", "FIELD_VERIFIED"] } } }),
+    db.report.count({ where: { ...where, status: "RESOLVED" } }),
+    db.report.groupBy({
+      by: ["status"],
+      where,
+      _count: true,
+    }),
+    db.report.groupBy({
+      by: ["category"],
+      where,
+      _count: true,
+    }),
+    db.report.findMany({
+      where,
+      select: {
+        id: true,
+        category: true,
+        status: true,
+        district: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
+    db.report.findMany({
+      where,
+      select: {
+        id: true,
+        latitude: true,
+        longitude: true,
+        status: true,
+        category: true,
+        address: true,
+      },
+    }),
+    db.report.groupBy({
+      by: ["district"],
+      where,
+      _count: true,
+      orderBy: { _count: { district: "desc" } },
+      take: 5,
+    }),
+    generateWeeklyTrend(where),
+    db.report.findMany({
+      select: { district: true },
+      distinct: ["district"],
+    }).then((reports) => reports.map((r: any) => r.district).filter(Boolean)),
+  ]);
 
-  return (
-    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-10">
-      {/* Dashboard Title Header */}
-      <div>
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-3">
-          <BarChart3 className="w-4 h-4" />
-          Real-time Civic Data & Transparency
-        </div>
-        <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
-          Public Transparency Dashboard
-        </h1>
-        <p className="text-sm text-muted mt-1 max-w-3xl">
-          Open access to infrastructure reporting metrics, community verification accuracy, DS Office response rates, and repair resolutions across Sri Lanka.
-        </p>
-      </div>
+  const resolvedReports = await db.report.findMany({
+    where: { ...where, status: "RESOLVED", resolvedAt: { not: null } },
+    select: {
+      createdAt: true,
+      resolvedAt: true,
+    },
+  });
 
-      {/* Overview Stat Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="p-6 rounded-2xl bg-surface border border-primary/20 backdrop-blur-md space-y-2">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-xs font-semibold">Total Reports</span>
-            <ShieldAlert className="w-5 h-5 text-primary" />
-          </div>
-          <div className="text-3xl font-extrabold text-foreground">{totalReports}</div>
-          <div className="text-[11px] text-muted">Submitted across Sri Lanka</div>
-        </div>
+  let avgResolutionTimeDays: number | null = null;
+  if (resolvedReports.length > 0) {
+    const totalDays = resolvedReports.reduce((sum: number, report: any) => {
+      const days = report.resolvedAt!
+        .getTime() - report.createdAt.getTime();
+      return sum + days / (1000 * 60 * 60 * 24);
+    }, 0);
+    avgResolutionTimeDays = Math.round(totalDays / resolvedReports.length);
+  }
 
-        <div className="p-6 rounded-2xl bg-surface border border-primary/20 backdrop-blur-md space-y-2">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-xs font-semibold">Community Verified</span>
-            <CheckCircle2 className="w-5 h-5 text-primary-light" />
-          </div>
-          <div className="text-3xl font-extrabold text-foreground">{verifiedCount}</div>
-          <div className="text-[11px] text-muted">Escalated to DS Offices</div>
-        </div>
+  const resolutionTimeline = await generateResolutionTimeline(where);
 
-        <div className="p-6 rounded-2xl bg-surface border border-primary/20 backdrop-blur-md space-y-2">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-xs font-semibold">Resolved Repairs</span>
-            <TrendingUp className="w-5 h-5 text-accent" />
-          </div>
-          <div className="text-3xl font-extrabold text-foreground">{resolvedCount}</div>
-          <div className="text-[11px] text-muted">Completed with photo proof</div>
-        </div>
+  const overview: DashboardStats = {
+    totalReports,
+    verifiedCount,
+    resolvedCount,
+    avgResolutionTimeDays,
+  };
 
-        <div className="p-6 rounded-2xl bg-surface border border-primary/20 backdrop-blur-md space-y-2">
-          <div className="flex items-center justify-between text-muted">
-            <span className="text-xs font-semibold">Resolution Rate</span>
-            <Clock className="w-5 h-5 text-primary" />
-          </div>
-          <div className="text-3xl font-extrabold text-foreground">{resolutionRate}%</div>
-          <div className="text-[11px] text-muted">Average resolution efficiency</div>
-        </div>
-      </div>
+  const statusCounts: StatusCount[] = statusDistribution.map((item: any) => ({
+    status: item.status,
+    count: item._count,
+  }));
 
-      {/* Category Distribution Breakdown */}
-      <div className="p-8 rounded-3xl bg-surface border border-primary/20 space-y-6">
-        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-primary" />
-          Reports by Infrastructure Category
-        </h3>
+  const categoryCounts: CategoryCount[] = categoryBreakdown.map((item: any) => ({
+    category: item.category,
+    count: item._count,
+  }));
 
-        {categoryCounts.length === 0 ? (
-          <p className="text-xs text-muted">No report category data available yet.</p>
-        ) : (
-          <div className="space-y-4">
-            {categoryCounts.map((item: { category: string; _count: { category: number } }) => {
-              const label = CATEGORY_LABELS[item.category] || item.category;
-              const count = item._count.category;
-              const percentage = totalReports > 0 ? Math.round((count / totalReports) * 100) : 0;
+  const activity: RecentActivity[] = recentActivity.map((item: any) => ({
+    id: item.id,
+    category: item.category,
+    status: item.status,
+    district: item.district,
+    timestamp: item.createdAt.toISOString(),
+  }));
 
-              return (
-                <div key={item.category} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted font-semibold">{label}</span>
-                    <span className="text-muted font-mono">
-                      {count} ({percentage}%)
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-surface-hover overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-primary to-primary-light rounded-full"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  const locations: ReportLocation[] = reportLocations.map((item: any) => ({
+    id: item.id,
+    latitude: item.latitude,
+    longitude: item.longitude,
+    status: item.status,
+    category: item.category,
+    address: item.address,
+  }));
+
+  const divisions: DivisionCount[] = topDivisions.map((item: any) => ({
+    name: item.district || "Unknown",
+    count: item._count,
+  }));
+
+  const districts: string[] = (availableDistricts || []).sort();
+
+  return {
+    overview,
+    statusDistribution: statusCounts,
+    categoryBreakdown: categoryCounts,
+    resolutionTimeline,
+    recentActivity: activity,
+    reportLocations: locations,
+    topDivisions: divisions,
+    weeklyTrend,
+    availableDistricts: districts,
+  };
 }
 
+async function generateResolutionTimeline(where: any): Promise<ResolutionTimelinePoint[]> {
+  const resolvedReports = await db.report.findMany({
+    where: { ...where, status: "RESOLVED", resolvedAt: { not: null } },
+    select: {
+      createdAt: true,
+      resolvedAt: true,
+    },
+    orderBy: { resolvedAt: "asc" },
+  });
 
+  if (resolvedReports.length === 0) return [];
+
+  const timeline = new Map<string, { totalDays: number; count: number }>();
+
+  resolvedReports.forEach((report: any) => {
+    const resolvedAt = report.resolvedAt!;
+    const year = resolvedAt.getFullYear();
+    const month = resolvedAt.getMonth();
+    const period = `${year}-${String(month + 1).padStart(2, "0")}`;
+
+    const days = (resolvedAt.getTime() - report.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (!timeline.has(period)) {
+      timeline.set(period, { totalDays: 0, count: 0 });
+    }
+
+    const entry = timeline.get(period)!;
+    entry.totalDays += days;
+    entry.count += 1;
+  });
+
+  return Array.from(timeline.entries())
+    .map(([period, data]) => ({
+      period,
+      avgResolutionTime: Math.round(data.totalDays / data.count),
+      count: data.count,
+    }))
+    .sort((a, b) => a.period.localeCompare(b.period));
+}
+
+async function generateWeeklyTrend(where: any): Promise<WeeklyTrendPoint[]> {
+  const reports = await db.report.findMany({
+    where,
+    select: {
+      createdAt: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (reports.length === 0) return [];
+
+  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const trend = new Map<number, number>();
+
+  reports.forEach((report: any) => {
+    const dayOfWeek = report.createdAt.getDay();
+    trend.set(dayOfWeek, (trend.get(dayOfWeek) || 0) + 1);
+  });
+
+  return daysOfWeek.map((day, index) => ({
+    day,
+    count: trend.get(index) || 0,
+  }));
+}
+
+export default async function DashboardPage() {
+  // Restrict access to ADMIN and DS_OFFICER only
+  const user = await requireRole(["ADMIN", "DS_OFFICER"]);
+
+  const initialData = await getDashboardData({});
+
+  return <DashboardClient initialData={initialData} />;
+}

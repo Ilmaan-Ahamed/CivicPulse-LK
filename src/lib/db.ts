@@ -1,36 +1,23 @@
+import "server-only";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { normalizeDatabaseUrl } from "@/lib/database-url";
+import { normalizeDatabaseUrl } from "./database-url";
 
-// Prisma 7: datasource no longer accepts `url` in schema.prisma.
-// Instead, we pass the connection via the PrismaPg driver adapter.
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+const connectionString = normalizeDatabaseUrl(
+  process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/civicpulse"
+);
 
-function createPrismaClient(): PrismaClient {
-  const connectionString = normalizeDatabaseUrl(process.env.DATABASE_URL);
-  if (!connectionString) {
-    throw new Error(
-      "DATABASE_URL is not set. Please add it to your .env.local file.\n" +
-        "See .env.local.example for the required format."
-    );
-  }
-  const adapter = new PrismaPg({ connectionString });
-  return new PrismaClient({
+const adapter = new PrismaPg({ connectionString });
+
+export const db =
+  globalForPrisma.prisma ??
+  new PrismaClient({
     adapter,
-    log:
-      process.env.NODE_ENV === "development"
-        ? ["error", "warn"]
-        : ["error"],
+    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
-}
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
-
-export default prisma;
+export default db;

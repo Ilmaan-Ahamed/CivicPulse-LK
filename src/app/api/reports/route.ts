@@ -1,165 +1,96 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
-import { createReportSchema, reportQuerySchema } from "@/lib/validators";
-import { generateReferenceNo } from "@/lib/utils";
-import { runFullTriage } from "@/lib/ai/triage";
-import type { Prisma } from "@prisma/client";
+import { z } from "zod";
+import { createIssue } from "@/lib/db/issue";
+import { db } from "@/lib/db";
+import { ReportStatus } from "@prisma/client";
 
-/**
- * GET /api/reports — List infrastructure reports with filtering
- */
-export async function GET(req: Request) {
+const createReportSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().min(1).max(5000),
+  category: z.string().optional(),
+  latitude: z.number().finite().optional(),
+  longitude: z.number().finite().optional(),
+  address: z.string().trim().max(500).optional(),
+});
+
+export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const queryParams = Object.fromEntries(searchParams.entries());
+    const url = new URL(request.url);
+    const status = url.searchParams.get("status");
 
-    const parsed = reportQuerySchema.safeParse(queryParams);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid query parameters", details: parsed.error.format() },
-        { status: 400 }
-      );
+    const where: any = {};
+    if (status) {
+      where.status = status;
     }
 
-    const { page, limit, status, category, district, sortBy, sortOrder } =
-      parsed.data;
-    const skip = (page - 1) * limit;
-
-    const where: Prisma.ReportWhereInput = {};
-    if (status) where.status = status;
-    if (category) where.category = category;
-    if (district) where.district = district;
-
-    const [reports, total] = await Promise.all([
-      prisma.report.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { [sortBy]: sortOrder },
-        include: {
-          citizen: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-            },
-          },
-          photos: true,
-          verifications: {
-            select: {
-              id: true,
-              status: true,
-              verifierId: true,
-            },
-          },
-        },
-      }),
-      prisma.report.count({ where }),
-    ]);
-
-    return NextResponse.json({
-      reports,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+    const reports = await db.report.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        summary: true,
+        category: true,
+        status: true,
+        district: true,
+        createdAt: true,
+        aiConfidence: true,
       },
     });
-  } catch (error: unknown) {
-    console.error("GET /api/reports error:", error);
-    const message = error instanceof Error ? error.message : "Internal server error";
+
+    return NextResponse.json({
+      success: true,
+      data: reports,
+    });
+  } catch (error) {
+    console.error("[REPORT GET ERROR]", error);
     return NextResponse.json(
-      { error: message },
+      { success: false, error: "Failed to fetch reports" },
       { status: 500 }
     );
   }
 }
 
-/**
- * POST /api/reports — Submit a new infrastructure report
- */
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const user = await requireAuth();
-    const body = await req.json();
-
-    const parsed = createReportSchema.safeParse(body);
+    const parsed = createReportSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Validation failed", details: parsed.error.format() },
+        { success: false, error: "Invalid report data", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    const { title, description, category, latitude, longitude, address, district } =
-      parsed.data;
-
-    const referenceNo = generateReferenceNo();
-
-    // 1. Create Report in DB
-    const report = await prisma.report.create({
-      data: {
-        referenceNo,
-        citizenId: user.id,
-        category,
-        title,
-        description,
-        latitude,
-        longitude,
-        address,
-        district: district || user.district || "Colombo",
-        status: "SUBMITTED",
-      },
+    const report = await createIssue(parsed.data);
+    console.info("[REPORT CREATED]", {
+      id: report.id,
+      referenceNo: report.referenceNo,
+      citizenId: report.citizenId,
     });
 
-    // 2. Log audit event
-    await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: "CREATE_REPORT",
-        entity: "Report",
-        entityId: report.id,
-        metadata: { referenceNo, category },
-      },
-    });
-
-    // 3. Async trigger Gemini AI Triage (non-blocking)
-    if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      runFullTriage({
-        title,
-        description,
-        category,
-        latitude,
-        longitude,
-        district: district || "Unknown",
-      })
-        .then(async (triage) => {
-          await prisma.report.update({
-            where: { id: report.id },
-            data: {
-              priority: triage.priority?.priority,
-              summary: triage.summary?.summary,
-              aiConfidence: triage.priority?.confidence,
-              isDuplicate: triage.duplicate?.isDuplicate ?? false,
-              duplicateOfId: triage.duplicate?.duplicateOfId,
-            },
-          });
-        })
-        .catch((err) => {
-          console.error("AI Triage Background Error:", err);
-        });
-    }
-
-    return NextResponse.json({ success: true, report }, { status: 201 });
-  } catch (error: unknown) {
-    console.error("POST /api/reports error:", error);
-    const message = error instanceof Error ? error.message : "Failed to create report";
     return NextResponse.json(
-      { error: message },
-      { status: 500 }
+      {
+        success: true,
+        report: {
+          id: report.id,
+          caseNumber: report.referenceNo,
+          title: report.title,
+          description: report.description,
+          category: report.category,
+          status: report.status,
+          latitude: report.latitude,
+          longitude: report.longitude,
+          address: report.address,
+          createdAt: report.createdAt.toISOString(),
+        },
+      },
+      { status: 201 }
     );
+  } catch (error) {
+    console.error("[REPORT CREATE ERROR]", error);
+    const message = error instanceof Error ? error.message : "Unable to create report";
+    const status = message.startsWith("Unauthorized") ? 401 : message.startsWith("Forbidden") ? 403 : 500;
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }

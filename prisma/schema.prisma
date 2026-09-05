@@ -20,11 +20,8 @@ datasource db {
 
 enum Role {
   CITIZEN
-  VERIFIER
+  NGO_PARTNER
   DS_OFFICER
-  AGENCY
-  NGO
-  VOLUNTEER
   ADMIN
 }
 
@@ -72,12 +69,27 @@ enum VerificationStatus {
   NEEDS_INFO
 }
 
+enum RoleRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  NEEDS_INFO
+}
+
 enum AssignmentStatus {
   PENDING
   ACCEPTED
   IN_PROGRESS
   COMPLETED
   DECLINED
+  ASSIGNED
+  REJECTED
+}
+
+enum AgencyType {
+  AGENCY
+  NGO
+  FIELD_TEAM
 }
 
 enum InspectionResult {
@@ -92,32 +104,38 @@ enum InspectionResult {
 // ===========================================
 
 model User {
-  id            String   @id @default(cuid())
-  clerkId       String   @unique
-  email         String   @unique
-  firstName     String?
-  lastName      String?
-  avatarUrl     String?
-  role          Role     @default(CITIZEN)
-  trustScore    Float    @default(50)
-  preferredLang Language @default(EN)
-  district      String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  clerkId            String   @unique
+  email              String   @unique
+  firstName          String?
+  lastName           String?
+  avatarUrl          String?
+  role               Role     @default(CITIZEN)
+  trustScore         Float    @default(50)
+  preferredLang      Language @default(EN)
+  district           String? // legacy — kept for existing data
+  dsDivision         String? // DS Division / district picker from onboarding
+  phone              String? // optional phone number
+  onboardingComplete Boolean  @default(false)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   // Relations
-  reports       Report[]          @relation("ReportAuthor")
-  verifications Verification[]    @relation("VerificationAuthor")
-  assignments   Assignment[]      @relation("AssignedByOfficer")
-  fieldTasks    Assignment[]      @relation("AssignedToAgent")
-  inspections   FieldInspection[]
-  auditLogs     AuditLog[]
-  notifications Notification[]
+  reports              Report[]          @relation("ReportAuthor")
+  verifications        Verification[]    @relation("VerificationAuthor")
+  assignments          Assignment[]      @relation("AssignedByOfficer")
+  fieldTasks           Assignment[]      @relation("AssignedToAgent")
+  inspections          FieldInspection[]
+  auditLogs            AuditLog[]
+  notifications        Notification[]
+  roleRequests         RoleRequest[]     @relation("UserRoleRequests")
+  reviewedRoleRequests RoleRequest[]     @relation("ReviewedRequests")
 
   @@index([clerkId])
   @@index([role])
   @@index([district])
+  @@index([onboardingComplete])
 }
 
 model Report {
@@ -203,8 +221,10 @@ model Verification {
 model Assignment {
   id           String           @id @default(cuid())
   reportId     String
-  dsOfficerId  String // DS Officer who made the assignment
-  assignedToId String // Agency/NGO/Volunteer assigned to
+  dsOfficerId  String? // DS Officer who made the assignment (legacy field)
+  assignedToId String? // Agency/NGO/Volunteer assigned to (legacy field)
+  agencyId     String? // Agency/NGO/Field Team assigned to (new field)
+  assignedById String? // DS Officer who made the assignment (new field)
   status       AssignmentStatus @default(PENDING)
   notes        String?
   deadline     DateTime?
@@ -215,13 +235,16 @@ model Assignment {
 
   // Relations
   report      Report            @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  dsOfficer   User              @relation("AssignedByOfficer", fields: [dsOfficerId], references: [id])
-  assignedTo  User              @relation("AssignedToAgent", fields: [assignedToId], references: [id])
+  agency      Agency?           @relation(fields: [agencyId], references: [id])
+  assignedBy  User?             @relation("AssignedByOfficer", fields: [assignedById], references: [id])
+  assignedTo  User?             @relation("AssignedToAgent", fields: [assignedToId], references: [id])
   inspections FieldInspection[]
 
   @@index([reportId])
   @@index([dsOfficerId])
   @@index([assignedToId])
+  @@index([agencyId])
+  @@index([assignedById])
   @@index([status])
 }
 
@@ -264,17 +287,24 @@ model StatusHistory {
 model Agency {
   id           String   @id @default(cuid())
   name         String
-  type         String // GOVERNMENT, NGO, VOLUNTEER_TEAM, CSR
+  type         String // GOVERNMENT, NGO, VOLUNTEER_TEAM, CSR (kept as String for backward compatibility)
   contactEmail String?
   contactPhone String?
   district     String?
-  description  String?
-  isActive     Boolean  @default(true)
+  description  String? // Kept for backward compatibility
+  isActive     Boolean  @default(true) // Kept for backward compatibility
+  contactName  String? // New field
+  active       Boolean  @default(true) // New field (will use this going forward)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Relations
+  assignments Assignment[]
+
   @@index([type])
   @@index([district])
+  @@index([isActive])
+  @@index([active])
 }
 
 model Notification {
@@ -296,18 +326,49 @@ model Notification {
 
 model AuditLog {
   id        String   @id @default(cuid())
-  userId    String
-  action    String // CREATE, UPDATE, DELETE, ASSIGN, VERIFY, etc.
-  entity    String // Report, Verification, Assignment, etc.
-  entityId  String
-  metadata  Json? // Additional context
+  actorId   String? // Nullable for backward compatibility
+  action    String // ASSIGNMENT_CREATED, ASSIGNMENT_STATUS_UPDATED, AGENCY_CREATED, etc.
+  entity    String? // Legacy field name (nullable for backward compatibility)
+  entityId  String? // Legacy field name (nullable for backward compatibility)
+  targetType String? // Report, Assignment, Agency, etc. (nullable for backward compatibility)
+  targetId  String? // Nullable for backward compatibility
+  metadata  Json? // Additional context (before/after values, etc.)
   ipAddress String?
   createdAt DateTime @default(now())
 
   // Relations
-  user User @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([entity, entityId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+// ===========================================
+// Role Request (Onboarding — pending approval)
+// ===========================================
+
+model RoleRequest {
+  id            String            @id @default(cuid())
+  userId        String
+  requestedRole Role // NGO | AGENCY | DS_OFFICER
+  orgName       String? // For NGO / Agency
+  justification String? // Why do you need this role?
+  dsDivision    String? // Relevant division/district context
+  status        RoleRequestStatus @default(PENDING)
+  reviewedBy    String? // Admin userId who approved/rejected
+  reviewedAt    DateTime?
+  reviewNote    String? // Admin note (for NEEDS_INFO or REJECTED)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  // Relations
+  user     User  @relation("UserRoleRequests", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("ReviewedRequests", fields: [reviewedBy], references: [id])
 
   @@index([userId])
-  @@index([entity, entityId])
+  @@index([status])
+  @@index([requestedRole])
   @@index([createdAt])
 }

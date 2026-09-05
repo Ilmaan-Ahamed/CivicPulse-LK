@@ -1,18 +1,15 @@
-const LEGACY_SSL_MODES = new Set(["prefer", "require", "verify-ca"]);
-
-/**
- * pg-connection-string v2 treats prefer/require/verify-ca like verify-full but
- * warns until sslmode=verify-full is explicit (Neon and most hosted Postgres).
- */
-export function normalizeDatabaseUrl(connectionString: string): string {
-  try {
-    const parsed = new URL(connectionString);
-    const sslmode = parsed.searchParams.get("sslmode");
-    if (sslmode && LEGACY_SSL_MODES.has(sslmode)) {
-      parsed.searchParams.set("sslmode", "verify-full");
-    }
-    return parsed.toString();
-  } catch {
-    return connectionString;
+export function normalizeDatabaseUrl(url: string | undefined): string {
+  if (!url) {
+    throw new Error(
+      "DATABASE_URL is not set. Add it to your .env file (Neon connection string)."
+    );
   }
+
+  // Ensure sslmode=require is present for Neon connections
+  if (!url.includes("sslmode=")) {
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}sslmode=require`;
+  }
+
+  return url;
 }
