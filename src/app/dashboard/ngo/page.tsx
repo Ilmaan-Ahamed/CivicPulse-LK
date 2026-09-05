@@ -13,6 +13,17 @@ export default function NgoDashboard() {
   const { currentUser } = useAuth();
   const { t } = useLanguage();
   const sharedIssues = useSharedIssues();
+  const [dbReports, setDbReports] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    fetch("/api/transparency")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = (await response.json()) as { cases?: any[] };
+        setDbReports(data.cases || []);
+      })
+      .catch(() => setDbReports([]));
+  }, []);
 
   const [opportunities, setOpportunities] = useState([
     {
@@ -113,15 +124,26 @@ export default function NgoDashboard() {
           <span className="text-[10px] font-mono text-teal-400">{opportunities.length} opportunities</span>
         </div>
         <InteractiveMap
-          markers={opportunities.map((item) => ({
-            id: item.id,
-            title: item.title,
-            category: item.category,
-            status: "SUBMITTED",
-            latitude: item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625,
-            longitude: item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972,
-            address: item.address,
-          }))}
+          markers={[
+            ...opportunities.map((item) => ({
+              id: item.id,
+              title: item.title,
+              category: item.category,
+              status: "SUBMITTED",
+              latitude: item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625,
+              longitude: item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972,
+              address: item.address,
+            })),
+            ...dbReports.map((report) => ({
+              id: report.id,
+              title: report.title,
+              category: report.category,
+              status: report.status,
+              latitude: report.latitude || 6.9271,
+              longitude: report.longitude || 79.8612,
+              address: report.address,
+            })),
+          ]}
           center={[6.9271, 79.8612]}
           zoom={11}
         />

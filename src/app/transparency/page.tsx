@@ -12,81 +12,6 @@ type TransparencyCase = CaseCardData & {
   district?: string | null;
 };
 
-const fallbackCases: TransparencyCase[] = [
-  {
-    id: "case-1042",
-    caseNumber: "CP-2026-1042",
-    title: "Hazardous Deep Potholes near Bambalapitiya Junction",
-    description: "Severe road surface damage causing vehicle accidents and traffic congestion on A2 main corridor near Galle Road Bamba junction.",
-    category: "ROAD_DAMAGE",
-    status: "VERIFIED",
-    priorityScore: 88.5,
-    address: "Galle Road, Bambalapitiya, Colombo 04",
-    dsDivisionName: "Colombo DS Office",
-    latitude: 6.8905,
-    longitude: 79.855,
-    district: "Colombo DS Office",
-    imageUrl: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80",
-    verificationCount: 4,
-    verificationThreshold: 3,
-    createdAt: "2026-08-10",
-  },
-  {
-    id: "case-1043",
-    caseNumber: "CP-2026-1043",
-    title: "Blocked Main Canal Causing Pettah Market Flooding",
-    description: "Polythene and debris blockages in the primary drainage channel adjacent to Central Bus Stand during heavy rains.",
-    category: "DRAINAGE",
-    status: "IN_PROGRESS",
-    priorityScore: 76,
-    address: "Bodhiraja Mawatha, Pettah, Colombo 11",
-    dsDivisionName: "Colombo DS Office",
-    latitude: 6.9344,
-    longitude: 79.8519,
-    district: "Colombo DS Office",
-    imageUrl: "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b7?auto=format&fit=crop&w=800&q=80",
-    verificationCount: 3,
-    verificationThreshold: 3,
-    createdAt: "2026-08-11",
-  },
-  {
-    id: "case-1044",
-    caseNumber: "CP-2026-1044",
-    title: "Non-Functional Streetlights on Kandy Peradeniya Corridor",
-    description: "Five consecutive solar streetlights have gone dark along the main university access road, compromising safety at night.",
-    category: "STREETLIGHT",
-    status: "UNDER_VERIFICATION",
-    priorityScore: 62,
-    address: "Gatembe, Peradeniya Road, Kandy",
-    dsDivisionName: "Kandy Four Gravets DS",
-    latitude: 7.2625,
-    longitude: 80.5972,
-    district: "Kandy Four Gravets DS",
-    imageUrl: "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?auto=format&fit=crop&w=800&q=80",
-    verificationCount: 2,
-    verificationThreshold: 3,
-    createdAt: "2026-08-12",
-  },
-  {
-    id: "case-1045",
-    caseNumber: "CP-2026-1045",
-    title: "Burst Main Water Pipe at Galle Fort Pedestrian Walkway",
-    description: "Clean water leak under high pressure washing away paved heritage stones near Rampart Street.",
-    category: "WATER_SUPPLY",
-    status: "RESOLVED",
-    priorityScore: 91,
-    address: "Rampart Street, Galle Fort, Galle",
-    dsDivisionName: "Galle Four Gravets DS",
-    latitude: 6.0268,
-    longitude: 80.217,
-    district: "Galle Four Gravets DS",
-    imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=800&q=80",
-    verificationCount: 5,
-    verificationThreshold: 3,
-    createdAt: "2026-08-12",
-  },
-];
-
 function toUiCategory(value: string | undefined | null) {
   return value ?? "OTHER";
 }
@@ -112,7 +37,8 @@ function formatCategoryLabel(category: string) {
 
 export default function TransparencyDashboard() {
   const { t } = useLanguage();
-  const [publicCases, setPublicCases] = useState<TransparencyCase[]>(fallbackCases);
+  const [publicCases, setPublicCases] = useState<TransparencyCase[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
@@ -128,11 +54,14 @@ export default function TransparencyDashboard() {
         if (!response.ok) throw new Error("Failed");
         const data = (await response.json()) as { cases?: TransparencyCase[] };
         if (active) {
-          setPublicCases(data.cases && data.cases.length ? data.cases : fallbackCases);
+          setPublicCases(data.cases || []);
         }
       })
       .catch(() => {
-        if (active) setPublicCases(fallbackCases);
+        if (active) setPublicCases([]);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
       });
 
     return () => {
@@ -200,6 +129,24 @@ export default function TransparencyDashboard() {
   const resolvedCount = filteredCases.filter(
     (caseItem) => toUiStatus(caseItem.status) === "RESOLVED",
   ).length;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-8">
+            <div className="mb-1 flex items-center gap-2">
+              <Shield className="h-5 w-5 text-[#F97316] dark:text-[#FF8C00]" />
+              <h1 className="page-title text-2xl dark:text-white">{t("nav.transparency")} Dashboard</h1>
+            </div>
+          </div>
+          <div className="flex h-96 items-center justify-center">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">

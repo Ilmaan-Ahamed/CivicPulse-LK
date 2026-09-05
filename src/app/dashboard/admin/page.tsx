@@ -14,6 +14,17 @@ export default function AdminConsole() {
   const sharedIssues = useSharedIssues();
   const [activeAdminTab, setActiveAdminTab] = useState<"users" | "role-requests" | "settings" | "audit">("users");
   const [inspectingIssueId, setInspectingIssueId] = useState<string | null>(null);
+  const [dbReports, setDbReports] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    fetch("/api/transparency")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = (await response.json()) as { cases?: any[] };
+        setDbReports(data.cases || []);
+      })
+      .catch(() => setDbReports([]));
+  }, []);
 
   const [users, setUsers] = useState([
     { id: "u1", name: "Dinesh Abeywardena", email: "admin@civicpulse.lk", role: "ADMIN", status: "ACTIVE", trustScore: 100.0 },
@@ -216,14 +227,14 @@ export default function AdminConsole() {
         </div>
       </div>
 
-      {sharedIssues.length > 0 && (
-        <div className="max-w-7xl mx-auto card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-6 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-base card-heading dark:text-white">Citizen Report Sync Feed</h3>
-            <span className="text-[10px] font-mono text-rose-400">{sharedIssues.length} synced issues</span>
-          </div>
-          <InteractiveMap
-            markers={sharedIssues.map((issue) => ({
+      <div className="max-w-7xl mx-auto card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-6 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-base card-heading dark:text-white">Platform Report Map</h3>
+          <span className="text-[10px] font-mono text-rose-400">{[...sharedIssues, ...dbReports].length} total reports</span>
+        </div>
+        <InteractiveMap
+          markers={[
+            ...sharedIssues.map((issue) => ({
               id: issue.id,
               caseId: issue.caseNumber,
               title: issue.title,
@@ -232,72 +243,82 @@ export default function AdminConsole() {
               latitude: issue.category === "ROADS" ? 6.8905 : issue.category === "DRAINAGE" ? 6.9344 : issue.category === "WATER" ? 6.0268 : 7.2625,
               longitude: issue.category === "ROADS" ? 79.855 : issue.category === "DRAINAGE" ? 79.8519 : issue.category === "WATER" ? 80.217 : 80.5972,
               address: issue.address,
-            }))}
-            center={[6.9271, 79.8612]}
-            zoom={11}
-            onMarkerSelect={(marker) => setInspectingIssueId(marker.id)}
-          />
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {sharedIssues.slice(0, 6).map((issue) => (
-              <div key={issue.id} className="p-4 rounded-2xl card-light dark:bg-slate-950 dark:border-slate-800">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <span className="font-mono text-[10px] text-rose-400 font-bold">{issue.caseNumber}</span>
-                  <span className="px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 text-[10px] font-bold border border-rose-800">
-                    {issue.status}
-                  </span>
-                </div>
-                <h4 className="text-sm font-bold card-heading dark:text-white line-clamp-1">{issue.title}</h4>
-                <p className="text-[11px] body-text dark:text-slate-400 mt-1 line-clamp-2">{issue.description}</p>
-                <p className="text-[11px] body-text dark:text-slate-500 mt-2">{issue.address}</p>
+            })),
+            ...dbReports.map((report) => ({
+              id: report.id,
+              caseId: report.caseNumber,
+              title: report.title,
+              category: report.category,
+              status: report.status,
+              latitude: report.latitude || 6.9271,
+              longitude: report.longitude || 79.8612,
+              address: report.address,
+            })),
+          ]}
+          center={[6.9271, 79.8612]}
+          zoom={11}
+          onMarkerSelect={(marker) => setInspectingIssueId(marker.id)}
+        />
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {[...sharedIssues, ...dbReports].slice(0, 6).map((issue) => (
+            <div key={issue.id} className="p-4 rounded-2xl card-light dark:bg-slate-950 dark:border-slate-800">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <span className="font-mono text-[10px] text-rose-400 font-bold">{issue.caseNumber}</span>
+                <span className="px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 text-[10px] font-bold border border-rose-800">
+                  {issue.status}
+                </span>
               </div>
-            ))}
-          </div>
-          {inspectingIssueId && (() => {
-            const issue = sharedIssues.find((item) => item.id === inspectingIssueId);
-            if (!issue) return null;
-
-            return (
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="admin-report-inspection-title"
-                onClick={() => setInspectingIssueId(null)}
-              >
-                <div
-                  className="card-light dark:bg-slate-900 dark:border-slate-700 w-full max-w-lg rounded-3xl border p-6 shadow-2xl"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <span className="font-mono text-[10px] font-bold text-rose-400">{issue.caseNumber}</span>
-                      <h2 id="admin-report-inspection-title" className="mt-2 text-xl font-bold card-heading dark:text-white">
-                        {issue.title}
-                      </h2>
-                    </div>
-                    <button
-                      type="button"
-                      aria-label="Close report inspection"
-                      onClick={() => setInspectingIssueId(null)}
-                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="mt-5 space-y-3 text-xs">
-                    <p className="body-text dark:text-slate-300">{issue.description}</p>
-                    <p className="text-slate-500">{issue.address}</p>
-                    <div className="flex items-center gap-3 font-mono text-[10px]">
-                      <span className="rounded border border-rose-800 bg-rose-950/80 px-2 py-1 text-rose-300">{issue.status}</span>
-                      <span className="text-slate-500">{issue.category}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
+              <h4 className="text-sm font-bold card-heading dark:text-white line-clamp-1">{issue.title}</h4>
+              <p className="text-[11px] body-text dark:text-slate-400 mt-1 line-clamp-2">{issue.description}</p>
+              <p className="text-[11px] body-text dark:text-slate-500 mt-2">{issue.address}</p>
+            </div>
+          ))}
         </div>
-      )}
+        {inspectingIssueId && (() => {
+          const issue = [...sharedIssues, ...dbReports].find((item) => item.id === inspectingIssueId);
+          if (!issue) return null;
+
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="admin-report-inspection-title"
+              onClick={() => setInspectingIssueId(null)}
+            >
+              <div
+                className="card-light dark:bg-slate-900 dark:border-slate-700 w-full max-w-lg rounded-3xl border p-6 shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <span className="font-mono text-[10px] font-bold text-rose-400">{issue.caseNumber}</span>
+                    <h2 id="admin-report-inspection-title" className="mt-2 text-xl font-bold card-heading dark:text-white">
+                      {issue.title}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Close report inspection"
+                    onClick={() => setInspectingIssueId(null)}
+                    className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="mt-5 space-y-3 text-xs">
+                  <p className="body-text dark:text-slate-300">{issue.description}</p>
+                  <p className="text-slate-500">{issue.address}</p>
+                  <div className="flex items-center gap-3 font-mono text-[10px]">
+                    <span className="rounded border border-rose-800 bg-rose-950/80 px-2 py-1 text-rose-300">{issue.status}</span>
+                    <span className="text-slate-500">{issue.category}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
 
       {/* Admin Navigation Tabs */}
       <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-3 border-b border-border dark:border-slate-800 pb-3">
