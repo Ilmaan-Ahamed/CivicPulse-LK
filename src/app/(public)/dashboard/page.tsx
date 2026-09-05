@@ -42,6 +42,7 @@ async function getDashboardData(filters: {
     reportLocations,
     topDivisions,
     weeklyTrend,
+    availableDistricts,
   ] = await Promise.all([
     db.report.count({ where }),
     db.report.count({ where: { ...where, status: { in: ["VERIFIED", "FIELD_VERIFIED"] } } }),
@@ -76,6 +77,7 @@ async function getDashboardData(filters: {
         longitude: true,
         status: true,
         category: true,
+        address: true,
       },
     }),
     db.report.groupBy({
@@ -86,6 +88,10 @@ async function getDashboardData(filters: {
       take: 5,
     }),
     generateWeeklyTrend(where),
+    db.report.findMany({
+      select: { district: true },
+      distinct: ["district"],
+    }).then((reports) => reports.map((r: any) => r.district).filter(Boolean)),
   ]);
 
   const resolvedReports = await db.report.findMany({
@@ -139,12 +145,15 @@ async function getDashboardData(filters: {
     longitude: item.longitude,
     status: item.status,
     category: item.category,
+    address: item.address,
   }));
 
   const divisions: DivisionCount[] = topDivisions.map((item: any) => ({
     name: item.district || "Unknown",
     count: item._count,
   }));
+
+  const districts: string[] = (availableDistricts || []).sort();
 
   return {
     overview,
@@ -155,6 +164,7 @@ async function getDashboardData(filters: {
     reportLocations: locations,
     topDivisions: divisions,
     weeklyTrend,
+    availableDistricts: districts,
   };
 }
 

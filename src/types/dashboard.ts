@@ -37,6 +37,7 @@ export interface ReportLocation {
   longitude: number;
   status: ReportStatus;
   category: Category;
+  address?: string | null;
 }
 
 export interface DivisionCount {
@@ -60,5 +61,6 @@ export interface DashboardResponse {
     reportLocations: ReportLocation[];
     topDivisions: DivisionCount[];
     weeklyTrend: WeeklyTrendPoint[];
+    availableDistricts: string[];
   };
 }

@@ -20,6 +20,17 @@ export default function CitizenDashboard() {
   const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<"my-reports" | "nearby" | "verification" | "inspections">("my-reports");
   const sharedIssues = useSharedIssues();
+  const [dbReports, setDbReports] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/transparency")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = (await response.json()) as { cases?: any[] };
+        setDbReports(data.cases || []);
+      })
+      .catch(() => setDbReports([]));
+  }, []);
 
   useEffect(() => {
     if (tabParam === "verification") {
@@ -196,7 +207,7 @@ export default function CitizenDashboard() {
     },
   ];
 
-  const mapMarkers = [...sharedCitizenReports, ...nearbyReports].reduce<Array<{
+  const mapMarkers = [...sharedCitizenReports, ...nearbyReports, ...dbReports].reduce<Array<{
     id: string;
     title: string;
     category: string;
@@ -207,13 +218,16 @@ export default function CitizenDashboard() {
   }>>((acc, report) => {
     if (acc.some((item) => item.id === report.id)) return acc;
 
+    const lat = report.latitude || (report.category === "ROADS" ? 6.8905 : report.category === "DRAINAGE" ? 6.9344 : report.category === "WATER" ? 6.0268 : 7.2625);
+    const lng = report.longitude || (report.category === "ROADS" ? 79.855 : report.category === "DRAINAGE" ? 79.8519 : report.category === "WATER" ? 80.217 : 80.5972);
+
     acc.push({
       id: report.id,
       title: report.title,
       category: report.category,
       status: report.status,
-      latitude: report.category === "ROADS" ? 6.8905 : report.category === "DRAINAGE" ? 6.9344 : report.category === "WATER" ? 6.0268 : 7.2625,
-      longitude: report.category === "ROADS" ? 79.855 : report.category === "DRAINAGE" ? 79.8519 : report.category === "WATER" ? 80.217 : 80.5972,
+      latitude: lat,
+      longitude: lng,
       address: report.address,
     });
 

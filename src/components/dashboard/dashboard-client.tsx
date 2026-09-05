@@ -16,6 +16,8 @@ import type {
   ResolutionTimelinePoint,
   RecentActivity,
   ReportLocation,
+  DivisionCount,
+  WeeklyTrendPoint,
 } from "@/types/dashboard";
 
 interface DashboardClientProps {
@@ -26,6 +28,9 @@ interface DashboardClientProps {
     resolutionTimeline: ResolutionTimelinePoint[];
     recentActivity: RecentActivity[];
     reportLocations: ReportLocation[];
+    topDivisions: DivisionCount[];
+    weeklyTrend: WeeklyTrendPoint[];
+    availableDistricts: string[];
   };
 }
 
@@ -109,10 +114,11 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                 onChange={(e) => handleFilterChange("district", e.target.value)}
               >
                 <option value="">{t("dashboard.allDistricts")}</option>
-                <option value="Colombo">Colombo</option>
-                <option value="Kandy">Kandy</option>
-                <option value="Galle">Galle</option>
-                <option value="Jaffna">Jaffna</option>
+                {data.availableDistricts.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

@@ -49,7 +49,7 @@ export function ReportMap({ data, isLoading }: ReportMapProps) {
     status: item.status,
     latitude: item.latitude,
     longitude: item.longitude,
-    address: "",
+    address: item.address || "",
   }));
 
   return (
