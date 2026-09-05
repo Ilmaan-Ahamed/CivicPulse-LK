@@ -170,6 +170,9 @@ export const translations: Record<Language, Record<string, string>> = {
     "dashboard.clearFilters": "Clear Filters",
     "dashboard.noData": "No data available",
     "dashboard.loading": "Loading...",
+    "dashboard.topDivisions": "Top DS Divisions",
+    "dashboard.weeklyTrend": "Weekly Trend",
+    "dashboard.reports": "Reports",
   },
   si: {
     // Brand & Taglines
@@ -337,6 +340,9 @@ export const translations: Record<Language, Record<string, string>> = {
     "dashboard.allStatuses": "සියලු තත්ත්ව",
     "dashboard.dateRange": "දින පරාසය",
     "dashboard.applyFilters": "පෙරහන් යොදන්න",
+    "dashboard.topDivisions": "ඉහළම ප්‍රාදේශීය ලේකම් කොට්ඨාස",
+    "dashboard.weeklyTrend": "සතිපතා ප්‍රවණතාව",
+    "dashboard.reports": "වාර්තා",
     "dashboard.clearFilters": "පෙරහන් ඉවතලන්න",
     "dashboard.noData": "දත්ත නැත",
     "dashboard.loading": "පූරණය වෙමින්...",
@@ -510,5 +516,8 @@ export const translations: Record<Language, Record<string, string>> = {
     "dashboard.clearFilters": "வடிகட்டிகளை அழிக்கவும்",
     "dashboard.noData": "தரவு இல்லை",
     "dashboard.loading": "ஏற்றுகிறது...",
+    "dashboard.topDivisions": "முன்னணி பிரதேச செயலகங்கள்",
+    "dashboard.weeklyTrend": "வாராந்திர போக்கு",
+    "dashboard.reports": "அறிக்கைகள்",
   },
 };
