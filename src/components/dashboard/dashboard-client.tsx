@@ -196,9 +196,13 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           />
         </div>
 
-        <div className="mb-8 grid gap-6 md:grid-cols-2">
-          <StatusChart data={data.statusDistribution} isLoading={isLoading} />
-          <CategoryChart data={data.categoryBreakdown} isLoading={isLoading} />
+        <div className="mb-8 grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-1">
+            <StatusChart data={data.statusDistribution} isLoading={isLoading} />
+          </div>
+          <div className="lg:col-span-2">
+            <CategoryChart data={data.categoryBreakdown} isLoading={isLoading} />
+          </div>
         </div>
 
         <div className="mb-8">

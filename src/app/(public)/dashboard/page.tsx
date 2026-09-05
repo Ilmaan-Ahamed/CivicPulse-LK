@@ -11,6 +11,8 @@ import type {
   ResolutionTimelinePoint,
   RecentActivity,
   ReportLocation,
+  DivisionCount,
+  WeeklyTrendPoint,
 } from "@/types/dashboard";
 
 async function getDashboardData(filters: {
@@ -38,6 +40,8 @@ async function getDashboardData(filters: {
     categoryBreakdown,
     recentActivity,
     reportLocations,
+    topDivisions,
+    weeklyTrend,
   ] = await Promise.all([
     db.report.count({ where }),
     db.report.count({ where: { ...where, status: { in: ["VERIFIED", "FIELD_VERIFIED"] } } }),
@@ -74,6 +78,14 @@ async function getDashboardData(filters: {
         category: true,
       },
     }),
+    db.report.groupBy({
+      by: ["district"],
+      where,
+      _count: true,
+      orderBy: { _count: { district: "desc" } },
+      take: 5,
+    }),
+    generateWeeklyTrend(where),
   ]);
 
   const resolvedReports = await db.report.findMany({
@@ -129,6 +141,11 @@ async function getDashboardData(filters: {
     category: item.category,
   }));
 
+  const divisions: DivisionCount[] = topDivisions.map((item: any) => ({
+    name: item.district || "Unknown",
+    count: item._count,
+  }));
+
   return {
     overview,
     statusDistribution: statusCounts,
@@ -136,6 +153,8 @@ async function getDashboardData(filters: {
     resolutionTimeline,
     recentActivity: activity,
     reportLocations: locations,
+    topDivisions: divisions,
+    weeklyTrend,
   };
 }
 
@@ -177,6 +196,31 @@ async function generateResolutionTimeline(where: any): Promise<ResolutionTimelin
       count: data.count,
     }))
     .sort((a, b) => a.period.localeCompare(b.period));
+}
+
+async function generateWeeklyTrend(where: any): Promise<WeeklyTrendPoint[]> {
+  const reports = await db.report.findMany({
+    where,
+    select: {
+      createdAt: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (reports.length === 0) return [];
+
+  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const trend = new Map<number, number>();
+
+  reports.forEach((report: any) => {
+    const dayOfWeek = report.createdAt.getDay();
+    trend.set(dayOfWeek, (trend.get(dayOfWeek) || 0) + 1);
+  });
+
+  return daysOfWeek.map((day, index) => ({
+    day,
+    count: trend.get(index) || 0,
+  }));
 }
 
 export default async function DashboardPage() {

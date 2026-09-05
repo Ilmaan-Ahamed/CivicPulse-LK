@@ -39,6 +39,16 @@ export interface ReportLocation {
   category: Category;
 }
 
+export interface DivisionCount {
+  name: string;
+  count: number;
+}
+
+export interface WeeklyTrendPoint {
+  day: string;
+  count: number;
+}
+
 export interface DashboardResponse {
   success: true;
   data: {
@@ -48,5 +58,7 @@ export interface DashboardResponse {
     resolutionTimeline: ResolutionTimelinePoint[];
     recentActivity: RecentActivity[];
     reportLocations: ReportLocation[];
+    topDivisions: DivisionCount[];
+    weeklyTrend: WeeklyTrendPoint[];
   };
 }
