@@ -12,7 +12,7 @@ export function RoleSwitcherModal() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
-  const rolesList: UserRole[] = ["CITIZEN", "NGO", "DS_OFFICER", "ADMIN"];
+  const rolesList: UserRole[] = ["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"];
 
   const handleRoleSelect = (role: UserRole) => {
     switchRole(role);
@@ -23,7 +23,7 @@ export function RoleSwitcherModal() {
       case "CITIZEN":
         router.push("/dashboard/citizen");
         break;
-      case "NGO":
+      case "NGO_PARTNER":
         router.push("/dashboard/ngo");
         break;
       case "DS_OFFICER":

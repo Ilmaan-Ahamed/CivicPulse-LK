@@ -32,16 +32,16 @@ async function main() {
     { clerkId: 'user_2civ007mock', email: 'kumaran.selva@gmail.com', firstName: 'Kumaran', lastName: 'Selvaraj', role: Role.CITIZEN, trustScore: 60, preferredLang: Language.TA, district: 'Batticaloa' },
     { clerkId: 'user_2civ008mock', email: 'chamari.silva@gmail.com', firstName: 'Chamari', lastName: 'Silva', role: Role.CITIZEN, trustScore: 53, preferredLang: Language.SI, district: 'Matara' },
     { clerkId: 'user_2civ009mock', email: 'ahmed.rushdie@gmail.com', firstName: 'Ahmed', lastName: 'Rushdie', role: Role.CITIZEN, trustScore: 64, preferredLang: Language.EN, district: 'Negombo' },
-    { clerkId: 'user_2civ010mock', email: 'ruwan.jaya@gmail.com', firstName: 'Ruwan', lastName: 'Jayasuriya', role: Role.VERIFIER, trustScore: 82, preferredLang: Language.SI, district: 'Negombo' },
-    { clerkId: 'user_2civ011mock', email: 'selvi.ramanathan@gmail.com', firstName: 'Selvi', lastName: 'Ramanathan', role: Role.VERIFIER, trustScore: 78, preferredLang: Language.TA, district: 'Jaffna' },
-    { clerkId: 'user_2civ012mock', email: 'harsha.dezoysa@gmail.com', firstName: 'Harsha', lastName: 'de Zoysa', role: Role.VERIFIER, trustScore: 75, preferredLang: Language.EN, district: 'Colombo' },
-    { clerkId: 'user_2civ013mock', email: 'malini.rathnayake@gmail.com', firstName: 'Malini', lastName: 'Rathnayake', role: Role.VERIFIER, trustScore: 80, preferredLang: Language.SI, district: 'Kandy' },
+    { clerkId: 'user_2civ010mock', email: 'ruwan.jaya@gmail.com', firstName: 'Ruwan', lastName: 'Jayasuriya', role: Role.CITIZEN, trustScore: 82, preferredLang: Language.SI, district: 'Negombo' },
+    { clerkId: 'user_2civ011mock', email: 'selvi.ramanathan@gmail.com', firstName: 'Selvi', lastName: 'Ramanathan', role: Role.CITIZEN, trustScore: 78, preferredLang: Language.TA, district: 'Jaffna' },
+    { clerkId: 'user_2civ012mock', email: 'harsha.dezoysa@gmail.com', firstName: 'Harsha', lastName: 'de Zoysa', role: Role.CITIZEN, trustScore: 75, preferredLang: Language.EN, district: 'Colombo' },
+    { clerkId: 'user_2civ013mock', email: 'malini.rathnayake@gmail.com', firstName: 'Malini', lastName: 'Rathnayake', role: Role.CITIZEN, trustScore: 80, preferredLang: Language.SI, district: 'Kandy' },
     { clerkId: 'user_2civ014mock', email: 'ilmaan.ahamed@ds.gov.lk', firstName: 'MJ Ilmaan', lastName: 'Ahamed', role: Role.DS_OFFICER, trustScore: 90, preferredLang: Language.EN, district: 'Negombo' },
     { clerkId: 'user_2civ015mock', email: 'chandrasena@ds.gov.lk', firstName: 'W.A.', lastName: 'Chandrasena', role: Role.DS_OFFICER, trustScore: 88, preferredLang: Language.SI, district: 'Kandy' },
     { clerkId: 'user_2civ016mock', email: 'thevaki@ds.gov.lk', firstName: 'R.', lastName: 'Thevaki', role: Role.DS_OFFICER, trustScore: 85, preferredLang: Language.TA, district: 'Jaffna' },
-    { clerkId: 'user_2civ017mock', email: 'sanjeewa.rda@gov.lk', firstName: 'Sanjeewa', lastName: 'Rathnapala', role: Role.AGENCY, trustScore: 70, preferredLang: Language.SI, district: 'Colombo' },
-    { clerkId: 'user_2civ018mock', email: 'kavitha.sewalanka@sewalanka.org', firstName: 'Kavitha', lastName: 'Sinnathurai', role: Role.NGO, trustScore: 68, preferredLang: Language.TA, district: 'Colombo' },
-    { clerkId: 'user_2civ019mock', email: 'priyantha.cleannegombo@gmail.com', firstName: 'Priyantha', lastName: 'Kumara', role: Role.VOLUNTEER, trustScore: 72, preferredLang: Language.SI, district: 'Negombo' },
+    { clerkId: 'user_2civ017mock', email: 'sanjeewa.rda@gov.lk', firstName: 'Sanjeewa', lastName: 'Rathnapala', role: Role.NGO_PARTNER, trustScore: 70, preferredLang: Language.SI, district: 'Colombo' },
+    { clerkId: 'user_2civ018mock', email: 'kavitha.sewalanka@sewalanka.org', firstName: 'Kavitha', lastName: 'Sinnathurai', role: Role.NGO_PARTNER, trustScore: 68, preferredLang: Language.TA, district: 'Colombo' },
+    { clerkId: 'user_2civ019mock', email: 'priyantha.cleannegombo@gmail.com', firstName: 'Priyantha', lastName: 'Kumara', role: Role.NGO_PARTNER, trustScore: 72, preferredLang: Language.SI, district: 'Negombo' },
     { clerkId: 'user_2civ020mock', email: 'admin@civicpulse.lk', firstName: 'System', lastName: 'Administrator', role: Role.ADMIN, trustScore: 100, preferredLang: Language.EN, district: 'Colombo' },
   ];
 
@@ -52,10 +52,8 @@ async function main() {
   }
 
   const citizens = users.filter(u => u.role === Role.CITIZEN);
-  const verifiers = users.filter(u => u.role === Role.VERIFIER);
   const dsOfficers = users.filter(u => u.role === Role.DS_OFFICER);
-  const fieldAgentRoles = new Set<Role>([Role.AGENCY, Role.NGO, Role.VOLUNTEER]);
-  const fieldAgents = users.filter(u => fieldAgentRoles.has(u.role));
+  const ngoPartners = users.filter(u => u.role === Role.NGO_PARTNER);
   const admin = users.find(u => u.role === Role.ADMIN)!;
 
   // ---------------- 2. AGENCIES (20 records) ----------------
@@ -155,7 +153,7 @@ async function main() {
     const created = await prisma.verification.create({
       data: {
         reportId: reports[v.reportIdx].id,
-        verifierId: verifiers[v.verifierIdx].id,
+        verifierId: citizens[v.verifierIdx % citizens.length].id,
         status: v.status,
         comment: v.comment,
         latitude: reports[v.reportIdx].latitude,
@@ -218,12 +216,12 @@ async function main() {
   const assignments = [];
   for (const a of assignmentSeed) {
     const dsOfficer = dsOfficers[a.reportIdx % dsOfficers.length];
-    const agent = fieldAgents[a.agentIdx % fieldAgents.length];
+    const agency = agencies[a.agentIdx % agencies.length];
     const created = await prisma.assignment.create({
       data: {
         reportId: reports[a.reportIdx].id,
-        dsOfficerId: dsOfficer.id,
-        assignedToId: agent.id,
+        agencyId: agency.id,
+        assignedById: dsOfficer.id,
         status: a.status,
         notes: a.notes,
         deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -256,7 +254,7 @@ async function main() {
 
   for (const ins of inspectionSeed) {
     const assignment = assignments[ins.assignmentIdx % assignments.length];
-    const inspector = fieldAgents[ins.assignmentIdx % fieldAgents.length];
+    const inspector = ngoPartners[ins.assignmentIdx % ngoPartners.length];
     await prisma.fieldInspection.create({
       data: {
         assignmentId: assignment.id,
@@ -367,7 +365,7 @@ async function main() {
 
     await prisma.auditLog.create({
       data: {
-        userId: users[log.userIdx].id,
+        actorId: users[log.userIdx].id,
         action: log.action,
         entity: log.entity,
         entityId,
