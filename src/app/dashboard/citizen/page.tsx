@@ -21,13 +21,14 @@ export default function CitizenDashboard() {
   const [activeTab, setActiveTab] = useState<"my-reports" | "nearby" | "verification" | "inspections">("my-reports");
   const sharedIssues = useSharedIssues();
   const [dbReports, setDbReports] = useState<any[]>([]);
+  const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
 
   const [verificationQueue, setVerificationQueue] = useState<any[]>([]);
   const [verificationHistory, setVerificationHistory] = useState<any[]>([]);
   const [inspectionTasks, setInspectionTasks] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch reports from database
+    // Fetch reports from database (role-filtered)
     fetch("/api/reports/dashboard")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
@@ -35,6 +36,15 @@ export default function CitizenDashboard() {
         setDbReports(data.data || []);
       })
       .catch(() => setDbReports([]));
+
+    // Fetch all reports for map (like transparency page)
+    fetch("/api/transparency")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setTransparencyReports(data.cases || []);
+      })
+      .catch(() => setTransparencyReports([]));
 
     if (tabParam === "verification") {
       setActiveTab("verification");
@@ -155,7 +165,7 @@ export default function CitizenDashboard() {
   const myReports: CaseCardData[] = [...sharedCitizenReports, ...dbReportsAsCards];
   const nearbyReports: CaseCardData[] = [...sharedCitizenReports, ...dbReportsAsCards];
 
-  const mapMarkers = [...sharedCitizenReports, ...nearbyReports, ...dbReports].reduce<Array<{
+  const mapMarkers = [...sharedCitizenReports, ...transparencyReports].reduce<Array<{
     id: string;
     title: string;
     category: string;

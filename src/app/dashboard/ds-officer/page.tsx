@@ -15,6 +15,7 @@ export default function DsOfficerConsole() {
   const { t } = useLanguage();
   const sharedIssues = useSharedIssues();
   const [dbReports, setDbReports] = useState<any[]>([]);
+  const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
 
   React.useEffect(() => {
     fetch("/api/reports/dashboard")
@@ -24,6 +25,15 @@ export default function DsOfficerConsole() {
         setDbReports(data.data || []);
       })
       .catch(() => setDbReports([]));
+
+    // Fetch all reports for map (like transparency page)
+    fetch("/api/transparency")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setTransparencyReports(data.cases || []);
+      })
+      .catch(() => setTransparencyReports([]));
   }, []);
 
   const [triageCases, setTriageCases] = useState<any[]>([]);
@@ -283,22 +293,13 @@ export default function DsOfficerConsole() {
         </div>
         <InteractiveMap
           markers={[
-            ...sharedIssues.map((issue) => ({
-              id: issue.id,
-              title: issue.title,
-              category: issue.category,
-              status: issue.status,
-              latitude: issue.category === "ROADS" ? 6.8905 : issue.category === "DRAINAGE" ? 6.9344 : 7.2625,
-              longitude: issue.category === "ROADS" ? 79.855 : issue.category === "DRAINAGE" ? 79.8519 : 80.5972,
-              address: issue.address,
-            })),
-            ...triageCases.map((item) => ({
+            ...transparencyReports.map((item) => ({
               id: item.id,
               title: item.title,
               category: item.category,
               status: item.status,
-              latitude: item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625,
-              longitude: item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972,
+              latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
+              longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
               address: item.address,
             })),
           ]}

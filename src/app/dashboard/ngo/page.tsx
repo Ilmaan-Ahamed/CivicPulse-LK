@@ -14,6 +14,7 @@ export default function NgoDashboard() {
   const { t } = useLanguage();
   const sharedIssues = useSharedIssues();
   const [dbReports, setDbReports] = useState<any[]>([]);
+  const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
 
   React.useEffect(() => {
     fetch("/api/reports/dashboard")
@@ -23,6 +24,15 @@ export default function NgoDashboard() {
         setDbReports(data.data || []);
       })
       .catch(() => setDbReports([]));
+
+    // Fetch all reports for map (like transparency page)
+    fetch("/api/transparency")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setTransparencyReports(data.cases || []);
+      })
+      .catch(() => setTransparencyReports([]));
   }, []);
 
   const [opportunities, setOpportunities] = useState<any[]>([]);
@@ -115,13 +125,13 @@ export default function NgoDashboard() {
         </div>
         <InteractiveMap
           markers={[
-            ...opportunities.map((item) => ({
+            ...transparencyReports.map((item) => ({
               id: item.id,
               title: item.title,
               category: item.category,
-              status: "SUBMITTED",
-              latitude: item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625,
-              longitude: item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972,
+              status: item.status || "SUBMITTED",
+              latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
+              longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
               address: item.address,
             })),
           ]}

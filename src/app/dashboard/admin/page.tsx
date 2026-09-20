@@ -15,6 +15,7 @@ export default function AdminConsole() {
   const [activeAdminTab, setActiveAdminTab] = useState<"users" | "role-requests" | "settings" | "audit">("users");
   const [inspectingIssueId, setInspectingIssueId] = useState<string | null>(null);
   const [dbReports, setDbReports] = useState<any[]>([]);
+  const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
 
   React.useEffect(() => {
     fetch("/api/reports/dashboard")
@@ -24,6 +25,15 @@ export default function AdminConsole() {
         setDbReports(data.data || []);
       })
       .catch(() => setDbReports([]));
+
+    // Fetch all reports for map (like transparency page)
+    fetch("/api/transparency")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setTransparencyReports(data.cases || []);
+      })
+      .catch(() => setTransparencyReports([]));
   }, []);
 
   const [users, setUsers] = useState<any[]>([]);
@@ -232,25 +242,15 @@ export default function AdminConsole() {
         </div>
         <InteractiveMap
           markers={[
-            ...sharedIssues.map((issue) => ({
-              id: issue.id,
-              caseId: issue.caseNumber,
-              title: issue.title,
-              category: issue.category,
-              status: issue.status,
-              latitude: issue.category === "ROADS" ? 6.8905 : issue.category === "DRAINAGE" ? 6.9344 : issue.category === "WATER" ? 6.0268 : 7.2625,
-              longitude: issue.category === "ROADS" ? 79.855 : issue.category === "DRAINAGE" ? 79.8519 : issue.category === "WATER" ? 80.217 : 80.5972,
-              address: issue.address,
-            })),
-            ...dbReports.map((report) => ({
-              id: report.id,
-              caseId: report.caseNumber,
-              title: report.title,
-              category: report.category,
-              status: report.status,
-              latitude: report.latitude || 6.9271,
-              longitude: report.longitude || 79.8612,
-              address: report.address,
+            ...transparencyReports.map((item) => ({
+              id: item.id,
+              caseId: item.caseNumber,
+              title: item.title,
+              category: item.category,
+              status: item.status,
+              latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
+              longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
+              address: item.address,
             })),
           ]}
           center={[6.9271, 79.8612]}
@@ -261,7 +261,7 @@ export default function AdminConsole() {
           {dbReports.slice(0, 6).map((issue) => (
             <div key={issue.id} className="p-4 rounded-2xl card-light dark:bg-slate-950 dark:border-slate-800">
               <div className="flex items-center justify-between gap-3 mb-2">
-                <span className="font-mono text-[10px] text-rose-400 font-bold">{issue.caseNumber}</span>
+                <span className="font-mono text-[10px] text-rose-400 font-bold">{issue.referenceNo}</span>
                 <span className="px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 text-[10px] font-bold border border-rose-800">
                   {issue.status}
                 </span>
