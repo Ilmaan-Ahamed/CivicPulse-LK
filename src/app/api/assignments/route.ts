@@ -107,6 +107,77 @@ async function createAssignment(req: Request) {
   });
 }
 
+async function listAssignments(req: Request) {
+  const { userId } = await requireRole(["DS_OFFICER", "NGO_PARTNER", "ADMIN"] as any);
+  const url = new URL(req.url);
+  const status = url.searchParams.get("status");
+  const agencyId = url.searchParams.get("agencyId");
+  const reportId = url.searchParams.get("reportId");
+
+  const where: any = {};
+  if (status) where.status = status;
+  if (agencyId) where.agencyId = agencyId;
+  if (reportId) where.reportId = reportId;
+
+  const assignments = await db.assignment.findMany({
+    where,
+    include: {
+      report: {
+        select: {
+          id: true,
+          referenceNo: true,
+          title: true,
+          description: true,
+          category: true,
+          status: true,
+          district: true,
+          latitude: true,
+          longitude: true,
+          address: true,
+          createdAt: true,
+        },
+      },
+      agency: {
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          contactEmail: true,
+          contactPhone: true,
+          district: true,
+        },
+      },
+      assignedBy: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+        },
+      },
+      inspections: {
+        include: {
+          inspector: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return NextResponse.json({
+    success: true,
+    data: assignments,
+  });
+}
+
 async function updateAssignment(req: Request) {
   const { userId } = await requireRole(["DS_OFFICER", "NGO_PARTNER"] as any);
   const body = await req.json();
@@ -177,5 +248,6 @@ async function updateAssignment(req: Request) {
   });
 }
 
+export const GET = withErrorHandler(listAssignments);
 export const POST = withErrorHandler(createAssignment);
 export const PATCH = withErrorHandler(updateAssignment);

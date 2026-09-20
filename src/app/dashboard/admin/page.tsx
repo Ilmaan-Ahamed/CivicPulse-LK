@@ -22,7 +22,7 @@ export default function AdminConsole() {
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
-        setDbReports(data.data || []);
+        setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
       })
       .catch(() => setDbReports([]));
 
@@ -31,7 +31,7 @@ export default function AdminConsole() {
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
-        setTransparencyReports(data.cases || []);
+        setTransparencyReports(Array.from(new Map((data.cases || []).map((r: any) => [r.id, r])).values()));
       })
       .catch(() => setTransparencyReports([]));
   }, []);
@@ -128,7 +128,8 @@ export default function AdminConsole() {
           <h4 className="text-sm font-bold card-heading dark:text-white">Reports by Category</h4>
           <div className="space-y-3">
             {Object.entries(stats.categoryCounts).map(([category, count]) => {
-              const percentage = stats.totalReports > 0 ? Math.round((count / stats.totalReports) * 100) : 0;
+              const countNum = count as number;
+              const percentage = stats.totalReports > 0 ? Math.round((countNum / stats.totalReports) * 100) : 0;
               const colors: Record<string, string> = {
                 ROADS: "icon-orange",
                 DRAINAGE: "text-blue-400",
@@ -204,14 +205,14 @@ export default function AdminConsole() {
           <h4 className="text-sm font-bold card-heading dark:text-white">Top DS Divisions</h4>
           <div className="space-y-3">
             {Object.entries(stats.districtCounts)
-              .sort(([, a], [, b]) => b - a)
+              .sort(([, a], [, b]) => (b as number) - (a as number))
               .slice(0, 5)
               .map(([district, count], index) => {
                 const colors = ["icon-orange", "text-blue-400", "text-cyan-400", "text-amber-400", "text-purple-400"];
                 return (
                   <div key={district} className="flex items-center justify-between">
                     <span className="text-xs body-text dark:text-slate-400">{district}</span>
-                    <span className={`text-xs font-mono ${colors[index] || "text-slate-400"} font-bold`}>{count}</span>
+                    <span className={`text-xs font-mono ${colors[index] || "text-slate-400"} font-bold`}>{count as number}</span>
                   </div>
                 );
               })}
@@ -241,18 +242,23 @@ export default function AdminConsole() {
           <span className="text-[10px] font-mono text-rose-400">{[...sharedIssues, ...dbReports].length} total reports</span>
         </div>
         <InteractiveMap
-          markers={[
-            ...transparencyReports.map((item) => ({
-              id: item.id,
-              caseId: item.caseNumber,
-              title: item.title,
-              category: item.category,
-              status: item.status,
-              latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
-              longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
-              address: item.address,
-            })),
-          ]}
+          markers={Array.from(
+            new Map(
+              transparencyReports.map((item) => [
+                item.id,
+                {
+                  id: item.id,
+                  caseId: item.caseNumber,
+                  title: item.title,
+                  category: item.category,
+                  status: item.status,
+                  latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
+                  longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
+                  address: item.address,
+                },
+              ])
+            ).values()
+          )}
           center={[6.9271, 79.8612]}
           zoom={11}
           onMarkerSelect={(marker) => setInspectingIssueId(marker.id)}

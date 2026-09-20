@@ -17,12 +17,18 @@ export default function DsOfficerConsole() {
   const [dbReports, setDbReports] = useState<any[]>([]);
   const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
 
+  // Deduplicate sharedIssues with useMemo to prevent infinite loop
+  const uniqueSharedIssues = React.useMemo(
+    () => Array.from(new Map(sharedIssues.map((issue) => [issue.id, issue])).values()),
+    [sharedIssues]
+  );
+
   React.useEffect(() => {
     fetch("/api/reports/dashboard")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
-        setDbReports(data.data || []);
+        setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
       })
       .catch(() => setDbReports([]));
 
@@ -31,7 +37,7 @@ export default function DsOfficerConsole() {
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
-        setTransparencyReports(data.cases || []);
+        setTransparencyReports(Array.from(new Map((data.cases || []).map((r: any) => [r.id, r])).values()));
       })
       .catch(() => setTransparencyReports([]));
   }, []);
@@ -39,7 +45,7 @@ export default function DsOfficerConsole() {
   const [triageCases, setTriageCases] = useState<any[]>([]);
 
   React.useEffect(() => {
-    const syncedQueue = sharedIssues
+    const syncedQueue = uniqueSharedIssues
       .filter((issue) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(issue.status))
       .map((issue) => ({
         id: issue.id,
@@ -73,8 +79,12 @@ export default function DsOfficerConsole() {
         slaBreachRisk: report.priorityScore >= 80,
       }));
 
-    setTriageCases([...dbQueue, ...syncedQueue]);
-  }, [sharedIssues, dbReports]);
+    setTriageCases(
+      Array.from(
+        new Map([...dbQueue, ...syncedQueue].map((item) => [item.id, item])).values()
+      )
+    );
+  }, [uniqueSharedIssues, dbReports]);
 
   const [assigningCase, setAssigningCase] = useState<any | null>(null);
   const [selectedAgency, setSelectedAgency] = useState("RDA Western Province");
@@ -292,17 +302,22 @@ export default function DsOfficerConsole() {
           <span className="text-[10px] font-mono text-amber-400">{[...triageCases, ...sharedIssues].length} mapped alerts</span>
         </div>
         <InteractiveMap
-          markers={[
-            ...transparencyReports.map((item) => ({
-              id: item.id,
-              title: item.title,
-              category: item.category,
-              status: item.status,
-              latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
-              longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
-              address: item.address,
-            })),
-          ]}
+          markers={Array.from(
+            new Map(
+              transparencyReports.map((item) => [
+                item.id,
+                {
+                  id: item.id,
+                  title: item.title,
+                  category: item.category,
+                  status: item.status,
+                  latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
+                  longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
+                  address: item.address,
+                },
+              ])
+            ).values()
+          )}
           center={[6.9271, 79.8612]}
           zoom={11}
         />
