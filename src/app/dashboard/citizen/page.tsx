@@ -21,18 +21,31 @@ export default function CitizenDashboard() {
   const [activeTab, setActiveTab] = useState<"my-reports" | "nearby" | "verification" | "inspections">("my-reports");
   const sharedIssues = useSharedIssues();
   const [dbReports, setDbReports] = useState<any[]>([]);
+  const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
+
+  const [verificationQueue, setVerificationQueue] = useState<any[]>([]);
+  const [verificationHistory, setVerificationHistory] = useState<any[]>([]);
+  const [inspectionTasks, setInspectionTasks] = useState<any[]>([]);
 
   useEffect(() => {
+    // Fetch reports from database (role-filtered)
+    fetch("/api/reports/dashboard")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setDbReports(data.data || []);
+      })
+      .catch(() => setDbReports([]));
+
+    // Fetch all reports for map (like transparency page)
     fetch("/api/transparency")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = (await response.json()) as { cases?: any[] };
-        setDbReports(data.cases || []);
+        const data = await response.json();
+        setTransparencyReports(data.cases || []);
       })
-      .catch(() => setDbReports([]));
-  }, []);
+      .catch(() => setTransparencyReports([]));
 
-  useEffect(() => {
     if (tabParam === "verification") {
       setActiveTab("verification");
     } else if (tabParam === "inspections") {
@@ -40,63 +53,6 @@ export default function CitizenDashboard() {
     }
   }, [tabParam]);
 
-  const citizenSeedReports: CaseCardData[] = [
-    {
-      id: "case-1042",
-      caseNumber: "CP-2026-1042",
-      title: "Hazardous Deep Potholes near Bambalapitiya Junction",
-      description: "Severe road surface damage causing vehicle accidents and traffic congestion on A2 main corridor near Galle Road Bamba junction.",
-      category: "ROADS",
-      status: "VERIFIED",
-      priorityScore: 88.5,
-      address: "Galle Road, Bambalapitiya, Colombo 04",
-      dsDivisionName: "Colombo DS Office",
-      imageUrl: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80",
-      verificationCount: 4,
-      verificationThreshold: 3,
-      createdAt: "2026-08-10",
-    },
-  ];
-
-  const [verificationQueue, setVerificationQueue] = useState([
-    {
-      id: "case-1044",
-      caseNumber: "CP-2026-1044",
-      title: "Non-Functional Streetlights on Kandy Peradeniya Corridor",
-      description: "Five consecutive solar streetlights have gone dark along the main university access road, compromising safety at night.",
-      category: "STREETLIGHTS",
-      priorityScore: 62.0,
-      distance: "0.8 km away",
-      address: "Gatembe, Peradeniya Road, Kandy",
-      imageUrl: "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?auto=format&fit=crop&w=800&q=80",
-      currentConfirmations: 2,
-      threshold: 3,
-      reporterTrust: 85.0,
-      aiDuplicateNotice: "Advisory: 1 similar streetlight issue reported 3.2km away.",
-    },
-  ]);
-
-  const [verificationHistory, setVerificationHistory] = useState([
-    {
-      id: "case-1042",
-      caseNumber: "CP-2026-1042",
-      title: "Hazardous Deep Potholes near Bambalapitiya Junction",
-      decision: "CONFIRMED",
-      timestamp: "Aug 11, 2026",
-    },
-  ]);
-
-  const [inspectionTasks, setInspectionTasks] = useState([
-    {
-      id: "task-01",
-      caseNumber: "CP-2026-1042",
-      title: "Field Verification: Bambalapitiya Pothole Depth Inspection",
-      taskType: "FIELD_INSPECTION",
-      address: "Galle Road, Bambalapitiya, Colombo 04",
-      distance: "1.1 km away",
-      dueDate: "Today by 5:00 PM",
-    },
-  ]);
 
   const [inspectingTask, setInspectingTask] = useState<any | null>(null);
   const [observedCondition, setObservedCondition] = useState("");
@@ -187,27 +143,29 @@ export default function CitizenDashboard() {
     ).values(),
   );
 
-  const myReports: CaseCardData[] = [...sharedCitizenReports, ...citizenSeedReports];
-  const nearbyReports: CaseCardData[] = [
-    ...sharedCitizenReports,
-    {
-      id: "case-1043",
-      caseNumber: "CP-2026-1043",
-      title: "Blocked Main Canal Causing Pettah Market Flooding",
-      description: "Polythene and debris blockages in the primary drainage channel adjacent to Central Bus Stand during heavy rains.",
-      category: "DRAINAGE",
-      status: "IN_PROGRESS",
-      priorityScore: 76.0,
-      address: "Bodhiraja Mawatha, Pettah, Colombo 11",
-      dsDivisionName: "Colombo DS Office",
-      imageUrl: "https://images.unsplash.com/photo-1541888946425-d0fbb186a5b7?auto=format&fit=crop&w=800&q=80",
-      verificationCount: 3,
-      verificationThreshold: 3,
-      createdAt: "2026-08-11",
-    },
-  ];
+  // Convert dbReports to CaseCardData format
+  const dbReportsAsCards: CaseCardData[] = dbReports.map((report) => ({
+    id: report.id,
+    caseNumber: report.caseNumber,
+    title: report.title,
+    description: report.description,
+    category: report.category,
+    status: report.status,
+    priorityScore: report.priorityScore,
+    address: report.address,
+    dsDivisionName: report.district,
+    imageUrl: report.imageUrl,
+    verificationCount: report.verificationCount,
+    verificationThreshold: report.verificationThreshold,
+    createdAt: report.createdAt,
+    latitude: report.latitude,
+    longitude: report.longitude,
+  }));
 
-  const mapMarkers = [...sharedCitizenReports, ...nearbyReports, ...dbReports].reduce<Array<{
+  const myReports: CaseCardData[] = [...sharedCitizenReports, ...dbReportsAsCards];
+  const nearbyReports: CaseCardData[] = [...sharedCitizenReports, ...dbReportsAsCards];
+
+  const mapMarkers = [...sharedCitizenReports, ...transparencyReports].reduce<Array<{
     id: string;
     title: string;
     category: string;

@@ -15,47 +15,28 @@ export default function DsOfficerConsole() {
   const { t } = useLanguage();
   const sharedIssues = useSharedIssues();
   const [dbReports, setDbReports] = useState<any[]>([]);
+  const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
 
   React.useEffect(() => {
+    fetch("/api/reports/dashboard")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setDbReports(data.data || []);
+      })
+      .catch(() => setDbReports([]));
+
+    // Fetch all reports for map (like transparency page)
     fetch("/api/transparency")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = (await response.json()) as { cases?: any[] };
-        setDbReports(data.cases || []);
+        const data = await response.json();
+        setTransparencyReports(data.cases || []);
       })
-      .catch(() => setDbReports([]));
+      .catch(() => setTransparencyReports([]));
   }, []);
 
-  const [triageCases, setTriageCases] = useState([
-    {
-      id: "case-1042",
-      caseNumber: "CP-2026-1042",
-      title: "Hazardous Deep Potholes near Bambalapitiya Junction",
-      description: "Severe road surface damage causing vehicle accidents and traffic congestion on A2 main corridor near Galle Road Bamba junction.",
-      category: "ROADS",
-      status: "VERIFIED",
-      priorityScore: 88.5,
-      aiSummary: "High-priority urban arterial road hazard near major public transit junction. Immediate asphalt resurfacing recommended.",
-      address: "Galle Road, Bambalapitiya, Colombo 04",
-      verificationCount: 4,
-      age: "2 days old",
-      slaBreachRisk: true,
-    },
-    {
-      id: "case-1046",
-      caseNumber: "CP-2026-1046",
-      title: "Collapsed Drainage Retaining Wall in Nugegoda",
-      description: "Heavy rain damaged 8m segment of concrete canal wall near high street market.",
-      category: "DRAINAGE",
-      status: "VERIFIED",
-      priorityScore: 81.0,
-      aiSummary: "Drainage wall collapse risking flash floods in nearby commercial market stalls.",
-      address: "High Level Road, Nugegoda",
-      verificationCount: 3,
-      age: "1 day old",
-      slaBreachRisk: false,
-    },
-  ]);
+  const [triageCases, setTriageCases] = useState<any[]>([]);
 
   React.useEffect(() => {
     const syncedQueue = sharedIssues
@@ -75,17 +56,57 @@ export default function DsOfficerConsole() {
         slaBreachRisk: issue.priorityScore >= 80,
       }));
 
-    setTriageCases((previous) => {
-      const seen = new Set(previous.map((item) => item.caseNumber));
-      const freshItems = syncedQueue.filter((item) => !seen.has(item.caseNumber));
-      return [...freshItems, ...previous];
-    });
-  }, [sharedIssues]);
+    const dbQueue = dbReports
+      .filter((report) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(report.status))
+      .map((report) => ({
+        id: report.id,
+        caseNumber: report.caseNumber,
+        title: report.title,
+        description: report.description,
+        category: report.category,
+        status: report.status,
+        priorityScore: report.priorityScore,
+        aiSummary: `Citizen-submitted ${report.category.toLowerCase()} issue. This report is now visible to the DS Office dashboard for triage.`,
+        address: report.address,
+        verificationCount: report.verificationCount || 0,
+        age: "Just submitted",
+        slaBreachRisk: report.priorityScore >= 80,
+      }));
+
+    setTriageCases([...dbQueue, ...syncedQueue]);
+  }, [sharedIssues, dbReports]);
 
   const [assigningCase, setAssigningCase] = useState<any | null>(null);
   const [selectedAgency, setSelectedAgency] = useState("RDA Western Province");
   const [instructions, setInstructions] = useState("");
-  const [assignedCasesCount, setAssignedCasesCount] = useState(14);
+  const [assignedCasesCount, setAssignedCasesCount] = useState(0);
+
+  // Calculate statistics from real data
+  const stats = React.useMemo(() => {
+    const totalReports = dbReports.length;
+    const verifiedReports = dbReports.filter(r => r.status === "VERIFIED").length;
+    const resolvedReports = dbReports.filter(r => r.status === "RESOLVED").length;
+    const highPriorityReports = dbReports.filter(r => r.priorityScore >= 80).length;
+    
+    const categoryCounts = dbReports.reduce((acc, r) => {
+      acc[r.category] = (acc[r.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const districtCounts = dbReports.reduce((acc, r) => {
+      acc[r.district] = (acc[r.district] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return {
+      totalReports,
+      verifiedReports,
+      resolvedReports,
+      highPriorityReports,
+      categoryCounts,
+      districtCounts,
+    };
+  }, [dbReports]);
 
   const handleAssignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,20 +161,20 @@ export default function DsOfficerConsole() {
       {/* Analytics KPI Row */}
       <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4">
-          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">Average Triage SLA</span>
-          <p className="text-xl card-stat dark:text-white font-mono mt-1">1.4 Hours</p>
+          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">Total Reports</span>
+          <p className="text-xl card-stat dark:text-white font-mono mt-1">{stats.totalReports}</p>
         </div>
         <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4">
-          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">SLA Risk Warnings</span>
-          <p className="text-xl card-stat dark:text-rose-400 font-mono mt-1">1 Case Alert</p>
+          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">High Priority</span>
+          <p className="text-xl card-stat dark:text-rose-400 font-mono mt-1">{stats.highPriorityReports}</p>
         </div>
         <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4">
-          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">Active Agencies</span>
-          <p className="text-xl card-stat dark:text-orange-400 font-mono mt-1">6 Partner Agencies</p>
+          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">Verified</span>
+          <p className="text-xl card-stat dark:text-orange-400 font-mono mt-1">{stats.verifiedReports}</p>
         </div>
         <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4">
-          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">AI Accuracy Rate</span>
-          <p className="text-xl card-stat dark:text-teal-400 font-mono mt-1">94.8% Advisory</p>
+          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">Resolved</span>
+          <p className="text-xl card-stat dark:text-teal-400 font-mono mt-1">{stats.resolvedReports}</p>
         </div>
       </div>
 
@@ -163,42 +184,35 @@ export default function DsOfficerConsole() {
         <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
           <h4 className="text-sm font-bold card-heading dark:text-white">Reports by Category</h4>
           <div className="space-y-3">
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Roads</span>
-                <span className="font-mono icon-orange">45%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-orange-500 dark:bg-orange-400 rounded-full" style={{ width: "45%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Drainage</span>
-                <span className="font-mono text-blue-400">28%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 dark:bg-blue-400 rounded-full" style={{ width: "28%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Water</span>
-                <span className="font-mono text-cyan-400">18%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-cyan-500 dark:bg-cyan-400 rounded-full" style={{ width: "18%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Streetlights</span>
-                <span className="font-mono text-amber-400">9%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-amber-500 dark:bg-amber-400 rounded-full" style={{ width: "9%" }}></div>
-              </div>
-            </div>
+            {Object.entries(stats.categoryCounts).map(([category, count]) => {
+              const percentage = stats.totalReports > 0 ? Math.round((count / stats.totalReports) * 100) : 0;
+              const colors: Record<string, string> = {
+                ROADS: "icon-orange",
+                DRAINAGE: "text-blue-400",
+                WATER: "text-cyan-400",
+                STREETLIGHTS: "text-amber-400",
+              };
+              const bgColors: Record<string, string> = {
+                ROADS: "bg-orange-500 dark:bg-orange-400",
+                DRAINAGE: "bg-blue-500 dark:bg-blue-400",
+                WATER: "bg-cyan-500 dark:bg-cyan-400",
+                STREETLIGHTS: "bg-amber-500 dark:bg-amber-400",
+              };
+              return (
+                <div key={category}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="body-text dark:text-slate-400">{category}</span>
+                    <span className={`font-mono ${colors[category] || "text-slate-400"}`}>{percentage}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${bgColors[category] || "bg-slate-500"} rounded-full`} style={{ width: `${percentage}%` }}></div>
+                  </div>
+                </div>
+              );
+            })}
+            {Object.keys(stats.categoryCounts).length === 0 && (
+              <p className="text-xs body-text dark:text-slate-400">No data available</p>
+            )}
           </div>
         </div>
 
@@ -206,33 +220,30 @@ export default function DsOfficerConsole() {
         <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
           <h4 className="text-sm font-bold card-heading dark:text-white">Resolution Status</h4>
           <div className="space-y-3">
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Resolved</span>
-                <span className="font-mono text-emerald-400">82%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full" style={{ width: "82%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">In Progress</span>
-                <span className="font-mono text-blue-400">12%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 dark:bg-blue-400 rounded-full" style={{ width: "12%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Pending</span>
-                <span className="font-mono text-amber-400">6%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-amber-500 dark:bg-amber-400 rounded-full" style={{ width: "6%" }}></div>
-              </div>
-            </div>
+            {stats.totalReports > 0 ? (
+              <>
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="body-text dark:text-slate-400">Resolved</span>
+                    <span className="font-mono text-emerald-400">{Math.round((stats.resolvedReports / stats.totalReports) * 100)}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full" style={{ width: `${(stats.resolvedReports / stats.totalReports) * 100}%` }}></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="body-text dark:text-slate-400">Verified</span>
+                    <span className="font-mono text-blue-400">{Math.round((stats.verifiedReports / stats.totalReports) * 100)}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 dark:bg-blue-400 rounded-full" style={{ width: `${(stats.verifiedReports / stats.totalReports) * 100}%` }}></div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs body-text dark:text-slate-400">No data available</p>
+            )}
           </div>
         </div>
 
@@ -240,61 +251,34 @@ export default function DsOfficerConsole() {
         <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
           <h4 className="text-sm font-bold card-heading dark:text-white">Top DS Divisions</h4>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs body-text dark:text-slate-400">Colombo</span>
-              <span className="text-xs font-mono icon-orange font-bold">245</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs body-text dark:text-slate-400">Gampaha</span>
-              <span className="text-xs font-mono text-blue-400 font-bold">189</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs body-text dark:text-slate-400">Kandy</span>
-              <span className="text-xs font-mono text-cyan-400 font-bold">156</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs body-text dark:text-slate-400">Galle</span>
-              <span className="text-xs font-mono text-amber-400 font-bold">134</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs body-text dark:text-slate-400">Kurunegala</span>
-              <span className="text-xs font-mono text-purple-400 font-bold">98</span>
-            </div>
+            {Object.entries(stats.districtCounts)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 5)
+              .map(([district, count], index) => {
+                const colors = ["icon-orange", "text-blue-400", "text-cyan-400", "text-amber-400", "text-purple-400"];
+                return (
+                  <div key={district} className="flex items-center justify-between">
+                    <span className="text-xs body-text dark:text-slate-400">{district}</span>
+                    <span className={`text-xs font-mono ${colors[index] || "text-slate-400"} font-bold`}>{count}</span>
+                  </div>
+                );
+              })}
+            {Object.keys(stats.districtCounts).length === 0 && (
+              <p className="text-xs body-text dark:text-slate-400">No data available</p>
+            )}
           </div>
         </div>
 
-        {/* Weekly Trend */}
+        {/* Weekly Trend - Placeholder */}
         <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
           <h4 className="text-sm font-bold card-heading dark:text-white">Weekly Trend</h4>
           <div className="flex items-end justify-between h-24 gap-2">
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "60%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Mon</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "80%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Tue</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "45%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Wed</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "90%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Thu</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "70%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Fri</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "40%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Sat</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "30%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Sun</span>
-            </div>
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, index) => (
+              <div key={day} className="flex flex-col items-center gap-1 flex-1">
+                <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: `${30 + Math.random() * 60}%` }}></div>
+                <span className="text-[10px] body-text dark:text-slate-400">{day}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -309,32 +293,14 @@ export default function DsOfficerConsole() {
         </div>
         <InteractiveMap
           markers={[
-            ...sharedIssues.map((issue) => ({
-              id: issue.id,
-              title: issue.title,
-              category: issue.category,
-              status: issue.status,
-              latitude: issue.category === "ROADS" ? 6.8905 : issue.category === "DRAINAGE" ? 6.9344 : 7.2625,
-              longitude: issue.category === "ROADS" ? 79.855 : issue.category === "DRAINAGE" ? 79.8519 : 80.5972,
-              address: issue.address,
-            })),
-            ...triageCases.map((item) => ({
+            ...transparencyReports.map((item) => ({
               id: item.id,
               title: item.title,
               category: item.category,
               status: item.status,
-              latitude: item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625,
-              longitude: item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972,
+              latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
+              longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
               address: item.address,
-            })),
-            ...dbReports.map((report) => ({
-              id: report.id,
-              title: report.title,
-              category: report.category,
-              status: report.status,
-              latitude: report.latitude || 6.9271,
-              longitude: report.longitude || 79.8612,
-              address: report.address,
             })),
           ]}
           center={[6.9271, 79.8612]}
