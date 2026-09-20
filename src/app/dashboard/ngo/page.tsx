@@ -16,12 +16,18 @@ export default function NgoDashboard() {
   const [dbReports, setDbReports] = useState<any[]>([]);
   const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
 
+  // Deduplicate sharedIssues with useMemo to prevent infinite loop
+  const uniqueSharedIssues = React.useMemo(
+    () => Array.from(new Map(sharedIssues.map((issue) => [issue.id, issue])).values()),
+    [sharedIssues]
+  );
+
   React.useEffect(() => {
     fetch("/api/reports/dashboard")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
-        setDbReports(data.data || []);
+        setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
       })
       .catch(() => setDbReports([]));
 
@@ -30,7 +36,7 @@ export default function NgoDashboard() {
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
-        setTransparencyReports(data.cases || []);
+        setTransparencyReports(Array.from(new Map((data.cases || []).map((r: any) => [r.id, r])).values()));
       })
       .catch(() => setTransparencyReports([]));
   }, []);
@@ -38,7 +44,7 @@ export default function NgoDashboard() {
   const [opportunities, setOpportunities] = useState<any[]>([]);
 
   React.useEffect(() => {
-    const syncedOpportunities = sharedIssues
+    const syncedOpportunities = uniqueSharedIssues
       .filter((issue) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(issue.status))
       .map((issue) => ({
         id: issue.id,
@@ -64,8 +70,12 @@ export default function NgoDashboard() {
         supportNeeded: "Volunteer mobilization and on-ground support required",
       }));
 
-    setOpportunities([...dbOpportunities, ...syncedOpportunities]);
-  }, [sharedIssues, dbReports]);
+    setOpportunities(
+      Array.from(
+        new Map([...dbOpportunities, ...syncedOpportunities].map((opp) => [opp.id, opp])).values()
+      )
+    );
+  }, [uniqueSharedIssues, dbReports]);
 
   const [commitments, setCommitments] = useState<any[]>([]);
 
@@ -124,17 +134,22 @@ export default function NgoDashboard() {
           <span className="text-[10px] font-mono text-teal-400">{opportunities.length} opportunities</span>
         </div>
         <InteractiveMap
-          markers={[
-            ...transparencyReports.map((item) => ({
-              id: item.id,
-              title: item.title,
-              category: item.category,
-              status: item.status || "SUBMITTED",
-              latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
-              longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
-              address: item.address,
-            })),
-          ]}
+          markers={Array.from(
+            new Map(
+              transparencyReports.map((item) => [
+                item.id,
+                {
+                  id: item.id,
+                  title: item.title,
+                  category: item.category,
+                  status: item.status || "SUBMITTED",
+                  latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
+                  longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
+                  address: item.address,
+                },
+              ])
+            ).values()
+          )}
           center={[6.9271, 79.8612]}
           zoom={11}
         />

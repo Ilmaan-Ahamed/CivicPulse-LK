@@ -23,6 +23,12 @@ export default function CitizenDashboard() {
   const [dbReports, setDbReports] = useState<any[]>([]);
   const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
 
+  // Deduplicate sharedIssues with useMemo to prevent infinite loop
+  const uniqueSharedIssues = React.useMemo(
+    () => Array.from(new Map(sharedIssues.map((issue) => [issue.id, issue])).values()),
+    [sharedIssues]
+  );
+
   const [verificationQueue, setVerificationQueue] = useState<any[]>([]);
   const [verificationHistory, setVerificationHistory] = useState<any[]>([]);
   const [inspectionTasks, setInspectionTasks] = useState<any[]>([]);
@@ -33,7 +39,7 @@ export default function CitizenDashboard() {
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
-        setDbReports(data.data || []);
+        setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
       })
       .catch(() => setDbReports([]));
 
@@ -42,7 +48,7 @@ export default function CitizenDashboard() {
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
-        setTransparencyReports(data.cases || []);
+        setTransparencyReports(Array.from(new Map((data.cases || []).map((r: any) => [r.id, r])).values()));
       })
       .catch(() => setTransparencyReports([]));
 
@@ -123,25 +129,21 @@ export default function CitizenDashboard() {
     setNotes("");
   };
 
-  const sharedCitizenReports: CaseCardData[] = Array.from(
-    new Map(
-      sharedIssues.map((issue) => [issue.id, {
-        id: issue.id,
-        caseNumber: issue.caseNumber,
-        title: issue.title,
-        description: issue.description,
-        category: issue.category,
-        status: issue.status,
-        priorityScore: issue.priorityScore,
-        address: issue.address,
-        dsDivisionName: issue.dsDivisionName,
-        imageUrl: issue.imageUrl,
-        verificationCount: 1,
-        verificationThreshold: 3,
-        createdAt: issue.createdAt,
-      }]),
-    ).values(),
-  );
+  const sharedCitizenReports: CaseCardData[] = uniqueSharedIssues.map((issue) => ({
+    id: issue.id,
+    caseNumber: issue.caseNumber,
+    title: issue.title,
+    description: issue.description,
+    category: issue.category,
+    status: issue.status,
+    priorityScore: issue.priorityScore,
+    address: issue.address,
+    dsDivisionName: issue.dsDivisionName,
+    imageUrl: issue.imageUrl,
+    verificationCount: 1,
+    verificationThreshold: 3,
+    createdAt: issue.createdAt,
+  }));
 
   // Convert dbReports to CaseCardData format
   const dbReportsAsCards: CaseCardData[] = dbReports.map((report) => ({
@@ -162,35 +164,29 @@ export default function CitizenDashboard() {
     longitude: report.longitude,
   }));
 
-  const myReports: CaseCardData[] = [...sharedCitizenReports, ...dbReportsAsCards];
-  const nearbyReports: CaseCardData[] = [...sharedCitizenReports, ...dbReportsAsCards];
+  const myReports: CaseCardData[] = Array.from(
+    new Map([...sharedCitizenReports, ...dbReportsAsCards].map((report) => [report.id, report])).values()
+  );
+  const nearbyReports: CaseCardData[] = Array.from(
+    new Map([...sharedCitizenReports, ...dbReportsAsCards].map((report) => [report.id, report])).values()
+  );
 
-  const mapMarkers = [...sharedCitizenReports, ...transparencyReports].reduce<Array<{
-    id: string;
-    title: string;
-    category: string;
-    status: string;
-    latitude: number;
-    longitude: number;
-    address: string;
-  }>>((acc, report) => {
-    if (acc.some((item) => item.id === report.id)) return acc;
-
-    const lat = report.latitude || (report.category === "ROADS" ? 6.8905 : report.category === "DRAINAGE" ? 6.9344 : report.category === "WATER" ? 6.0268 : 7.2625);
-    const lng = report.longitude || (report.category === "ROADS" ? 79.855 : report.category === "DRAINAGE" ? 79.8519 : report.category === "WATER" ? 80.217 : 80.5972);
-
-    acc.push({
-      id: report.id,
-      title: report.title,
-      category: report.category,
-      status: report.status,
-      latitude: lat,
-      longitude: lng,
-      address: report.address,
-    });
-
-    return acc;
-  }, []);
+  const mapMarkers = Array.from(
+    new Map(
+      [...sharedCitizenReports, ...transparencyReports].map((report) => [
+        report.id,
+        {
+          id: report.id,
+          title: report.title,
+          category: report.category,
+          status: report.status,
+          latitude: report.latitude || (report.category === "ROADS" ? 6.8905 : report.category === "DRAINAGE" ? 6.9344 : report.category === "WATER" ? 6.0268 : 7.2625),
+          longitude: report.longitude || (report.category === "ROADS" ? 79.855 : report.category === "DRAINAGE" ? 79.8519 : report.category === "WATER" ? 80.217 : 80.5972),
+          address: report.address,
+        },
+      ])
+    ).values()
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
