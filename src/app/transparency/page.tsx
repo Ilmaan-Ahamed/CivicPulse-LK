@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { InteractiveMap } from "@/components/map/InteractiveMap";
+import Link from "next/link";
+import { useState, useMemo, useEffect } from "react";
+import { MapPin, Clock, Search, Filter, AlertCircle, Shield } from "lucide-react";
 import { CaseCard, CaseCardData } from "@/components/shared/CaseCard";
-import { Search, Filter, MapPin, Shield } from "lucide-react";
+import { InteractiveMap } from "@/components/map/InteractiveMap";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { TrustScore } from "@/components/ui/TrustScore";
+import { PriorityIndicator } from "@/components/ui/PriorityIndicator";
+import { getAllDistrictNames, getAllDsDivisions } from "@/data/districts";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type TransparencyCase = CaseCardData & {
@@ -69,17 +74,7 @@ export default function TransparencyDashboard() {
     };
   }, []);
 
-  const districtOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          publicCases
-            .map((caseItem) => caseItem.district || caseItem.dsDivisionName || "")
-            .filter(Boolean),
-        ),
-      ).sort((a, b) => a.localeCompare(b)),
-    [publicCases],
-  );
+  const districtOptions = useMemo(() => getAllDsDivisions(), []);
 
   const filteredCases = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();

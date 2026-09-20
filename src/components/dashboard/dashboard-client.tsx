@@ -9,6 +9,7 @@ import { ResolutionTimeline } from "@/components/dashboard/resolution-timeline";
 import { ReportMap } from "@/components/dashboard/report-map";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { getAllDsDivisions } from "@/data/districts";
 import type {
   DashboardStats,
   StatusCount,
@@ -114,7 +115,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                 onChange={(e) => handleFilterChange("district", e.target.value)}
               >
                 <option value="">{t("dashboard.allDistricts")}</option>
-                {data.availableDistricts.map((district) => (
+                {getAllDsDivisions().map((district) => (
                   <option key={district} value={district}>
                     {district}
                   </option>
