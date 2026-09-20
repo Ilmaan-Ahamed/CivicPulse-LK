@@ -16,27 +16,16 @@ export default function NgoDashboard() {
   const [dbReports, setDbReports] = useState<any[]>([]);
 
   React.useEffect(() => {
-    fetch("/api/transparency")
+    fetch("/api/reports/dashboard")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = (await response.json()) as { cases?: any[] };
-        setDbReports(data.cases || []);
+        const data = await response.json();
+        setDbReports(data.data || []);
       })
       .catch(() => setDbReports([]));
   }, []);
 
-  const [opportunities, setOpportunities] = useState([
-    {
-      id: "case-1043",
-      caseNumber: "CP-2026-1043",
-      title: "Blocked Main Canal Causing Pettah Market Flooding",
-      description: "Polythene and debris blockages in the primary drainage channel adjacent to Central Bus Stand during heavy rains.",
-      category: "DRAINAGE",
-      priorityScore: 76.0,
-      address: "Bodhiraja Mawatha, Pettah, Colombo 11",
-      supportNeeded: "Volunteer cleaning crew & safety gear required",
-    },
-  ]);
+  const [opportunities, setOpportunities] = useState<any[]>([]);
 
   React.useEffect(() => {
     const syncedOpportunities = sharedIssues
@@ -52,22 +41,23 @@ export default function NgoDashboard() {
         supportNeeded: "Volunteer mobilization and on-ground support required",
       }));
 
-    setOpportunities((previous) => {
-      const seen = new Set(previous.map((item) => item.caseNumber));
-      const freshItems = syncedOpportunities.filter((item) => !seen.has(item.caseNumber));
-      return [...freshItems, ...previous];
-    });
-  }, [sharedIssues]);
+    const dbOpportunities = dbReports
+      .filter((report) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(report.status))
+      .map((report) => ({
+        id: report.id,
+        caseNumber: report.caseNumber,
+        title: report.title,
+        description: report.description,
+        category: report.category,
+        priorityScore: report.priorityScore,
+        address: report.address,
+        supportNeeded: "Volunteer mobilization and on-ground support required",
+      }));
 
-  const [commitments, setCommitments] = useState([
-    {
-      id: "pledge-01",
-      caseNumber: "CP-2026-1043",
-      pledgeType: "VOLUNTEERS & SAFETY GEAR",
-      description: "Pledged 15 volunteer team members for community canal cleanup and trash removal.",
-      status: "PLEDGED & ACTIVE",
-    },
-  ]);
+    setOpportunities([...dbOpportunities, ...syncedOpportunities]);
+  }, [sharedIssues, dbReports]);
+
+  const [commitments, setCommitments] = useState<any[]>([]);
 
   const [pledgingCase, setPledgingCase] = useState<any | null>(null);
   const [pledgeType, setPledgeType] = useState("VOLUNTEERS");
@@ -133,15 +123,6 @@ export default function NgoDashboard() {
               latitude: item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625,
               longitude: item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972,
               address: item.address,
-            })),
-            ...dbReports.map((report) => ({
-              id: report.id,
-              title: report.title,
-              category: report.category,
-              status: report.status,
-              latitude: report.latitude || 6.9271,
-              longitude: report.longitude || 79.8612,
-              address: report.address,
             })),
           ]}
           center={[6.9271, 79.8612]}
