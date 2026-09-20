@@ -7,7 +7,7 @@ async function getAuditLogs(req: Request) {
 
   const logs = await db.auditLog.findMany({
     include: {
-      actor: {
+      user: {
         select: {
           id: true,
           firstName: true,
@@ -24,7 +24,7 @@ async function getAuditLogs(req: Request) {
     success: true,
     data: logs.map((log) => ({
       id: log.id,
-      user: `${log.actor.firstName} ${log.actor.lastName} (${log.actor.role})`,
+      user: log.user ? `${log.user.firstName} ${log.user.lastName} (${log.user.role})` : "System",
       action: log.action,
       entity: `${log.entity} #${log.entityId}`,
       ip: log.ipAddress,

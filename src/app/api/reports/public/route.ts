@@ -22,7 +22,7 @@ async function getPublicReports(req: Request) {
     success: true,
     data: reports.map((report) => ({
       id: report.id,
-      caseNumber: report.caseNumber,
+      caseNumber: report.referenceNo,
       title: report.title,
       description: report.description,
       category: report.category,
