@@ -4,6 +4,9 @@ import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import { requireRole } from "@/lib/auth-guard";
 import { Role } from "@/lib/roles";
+import { logStatusChange } from "@/lib/tracking/status-history";
+import { logAuditAction } from "@/lib/tracking/audit-log";
+import { createNotification } from "@/lib/tracking/notifications";
 
 // Allowed status transitions
 const STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -81,6 +84,17 @@ async function createAssignment(req: Request) {
       data: { status: ReportStatus.ASSIGNED },
     });
 
+    // Log status change
+    await tx.statusHistory.create({
+      data: {
+        reportId,
+        fromStatus: report.status,
+        toStatus: ReportStatus.ASSIGNED,
+        changedBy: userId,
+        reason: "Report assigned to agency",
+      },
+    });
+
     await tx.auditLog.create({
       data: {
         actorId: userId,
@@ -100,6 +114,15 @@ async function createAssignment(req: Request) {
 
     return { assignment, updatedReport };
   });
+
+  // Notify citizen about assignment
+  await createNotification(
+    report.citizenId,
+    "Report Assigned",
+    `Your report "${report.title}" has been assigned to ${agency.name}`,
+    "ASSIGNMENT",
+    result.assignment.id
+  );
 
   return NextResponse.json({
     success: true,
@@ -222,6 +245,8 @@ async function updateAssignment(req: Request) {
       data: {
         status: status as any,
         updatedAt: new Date(),
+        ...(status === "ACCEPTED" && { acceptedAt: new Date() }),
+        ...(status === "COMPLETED" && { completedAt: new Date() }),
       },
     });
 
@@ -241,6 +266,34 @@ async function updateAssignment(req: Request) {
 
     return { updatedAssignment };
   });
+
+  // Update report status based on assignment status
+  if (status === "IN_PROGRESS" && assignment.report.status === "ASSIGNED") {
+    await db.report.update({
+      where: { id: assignment.reportId },
+      data: { status: ReportStatus.IN_PROGRESS },
+    });
+    await logStatusChange(assignment.reportId, ReportStatus.IN_PROGRESS, userId, "Assignment in progress");
+  }
+
+  if (status === "COMPLETED") {
+    await db.report.update({
+      where: { id: assignment.reportId },
+      data: { status: ReportStatus.FIELD_VERIFIED },
+    });
+    await logStatusChange(assignment.reportId, ReportStatus.FIELD_VERIFIED, userId, "Assignment completed");
+  }
+
+  // Notify DS officer about assignment update
+  if (assignment.assignedById) {
+    await createNotification(
+      assignment.assignedById,
+      "Assignment Status Updated",
+      `Assignment status changed to ${status}`,
+      "ASSIGNMENT_UPDATE",
+      id
+    );
+  }
 
   return NextResponse.json({
     success: true,

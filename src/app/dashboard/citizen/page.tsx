@@ -18,7 +18,7 @@ export default function CitizenDashboard() {
   const { t } = useLanguage();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState<"my-reports" | "nearby" | "verification" | "inspections">("my-reports");
+  const [activeTab, setActiveTab] = useState<"my-reports" | "nearby" | "verification" | "inspections" | "notifications">("my-reports");
   const sharedIssues = useSharedIssues();
   const [dbReports, setDbReports] = useState<any[]>([]);
   const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
@@ -32,6 +32,9 @@ export default function CitizenDashboard() {
   const [verificationQueue, setVerificationQueue] = useState<any[]>([]);
   const [verificationHistory, setVerificationHistory] = useState<any[]>([]);
   const [inspectionTasks, setInspectionTasks] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [selectedReportHistory, setSelectedReportHistory] = useState<any | null>(null);
 
   useEffect(() => {
     // Fetch reports from database (role-filtered)
@@ -51,6 +54,24 @@ export default function CitizenDashboard() {
         setTransparencyReports(Array.from(new Map((data.cases || []).map((r: any) => [r.id, r])).values()));
       })
       .catch(() => setTransparencyReports([]));
+
+    // Fetch notifications
+    fetch("/api/notifications")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setNotifications(data.data || []);
+      })
+      .catch(() => setNotifications([]));
+
+    // Fetch unread count
+    fetch("/api/notifications/unread-count")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setUnreadCount(data.count || 0);
+      })
+      .catch(() => setUnreadCount(0));
 
     if (tabParam === "verification") {
       setActiveTab("verification");
@@ -207,9 +228,22 @@ export default function CitizenDashboard() {
           href="/dashboard/citizen/report"
           className="btn-primary-orange px-6 py-3 text-xs flex items-center justify-center gap-2 shrink-0"
         >
-          <PlusCircle className="w-4 h-4" />
-          <span>{t("hero.cta.report")}</span>
+          <PlusCircle className="h-4 w-4" />
+          Report New Issue
         </Link>
+
+        {/* Notifications Bell */}
+        <button
+          onClick={() => setActiveTab(activeTab === "notifications" ? "my-reports" : "notifications")}
+          className="relative p-3 rounded-xl card-light dark:bg-[#111111] dark:border-[#333333] hover:bg-slate-100 dark:hover:bg-[#1a1a1a] transition-colors"
+        >
+          <ShieldCheck className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Tabs */}
@@ -247,6 +281,15 @@ export default function CitizenDashboard() {
         >
           <HeartHandshake className="w-3 h-3 inline mr-1" />
           Inspections ({inspectionTasks.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("notifications")}
+          className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${
+            activeTab === "notifications" ? "bg-[#F97316] dark:bg-[#FF8C00] text-white" : "text-slate-600 dark:text-[#B0B0B0] hover:text-slate-900 dark:hover:text-white"
+          }`}
+        >
+          <ShieldCheck className="w-3 h-3 inline mr-1" />
+          Notifications ({unreadCount})
         </button>
       </div>
 
@@ -380,6 +423,72 @@ export default function CitizenDashboard() {
                       <span>Submit Evidence</span>
                     </button>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : activeTab === "notifications" ? (
+        <div className="max-w-7xl mx-auto space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg page-title dark:text-white">Notifications</h2>
+            <button
+              onClick={() => {
+                fetch("/api/notifications", { method: "PATCH", body: JSON.stringify({ markAll: true }) })
+                  .then(() => {
+                    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+                    setUnreadCount(0);
+                  });
+              }}
+              className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            >
+              Mark all as read
+            </button>
+          </div>
+
+          {notifications.length === 0 ? (
+            <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-12 text-center space-y-3">
+              <ShieldCheck className="w-10 h-10 text-slate-400 mx-auto" />
+              <h3 className="text-base card-heading dark:text-white">No Notifications</h3>
+              <p className="text-xs body-text dark:text-slate-400">You're all caught up!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {notifications.map((notif) => (
+                <div
+                  key={notif.id}
+                  className={`card-light dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4 flex items-start gap-4 ${
+                    !notif.isRead ? "border-l-4 border-l-orange-500" : ""
+                  }`}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="text-sm font-bold card-heading dark:text-white">{notif.title}</h4>
+                      <span className="text-[10px] text-slate-500">
+                        {new Date(notif.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-xs body-text dark:text-slate-400">{notif.message}</p>
+                  </div>
+                  {!notif.isRead && (
+                    <button
+                      onClick={() => {
+                        fetch("/api/notifications", {
+                          method: "PATCH",
+                          body: JSON.stringify({ notificationId: notif.id }),
+                        })
+                          .then(() => {
+                            setNotifications(notifications.map(n => 
+                              n.id === notif.id ? { ...n, isRead: true } : n
+                            ));
+                            setUnreadCount(Math.max(0, unreadCount - 1));
+                          });
+                      }}
+                      className="text-xs text-orange-500 hover:text-orange-600"
+                    >
+                      Mark read
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

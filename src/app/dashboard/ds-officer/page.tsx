@@ -40,9 +40,19 @@ export default function DsOfficerConsole() {
         setTransparencyReports(Array.from(new Map((data.cases || []).map((r: any) => [r.id, r])).values()));
       })
       .catch(() => setTransparencyReports([]));
+
+    // Fetch assignments
+    fetch("/api/assignments")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setAssignments(data.data || []);
+      })
+      .catch(() => setAssignments([]));
   }, []);
 
   const [triageCases, setTriageCases] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
 
   React.useEffect(() => {
     const syncedQueue = uniqueSharedIssues
@@ -163,7 +173,7 @@ export default function DsOfficerConsole() {
           </div>
           <div className="card-light dark:bg-slate-950 dark:border-slate-800 px-4 py-2 rounded-2xl border text-center">
             <span className="text-[10px] card-subtext dark:text-slate-500 font-medium block">Assigned Active</span>
-            <span className="text-lg card-stat dark:text-orange-400 font-mono">{assignedCasesCount}</span>
+            <span className="text-lg card-stat dark:text-orange-400 font-mono">{assignments.filter(a => a.status === "IN_PROGRESS").length}</span>
           </div>
         </div>
       </div>
@@ -389,6 +399,76 @@ export default function DsOfficerConsole() {
             ))}
           </div>
         )}
+
+        {/* Assignment Tracking Section */}
+        <div className="max-w-7xl mx-auto space-y-4 mt-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg page-title dark:text-white flex items-center gap-2">
+              <Building2 className="w-4 h-4 icon-orange dark:text-orange-400" />
+              <span>Active Assignments Tracking</span>
+            </h2>
+            <span className="text-xs body-text dark:text-slate-400 font-mono">{assignments.length} total assignments</span>
+          </div>
+
+          {assignments.length === 0 ? (
+            <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-12 text-center space-y-3">
+              <Building2 className="w-10 h-10 text-slate-400 mx-auto" />
+              <h3 className="text-base card-heading dark:text-white">No Active Assignments</h3>
+              <p className="text-xs body-text dark:text-slate-400">Assign verified cases to agencies to track progress here.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {assignments.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-purple-400">{assignment.report?.referenceNo}</span>
+                      <StatusBadge status={assignment.status} size="sm" />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      {assignment.acceptedAt && (
+                        <span>Accepted: {new Date(assignment.acceptedAt).toLocaleDateString()}</span>
+                      )}
+                      {assignment.deadline && (
+                        <span className={new Date(assignment.deadline) < new Date() ? "text-rose-400" : ""}>
+                          Due: {new Date(assignment.deadline).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base card-heading dark:text-white">{assignment.report?.title}</h3>
+                    <p className="text-xs body-text dark:text-slate-400 mt-1">{assignment.report?.address}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-border dark:border-slate-800">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-orange-400" />
+                        <span className="text-xs card-heading dark:text-white">{assignment.agency?.name}</span>
+                      </div>
+                      <span className="text-xs text-slate-500">({assignment.agency?.type})</span>
+                    </div>
+                    {assignment.inspections && assignment.inspections.length > 0 && (
+                      <span className="text-xs text-emerald-400">{assignment.inspections.length} inspection(s)</span>
+                    )}
+                  </div>
+
+                  {assignment.notes && (
+                    <div className="p-3 rounded-xl card-light dark:bg-slate-950 dark:border-slate-800 text-xs body-text dark:text-slate-400">
+                      <span className="font-bold card-heading dark:text-slate-300">Notes: </span>
+                      {assignment.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Agency Assignment Modal */}

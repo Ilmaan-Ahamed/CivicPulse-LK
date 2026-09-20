@@ -80,7 +80,7 @@ export default function AdminConsole() {
       .catch(() => setUsers([]));
 
     // Fetch audit logs from database
-    fetch("/api/audit-logs")
+    fetch("/api/audit?limit=50")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
@@ -485,18 +485,58 @@ export default function AdminConsole() {
 
         {activeAdminTab === "audit" && (
           <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-6 space-y-4">
-            <h3 className="text-base card-heading dark:text-white">Immutable Platform Audit Logs</h3>
-            <div className="space-y-2">
-              {auditLogs.map((log) => (
-                <div key={log.id} className="p-3 rounded-xl card-light dark:bg-slate-950 dark:border-slate-800 font-mono text-xs flex items-center justify-between body-text dark:text-slate-300">
-                  <div>
-                    <span className="text-rose-400 font-bold mr-2">[{log.action}]</span>
-                    <span className="card-heading dark:text-white">{log.user}</span> → <span>{log.entity}</span>
-                  </div>
-                  <span className="text-slate-500 text-[11px]">{log.time} • IP {log.ip}</span>
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <h3 className="text-base card-heading dark:text-white">Immutable Platform Audit Logs</h3>
+              <span className="text-xs text-slate-500">{auditLogs.length} entries</span>
             </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono">
+                    <th className="pb-3">Timestamp</th>
+                    <th className="pb-3">Action</th>
+                    <th className="pb-3">Actor</th>
+                    <th className="pb-3">Target</th>
+                    <th className="pb-3">IP Address</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border dark:divide-slate-800">
+                  {auditLogs.map((log) => (
+                    <tr key={log.id}>
+                      <td className="py-3 font-mono text-slate-500">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </td>
+                      <td className="py-3">
+                        <span className="px-2 py-1 rounded bg-rose-950 text-rose-300 border border-rose-800 font-mono text-[10px]">
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="card-heading dark:text-white">
+                            {log.user?.firstName} {log.user?.lastName}
+                          </span>
+                          <span className="text-slate-500">({log.user?.email})</span>
+                          <RoleBadge role={log.user?.role as "CITIZEN" | "NGO_PARTNER" | "DS_OFFICER" | "ADMIN"} />
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div>
+                          <span className="card-heading dark:text-white">{log.targetType}</span>
+                          {log.targetId && (
+                            <span className="text-slate-500 font-mono text-[10px] ml-1">#{log.targetId.slice(0, 8)}...</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 font-mono text-slate-500">{log.ipAddress}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {auditLogs.length === 0 && (
+              <p className="text-xs body-text dark:text-slate-400 text-center py-8">No audit logs available.</p>
+            )}
           </div>
         )}
       </div>
