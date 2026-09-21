@@ -59,7 +59,7 @@ async function findDuplicatesFallback(
         status: {
           notIn: ["RESOLVED", "CLOSED", "REJECTED"],
         },
-        ...(category && { category }),
+        ...(category && { category: category as any }),
       },
       select: {
         id: true,
