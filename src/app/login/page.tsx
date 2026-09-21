@@ -16,28 +16,37 @@ import {
   AlertCircle,
   CheckCircle2,
   Sparkles,
-  ChevronDown,
   KeyRound,
   SmartphoneNfc,
   RotateCcw,
+  Users,
+  Building2,
+  Landmark,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useUser } from "@clerk/nextjs";
 import { UserRole } from "@/lib/auth/rbac";
+import { ROLE_HOME_ROUTES } from "@/lib/auth/role-routes";
 
 type AuthTab = "signin" | "signup";
 
-const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = [
-  { value: "CITIZEN", label: "Citizen", description: "Report infrastructure issues in your community" },
-  { value: "NGO_PARTNER", label: "NGO Partner", description: "Pledge support and manage assigned infrastructure cases" },
-  { value: "DS_OFFICER", label: "DS Officer", description: "Triage cases and coordinate agency assignments" },
-  { value: "ADMIN", label: "Administrator", description: "Manage users and system configuration" },
+const ROLE_OPTIONS: { value: UserRole; label: string; description: string; icon: typeof Users }[] = [
+  { value: "CITIZEN", label: "Citizen", description: "Report infrastructure issues in your community", icon: Users },
+  { value: "NGO_PARTNER", label: "NGO", description: "Pledge support and manage assigned infrastructure cases", icon: Building2 },
+  { value: "DS_OFFICER", label: "DS Officer", description: "Triage cases and coordinate agency assignments", icon: Landmark },
 ];
+
+function dashboardPathForRole(role?: UserRole | string | null) {
+  if (role && role in ROLE_HOME_ROUTES) {
+    return ROLE_HOME_ROUTES[role as keyof typeof ROLE_HOME_ROUTES];
+  }
+  return "/dashboard/citizen";
+}
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, register, verifySignIn, verifySignUp, resendSignUpVerification, isAuthenticated, currentRole } = useAuth();
+  const { login, register, verifySignIn, verifySignUp, resendSignUpVerification, currentRole, isLoading } = useAuth();
   const [signupVerificationEmail, setSignupVerificationEmail] = useState<string | null>(null);
   const [signupVerificationCode, setSignupVerificationCode] = useState("");
   const [isResendProcessing, setIsResendProcessing] = useState(false);
@@ -65,17 +74,16 @@ export default function LoginPage() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
-  const [registerRole, setRegisterRole] = useState<UserRole>("CITIZEN");
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [registerRole, setRegisterRole] = useState<UserRole | "">("");
 
-  // Redirect to Role Selection page as soon as Clerk confirms user is signed in
+  // Redirect signed-in users to the dashboard for their stored DB role
   useEffect(() => {
-    if (!isClerkLoaded) return;
+    if (!isClerkLoaded || isLoading) return;
 
     if (isSignedIn) {
-      router.push("/select-role");
+      router.push(dashboardPathForRole(currentRole));
     }
-  }, [isClerkLoaded, isSignedIn, router]);
+  }, [isClerkLoaded, isLoading, isSignedIn, currentRole, router]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +109,7 @@ export default function LoginPage() {
     if (!result.success) {
       setError(result.error || "Login failed. Please check your credentials.");
     } else {
-      router.push("/select-role");
+      router.push(dashboardPathForRole(result.role || currentRole));
     }
   };
 
@@ -121,7 +129,7 @@ export default function LoginPage() {
     if (!result.success) {
       setError(result.error || "Verification failed. Please try again.");
     } else {
-      router.push("/select-role");
+      router.push(dashboardPathForRole(result.role || currentRole));
     }
   };
 
@@ -132,6 +140,11 @@ export default function LoginPage() {
 
     if (!registerName || !registerEmail || !registerPassword) {
       setError("Please fill in all required fields.");
+      return;
+    }
+
+    if (!registerRole) {
+      setError("Please select a role.");
       return;
     }
 
@@ -166,12 +179,10 @@ export default function LoginPage() {
     if (!result.success) {
       setError(result.error || "Registration failed. Please try again.");
     } else {
-      setSuccess("Account created successfully! Redirecting to Role Selection...");
-      router.push("/select-role");
+      setSuccess("Account created successfully! Redirecting to your dashboard...");
+      router.push(dashboardPathForRole(result.role || registerRole));
     }
   };
-
-  const selectedRoleOption = ROLE_OPTIONS.find((r) => r.value === registerRole);
 
   // While Clerk is loading, show loading spinner
   if (!isClerkLoaded) {
@@ -188,7 +199,7 @@ export default function LoginPage() {
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4 text-center">
         <div className="w-8 h-8 border-2 border-orange-300 border-t-[#F97316] rounded-full animate-spin" />
         <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-          Redirecting to Role Selection…
+          Redirecting to your dashboard…
         </p>
       </div>
     );
@@ -464,7 +475,7 @@ export default function LoginPage() {
                         if (!res.success) {
                           setError(res.error || "Verification failed. Please try again.");
                         } else {
-                          router.push("/select-role");
+                          router.push(dashboardPathForRole(res.role || registerRole || currentRole));
                         }
                       }}
                       disabled={isSubmitting}
@@ -596,7 +607,38 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                 
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      {t("auth.selectRole")} <span className="text-red-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-1 gap-2" role="radiogroup" aria-label="Select Role">
+                      {ROLE_OPTIONS.map((option) => {
+                        const Icon = option.icon;
+                        const selected = registerRole === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() => setRegisterRole(option.value)}
+                            className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all flex items-start gap-3 ${
+                              selected
+                                ? "border-[#F97316] bg-[#FFE4C4]/70 dark:bg-orange-950/30 dark:border-orange-400 ring-1 ring-[#F97316]/40"
+                                : "border-[#E8D5B5] dark:border-slate-700 bg-[#FDEEDC]/60 dark:bg-slate-800/40 hover:border-[#F97316]/50"
+                            }`}
+                          >
+                            <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${selected ? "text-[#F97316] dark:text-orange-400" : "text-slate-400"}`} />
+                            <span>
+                              <span className="block text-sm font-bold text-slate-900 dark:text-white">{option.label}</span>
+                              <span className="block text-[11px] text-slate-500 dark:text-slate-400 leading-snug">{option.description}</span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Required anchor for Clerk's Smart CAPTCHA widget */}
                   <div id="clerk-captcha" />
 
