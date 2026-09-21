@@ -205,7 +205,8 @@ export default function DsOfficerConsole() {
           <h4 className="text-sm font-bold card-heading dark:text-white">Reports by Category</h4>
           <div className="space-y-3">
             {Object.entries(stats.categoryCounts).map(([category, count]) => {
-              const percentage = stats.totalReports > 0 ? Math.round((count / stats.totalReports) * 100) : 0;
+              const countNum = count as number;
+              const percentage = stats.totalReports > 0 ? Math.round((countNum / stats.totalReports) * 100) : 0;
               const colors: Record<string, string> = {
                 ROADS: "icon-orange",
                 DRAINAGE: "text-blue-400",
@@ -272,14 +273,15 @@ export default function DsOfficerConsole() {
           <h4 className="text-sm font-bold card-heading dark:text-white">Top DS Divisions</h4>
           <div className="space-y-3">
             {Object.entries(stats.districtCounts)
-              .sort(([, a], [, b]) => b - a)
+              .sort(([, a], [, b]) => (b as number) - (a as number))
               .slice(0, 5)
               .map(([district, count], index) => {
+                const countNum = count as number;
                 const colors = ["icon-orange", "text-blue-400", "text-cyan-400", "text-amber-400", "text-purple-400"];
                 return (
                   <div key={district} className="flex items-center justify-between">
                     <span className="text-xs body-text dark:text-slate-400">{district}</span>
-                    <span className={`text-xs font-mono ${colors[index] || "text-slate-400"} font-bold`}>{count}</span>
+                    <span className={`text-xs font-mono ${colors[index] || "text-slate-400"} font-bold`}>{countNum}</span>
                   </div>
                 );
               })}
