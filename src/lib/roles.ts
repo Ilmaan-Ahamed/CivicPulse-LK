@@ -7,6 +7,13 @@ export const ROLES = [
 
 export type Role = (typeof ROLES)[number];
 
+export const SIGNUP_ROLES = ["CITIZEN", "NGO_PARTNER", "DS_OFFICER"] as const;
+export type SignupRole = (typeof SIGNUP_ROLES)[number];
+
+export function isSignupRole(role?: string | null): role is SignupRole {
+  return !!role && (SIGNUP_ROLES as readonly string[]).includes(role);
+}
+
 export const normalizeRole = (role?: string | null): Role | undefined => {
   if (!role) return undefined;
 

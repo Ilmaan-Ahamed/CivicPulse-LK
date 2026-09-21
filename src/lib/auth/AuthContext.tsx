@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useRouter } from "next/navigation";
 import { useUser, useSignIn, useSignUp, useClerk } from "@clerk/nextjs";
 import { UserRole, UserProfile, MOCK_ROLE_USERS } from "./rbac";
+import { isSignupRole } from "@/lib/roles";
 import { readAuthValue, removeAuthValue, writeAuthValue } from "./storage";
 
 interface LoginData {
@@ -24,6 +25,7 @@ type VerificationType = "email_code" | "totp" | "phone_code";
 interface LoginResult {
   success: boolean;
   error?: string;
+  role?: UserRole;
   /** True when Clerk needs a verification code before completing sign-in */
   needsVerification?: boolean;
   /** Which factor strategy is waiting for a code */
@@ -37,10 +39,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (data: LoginData) => Promise<LoginResult>;
-  verifySignIn: (code: string) => Promise<{ success: boolean; error?: string }>;
-  register: (data: RegisterData) => Promise<{ success: boolean; error?: string } | any>;
+  verifySignIn: (code: string) => Promise<{ success: boolean; error?: string; role?: UserRole }>;
+  register: (data: RegisterData) => Promise<{ success: boolean; error?: string; role?: UserRole } | any>;
   // Verify and resend helpers for the sign-up email verification flow
-  verifySignUp: (code: string) => Promise<{ success: boolean; error?: string }>;
+  verifySignUp: (code: string) => Promise<{ success: boolean; error?: string; role?: UserRole }>;
   resendSignUpVerification: () => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
@@ -49,6 +51,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = "civicpulse_auth";
 const ROLE_KEY = "civicpulse_role";
+const PENDING_SIGNUP_ROLE_KEY = "civicpulse_pending_signup_role";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -72,14 +75,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const payload = {
-        role,
+      const payload: Record<string, string | undefined> = {
         clerkId: user?.id,
         email: user?.primaryEmailAddress?.emailAddress,
-        firstName: user?.firstName,
-        lastName: user?.lastName,
+        firstName: user?.firstName || undefined,
+        lastName: user?.lastName || undefined,
         imageUrl: user?.imageUrl,
       };
+      if (role) payload.role = role;
 
       const res = await fetch("/api/auth/sync", {
         method: "POST",
@@ -104,19 +107,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (isSignedIn && user) {
         try {
-          const savedRole = readAuthValue(ROLE_KEY) as UserRole | null;
-          const dbUser = await syncWithDb(savedRole || undefined);
+          const dbUser = await syncWithDb();
 
           if (dbUser) {
-            const activeRole = savedRole || dbUser.role;
-            setCurrentRole(activeRole);
-            setCurrentUser({ ...dbUser, role: activeRole });
+            setCurrentRole(dbUser.role);
+            setCurrentUser(dbUser);
             setIsAuthenticated(true);
             writeAuthValue(STORAGE_KEY, JSON.stringify(dbUser));
-            if (!savedRole) writeAuthValue(ROLE_KEY, dbUser.role);
+            writeAuthValue(ROLE_KEY, dbUser.role);
           } else {
             // Robust fallback if DB sync is temporarily slow or failing
-            const activeRole: UserRole = savedRole || "CITIZEN";
+            const clerkRole = user.unsafeMetadata?.role as UserRole | undefined;
+            const savedRole = readAuthValue(ROLE_KEY) as UserRole | null;
+            const activeRole: UserRole = clerkRole || savedRole || "CITIZEN";
             const fallbackUser: UserProfile = {
               id: user.id,
               name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.primaryEmailAddress?.emailAddress || "Citizen",
@@ -131,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setCurrentUser(fallbackUser);
             setIsAuthenticated(true);
             writeAuthValue(STORAGE_KEY, JSON.stringify(fallbackUser));
-            if (!savedRole) writeAuthValue(ROLE_KEY, activeRole);
+            writeAuthValue(ROLE_KEY, activeRole);
           }
         } catch (err) {
           console.error("Failed to sync auth session with DB:", err);
@@ -210,9 +213,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAuthenticated(true);
             writeAuthValue(STORAGE_KEY, JSON.stringify(dbUser));
             writeAuthValue(ROLE_KEY, dbUser.role);
-          } else {
-            setIsAuthenticated(true);
+            setIsLoading(false);
+            return { success: true, role: dbUser.role };
           }
+          setIsAuthenticated(true);
           setIsLoading(false);
           return { success: true };
 
@@ -284,7 +288,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * establish the session (works in both Clerk v6 and v7).
    */
   const verifySignIn = useCallback(
-    async (code: string): Promise<{ success: boolean; error?: string }> => {
+    async (code: string): Promise<{ success: boolean; error?: string; role?: UserRole }> => {
       // Classic SignInResource — has prepareFirstFactor / attemptFirstFactor etc.
       const classicSignIn = (clerk as any).client?.signIn;
 
@@ -324,9 +328,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAuthenticated(true);
             writeAuthValue(STORAGE_KEY, JSON.stringify(dbUser));
             writeAuthValue(ROLE_KEY, dbUser.role);
-          } else {
-            setIsAuthenticated(true);
+            setIsLoading(false);
+            return { success: true, role: dbUser.role };
           }
+          setIsAuthenticated(true);
           setIsLoading(false);
           return { success: true };
         }
@@ -355,9 +360,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
+        if (!isSignupRole(data.role)) {
+          return { success: false, error: "Please select a role." };
+        }
+
         const nameParts = data.name.trim().split(" ");
         const firstName = nameParts[0] || "";
         const lastName = nameParts.slice(1).join(" ") || "";
+        const selectedRole = data.role;
 
         // Clerk v7 Future API: create() returns { error }; status is on signUp resource
         const { error: createError } = await signUp.create({
@@ -365,6 +375,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           password: data.password,
           firstName,
           lastName,
+          unsafeMetadata: { role: selectedRole },
         });
 
         if (createError) {
@@ -383,26 +394,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return { success: false, error: msg };
           }
 
-          const dbUser = await syncWithDb(data.role || "CITIZEN");
+          const dbUser = await syncWithDb(selectedRole);
           if (dbUser) {
             setCurrentUser(dbUser);
             setCurrentRole(dbUser.role);
             setIsAuthenticated(true);
             writeAuthValue(STORAGE_KEY, JSON.stringify(dbUser));
             writeAuthValue(ROLE_KEY, dbUser.role);
-          } else {
-            setIsAuthenticated(true);
+            removeAuthValue(PENDING_SIGNUP_ROLE_KEY);
+            setIsLoading(false);
+            return { success: true, role: dbUser.role };
           }
+          setIsAuthenticated(true);
           setIsLoading(false);
-          return { success: true };
+          return { success: true, role: selectedRole };
         }
 
         // If Clerk signals missing_requirements, we need email verification before completing sign-up
         if (signUp.status === "missing_requirements") {
           try {
             // Persist selected role and pending email so we can complete DB sync after verification
-            const roleToSave = data.role || "CITIZEN";
-            writeAuthValue(ROLE_KEY, roleToSave);
+            writeAuthValue(ROLE_KEY, selectedRole);
+            writeAuthValue(PENDING_SIGNUP_ROLE_KEY, selectedRole);
             writeAuthValue("civicpulse_pending_signup_email", data.email);
 
             // Try to send verification email using the future signUp resource if available
@@ -472,7 +485,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [signUp, clerk]);
 
   // Attempt to verify the sign-up email with code and finalize the sign-up
-  const verifySignUp = useCallback(async (code: string): Promise<{ success: boolean; error?: string }> => {
+  const verifySignUp = useCallback(async (code: string): Promise<{ success: boolean; error?: string; role?: UserRole }> => {
     // Try future resource first, then classic client
     try {
       let updatedResource: any = null;
@@ -491,23 +504,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Establish the Clerk session — classic & future setActive compatible
         await (clerk as any).setActive({ session: updatedResource.createdSessionId });
 
-        // Use the saved role (stored at register time) to sync with DB
-        const savedRole = (readAuthValue(ROLE_KEY) as UserRole) || undefined;
-        const dbUser = await syncWithDb(savedRole as any);
+        const pendingRole = readAuthValue(PENDING_SIGNUP_ROLE_KEY) as UserRole | null;
+        const savedRole = (readAuthValue(ROLE_KEY) as UserRole | null) || undefined;
+        const roleToSync = isSignupRole(pendingRole) ? pendingRole : isSignupRole(savedRole) ? savedRole : undefined;
+        const dbUser = await syncWithDb(roleToSync);
         if (dbUser) {
           setCurrentUser(dbUser);
           setCurrentRole(dbUser.role);
           setIsAuthenticated(true);
           writeAuthValue(STORAGE_KEY, JSON.stringify(dbUser));
           writeAuthValue(ROLE_KEY, dbUser.role);
-        } else {
-          setIsAuthenticated(true);
+          removeAuthValue("civicpulse_pending_signup_email");
+          removeAuthValue(PENDING_SIGNUP_ROLE_KEY);
+          setIsLoading(false);
+          return { success: true, role: dbUser.role };
         }
 
-        // cleanup
+        setIsAuthenticated(true);
         removeAuthValue("civicpulse_pending_signup_email");
+        removeAuthValue(PENDING_SIGNUP_ROLE_KEY);
         setIsLoading(false);
-        return { success: true };
+        return { success: true, role: roleToSync };
       }
 
       return { success: false, error: `Unexpected sign-up state after verification: ${updatedResource?.status ?? "unknown"}` };
@@ -531,6 +548,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCurrentRole("CITIZEN");
       removeAuthValue(STORAGE_KEY);
       removeAuthValue(ROLE_KEY);
+      removeAuthValue(PENDING_SIGNUP_ROLE_KEY);
       router.push("/login");
     }
   }, [clerk, router]);
