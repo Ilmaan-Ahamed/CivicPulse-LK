@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import type { Role } from "@prisma/client";
+import { isSignupRole, normalizeRole, type SignupRole } from "@/lib/roles";
+
+function parseSignupRole(value: unknown): SignupRole | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = normalizeRole(value);
+  return isSignupRole(normalized) ? normalized : undefined;
+}
 
 export async function POST(request: Request) {
   try {
@@ -24,7 +31,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Not signed in" }, { status: 401 });
     }
 
-    const requestedRole = body.role as Role | undefined;
+    const requestedRole = parseSignupRole(body.role);
 
     let user = await db.user.findUnique({
       where: { clerkId: effectiveClerkId },
@@ -35,14 +42,18 @@ export async function POST(request: Request) {
       let firstName = typeof body.firstName === "string" ? body.firstName : null;
       let lastName = typeof body.lastName === "string" ? body.lastName : null;
       let avatarUrl = typeof body.imageUrl === "string" ? body.imageUrl : null;
+      let clerkMetadataRole: SignupRole | undefined;
 
-      if (!email && authUserId) {
+      if (authUserId) {
         const clerkUser = await currentUser();
         if (clerkUser) {
-          email = clerkUser.emailAddresses[0]?.emailAddress;
+          if (!email) email = clerkUser.emailAddresses[0]?.emailAddress;
           firstName = clerkUser.firstName || firstName;
           lastName = clerkUser.lastName || lastName;
           avatarUrl = clerkUser.imageUrl || avatarUrl;
+          clerkMetadataRole = parseSignupRole(
+            clerkUser.unsafeMetadata?.role ?? clerkUser.publicMetadata?.role
+          );
         }
       }
 
@@ -63,10 +74,17 @@ export async function POST(request: Request) {
             firstName: firstName || existingByEmail.firstName,
             lastName: lastName || existingByEmail.lastName,
             avatarUrl: avatarUrl || existingByEmail.avatarUrl,
-            role: requestedRole || existingByEmail.role,
           },
         });
       } else {
+        const signupRole = requestedRole || clerkMetadataRole;
+        if (!signupRole) {
+          return NextResponse.json(
+            { success: false, error: "A role is required to create an account" },
+            { status: 400 }
+          );
+        }
+
         user = await db.user.create({
           data: {
             clerkId: effectiveClerkId,
@@ -74,7 +92,7 @@ export async function POST(request: Request) {
             firstName,
             lastName,
             avatarUrl,
-            role: requestedRole || "CITIZEN",
+            role: signupRole as Role,
           },
         });
       }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { UserRole } from "@/lib/auth/rbac";
 import { Language } from "@prisma/client";
+import { isSignupRole, normalizeRole } from "@/lib/roles";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,13 +17,13 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const validRoles: UserRole[] = [
-      "CITIZEN",
-      "NGO_PARTNER",
-      "DS_OFFICER",
-      "ADMIN",
-    ];
-    const userRole: UserRole = validRoles.includes(role) ? role : "CITIZEN";
+    const userRole = normalizeRole(typeof role === "string" ? role : null);
+    if (!isSignupRole(userRole)) {
+      return NextResponse.json(
+        { error: "A valid role is required (Citizen, NGO, or DS Officer)" },
+        { status: 400 }
+      );
+    }
 
     const nameParts = name.trim().split(" ");
     const firstName = nameParts[0] || name.trim();
