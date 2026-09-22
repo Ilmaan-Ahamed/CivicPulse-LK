@@ -126,7 +126,7 @@ async function getReportById(req: Request, { params }: { params: Promise<{ id: s
 }
 
 async function updateReport(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { userId, role } = await requireRole(["CITIZEN", "DS_OFFICER", "ADMIN"] as any);
+  const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
   const body = await req.json();
   const { id } = await params;
   
@@ -176,7 +176,7 @@ async function updateReport(req: Request, { params }: { params: Promise<{ id: st
     const allowedFields = ["title", "description", "category", "latitude", "longitude", "address"];
     const requestedFields = Object.keys(parsed.data);
     const invalidFields = requestedFields.filter((field) => !allowedFields.includes(field));
-    
+
     if (invalidFields.length > 0) {
       return NextResponse.json(
         { success: false, error: `Citizens cannot update: ${invalidFields.join(", ")}` },
@@ -191,6 +191,13 @@ async function updateReport(req: Request, { params }: { params: Promise<{ id: st
         { status: 403 }
       );
     }
+  }
+
+  // NGO_PARTNER, DS_OFFICER, and ADMIN can update status on any report
+  // They can also update other fields for decision-making purposes
+  if (["NGO_PARTNER", "DS_OFFICER", "ADMIN"].includes(role)) {
+    // These roles can update status and other fields
+    // No additional restrictions needed
   }
 
   // If status is being changed, create status history
