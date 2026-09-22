@@ -15,11 +15,12 @@ const updateReportSchema = z.object({
   status: z.nativeEnum(ReportStatus).optional(),
 });
 
-async function getReportById(req: Request, { params }: { params: { id: string } }) {
+async function getReportById(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+  const { id } = await params;
   
   const report = await db.report.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       citizen: {
         select: {
@@ -124,9 +125,10 @@ async function getReportById(req: Request, { params }: { params: { id: string } 
   });
 }
 
-async function updateReport(req: Request, { params }: { params: { id: string } }) {
+async function updateReport(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { userId, role } = await requireRole(["CITIZEN", "DS_OFFICER", "ADMIN"] as any);
   const body = await req.json();
+  const { id } = await params;
   
   const parsed = updateReportSchema.safeParse(body);
   if (!parsed.success) {
@@ -138,7 +140,7 @@ async function updateReport(req: Request, { params }: { params: { id: string } }
 
   // Check if report exists
   const report = await db.report.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (!report) {
@@ -197,7 +199,7 @@ async function updateReport(req: Request, { params }: { params: { id: string } }
 
   const result = await db.$transaction(async (tx) => {
     const updatedReport = await tx.report.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...otherData,
         ...(status && { status }),
@@ -208,7 +210,7 @@ async function updateReport(req: Request, { params }: { params: { id: string } }
     if (status && status !== report.status) {
       await tx.statusHistory.create({
         data: {
-          reportId: params.id,
+          reportId: id,
           fromStatus: report.status,
           toStatus: status,
           changedBy: user.id,
@@ -224,7 +226,7 @@ async function updateReport(req: Request, { params }: { params: { id: string } }
         actorId: user.id,
         action: "REPORT_UPDATED",
         entity: "Report",
-        entityId: params.id,
+        entityId: id,
         metadata: {
           previous: {
             title: report.title,
@@ -253,12 +255,13 @@ async function updateReport(req: Request, { params }: { params: { id: string } }
   });
 }
 
-async function deleteReport(req: Request, { params }: { params: { id: string } }) {
-  const { userId } = await requireRole(["ADMIN"] as any);
+async function deleteReport(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { userId, role } = await requireRole(["CITIZEN", "ADMIN"] as any);
+  const { id } = await params;
   
   // Check if report exists
   const report = await db.report.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (!report) {
@@ -281,10 +284,29 @@ async function deleteReport(req: Request, { params }: { params: { id: string } }
     );
   }
 
+  // Role-based access control
+  if (role === "CITIZEN" && report.citizenId !== user.id) {
+    return NextResponse.json(
+      { success: false, error: "You can only delete your own reports" },
+      { status: 403 }
+    );
+  }
+
+  // Citizens can only delete reports in certain statuses
+  if (role === "CITIZEN") {
+    const deletableStatuses: ReportStatus[] = [ReportStatus.SUBMITTED, ReportStatus.UNDER_VERIFICATION];
+    if (!deletableStatuses.includes(report.status)) {
+      return NextResponse.json(
+        { success: false, error: `Cannot delete report with status: ${report.status}. Only reports in SUBMITTED or UNDER_VERIFICATION can be deleted.` },
+        { status: 403 }
+      );
+    }
+  }
+
   // Delete report and create audit log in transaction
   await db.$transaction(async (tx) => {
     await tx.report.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     await tx.auditLog.create({
@@ -292,12 +314,13 @@ async function deleteReport(req: Request, { params }: { params: { id: string } }
         actorId: user.id,
         action: "REPORT_DELETED",
         entity: "Report",
-        entityId: params.id,
+        entityId: id,
         metadata: {
           title: report.title,
           category: report.category,
           status: report.status,
           citizenId: report.citizenId,
+          deletedBy: role,
         },
         ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || undefined,
       },

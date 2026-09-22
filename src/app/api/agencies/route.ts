@@ -37,6 +37,19 @@ async function createAgency(req: Request) {
     );
   }
 
+  // Get user ID from clerkId
+  const user = await db.user.findUnique({
+    where: { clerkId: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: "User not found" },
+      { status: 404 }
+    );
+  }
+
   // Create agency and write audit log in a transaction
   const result = await db.$transaction(async (tx) => {
     const agency = await tx.agency.create({
@@ -52,7 +65,7 @@ async function createAgency(req: Request) {
 
     await tx.auditLog.create({
       data: {
-        actorId: userId,
+        actorId: user.id,
         action: "AGENCY_CREATED",
         entity: "Agency",
         entityId: agency.id,
@@ -85,6 +98,19 @@ async function updateAgency(req: Request) {
     return NextResponse.json(
       { success: false, error: "id is required" },
       { status: 400 }
+    );
+  }
+
+  // Get user ID from clerkId
+  const user = await db.user.findUnique({
+    where: { clerkId: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: "User not found" },
+      { status: 404 }
     );
   }
 
@@ -133,7 +159,7 @@ async function updateAgency(req: Request) {
 
     await tx.auditLog.create({
       data: {
-        actorId: userId,
+        actorId: user.id,
         action: "AGENCY_UPDATED",
         entity: "Agency",
         entityId: id,
@@ -180,6 +206,19 @@ async function deleteAgency(req: Request) {
     );
   }
 
+  // Get user ID from clerkId
+  const user = await db.user.findUnique({
+    where: { clerkId: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: "User not found" },
+      { status: 404 }
+    );
+  }
+
   // Get current agency
   const agency = await db.agency.findUnique({
     where: { id },
@@ -216,7 +255,7 @@ async function deleteAgency(req: Request) {
 
     await tx.auditLog.create({
       data: {
-        actorId: userId,
+        actorId: user.id,
         action: "AGENCY_DEACTIVATED",
         entity: "Agency",
         entityId: id,

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { PlusCircle, MapPin, Clock, CheckCircle2, ShieldCheck, Search, Filter, HeartHandshake, Camera, XCircle, SkipForward, AlertTriangle, Award } from "lucide-react";
+import { PlusCircle, MapPin, Clock, CheckCircle2, ShieldCheck, Search, Filter, HeartHandshake, Camera, XCircle, SkipForward, AlertTriangle, Award, Edit, Trash2, X, AlertCircle } from "lucide-react";
 import { CaseCard, CaseCardData } from "@/components/shared/CaseCard";
 import { InteractiveMap } from "@/components/map/InteractiveMap";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -55,6 +55,15 @@ export default function CitizenDashboard() {
       })
       .catch(() => setTransparencyReports([]));
 
+    // Fetch verification queue
+    fetch("/api/verification-queue")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setVerificationQueue(data.data || []);
+      })
+      .catch(() => setVerificationQueue([]));
+
     // Fetch notifications
     fetch("/api/notifications")
       .then(async (response) => {
@@ -88,11 +97,45 @@ export default function CitizenDashboard() {
   const [uploadedPhotos, setUploadedPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
 
-  const handleVerificationDecision = (id: string, decision: "CONFIRM" | "DISPUTE" | "SKIP") => {
-    const item = verificationQueue.find((c) => c.id === id);
-    setVerificationQueue(verificationQueue.filter((c) => c.id !== id));
+  // Edit and Delete state
+  const [editingReport, setEditingReport] = useState<CaseCardData | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-    if (item && (decision === "CONFIRM" || decision === "DISPUTE")) {
+  const handleVerificationDecision = async (id: string, decision: "CONFIRM" | "DISPUTE" | "SKIP") => {
+    const item = verificationQueue.find((c) => c.id === id);
+    
+    if (decision === "SKIP") {
+      setVerificationQueue(verificationQueue.filter((c) => c.id !== id));
+      return;
+    }
+
+    if (!item) return;
+
+    try {
+      const response = await fetch("/api/verifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reportId: id,
+          status: decision === "CONFIRM" ? "CONFIRMED" : "DISPUTED",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("Verification failed:", result.error);
+        return;
+      }
+
+      // Remove from queue and add to history
+      setVerificationQueue(verificationQueue.filter((c) => c.id !== id));
       setVerificationHistory([
         {
           id: item.id,
@@ -103,6 +146,18 @@ export default function CitizenDashboard() {
         },
         ...verificationHistory,
       ]);
+
+      // Refresh verification queue
+      fetch("/api/verification-queue")
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            setVerificationQueue(data.data || []);
+          }
+        })
+        .catch(() => {});
+    } catch (error) {
+      console.error("Verification submission error:", error);
     }
   };
 
@@ -148,6 +203,89 @@ export default function CitizenDashboard() {
     setPhotoPreviews([]);
     setObservedCondition("");
     setNotes("");
+  };
+
+  const handleEditReport = (report: CaseCardData) => {
+    setEditingReport(report);
+    setEditTitle(report.title);
+    setEditDescription(report.description);
+    setEditCategory(report.category);
+    setEditAddress(report.address);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingReport) return;
+
+    setIsEditing(true);
+    try {
+      const response = await fetch(`/api/reports/${editingReport.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDescription,
+          category: editCategory,
+          address: editAddress,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("Edit failed:", result.error);
+        return;
+      }
+
+      // Refresh reports
+      fetch("/api/reports/dashboard")
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+          }
+        })
+        .catch(() => {});
+
+      setEditingReport(null);
+    } catch (error) {
+      console.error("Edit submission error:", error);
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  const handleDeleteReport = async (reportId: string) => {
+    setDeletingReportId(reportId);
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/reports/${reportId}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("Delete failed:", result.error);
+        return;
+      }
+
+      // Refresh reports
+      fetch("/api/reports/dashboard")
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+          }
+        })
+        .catch(() => {});
+
+      setDeletingReportId(null);
+    } catch (error) {
+      console.error("Delete submission error:", error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const sharedCitizenReports: CaseCardData[] = uniqueSharedIssues.map((issue) => ({
@@ -308,7 +446,13 @@ export default function CitizenDashboard() {
       {activeTab === "my-reports" || activeTab === "nearby" ? (
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
           {(activeTab === "my-reports" ? myReports : nearbyReports).map((c) => (
-            <CaseCard key={c.id} caseData={c} />
+            <CaseCard 
+              key={c.id} 
+              caseData={c} 
+              onEdit={handleEditReport}
+              onDelete={handleDeleteReport}
+              isOwnReport={activeTab === "my-reports"}
+            />
           ))}
         </div>
       ) : activeTab === "verification" ? (
@@ -615,6 +759,148 @@ export default function CitizenDashboard() {
               </>
             )}
           </form>
+        </div>
+      )}
+
+      {/* Edit Report Modal */}
+      {editingReport && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <form
+            onSubmit={handleSaveEdit}
+            className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Edit className="w-5 h-5 text-orange-400" />
+                <h3 className="text-lg font-bold text-white">Edit Report</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingReport(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs">
+              <span className="font-mono text-orange-400 font-bold">{editingReport.caseNumber}</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                Title
+              </label>
+              <input
+                type="text"
+                required
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                Description
+              </label>
+              <textarea
+                rows={3}
+                required
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                Category
+              </label>
+              <select
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-orange-500"
+              >
+                <option value="ROADS">Roads & Potholes</option>
+                <option value="DRAINAGE">Drainage & Floods</option>
+                <option value="STREETLIGHTS">Streetlights</option>
+                <option value="WATER">Water Leakage</option>
+                <option value="PUBLIC_BUILDINGS">Public Structure</option>
+                <option value="SANITATION">Waste Disposal</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                Address
+              </label>
+              <input
+                type="text"
+                value={editAddress}
+                onChange={(e) => setEditAddress(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingReport(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+                disabled={isEditing}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn-glass-orange-solid px-6 py-2 text-xs"
+                disabled={isEditing}
+              >
+                {isEditing ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deletingReportId && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+            <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
+              <div className="w-10 h-10 rounded-full bg-rose-950/60 text-rose-400 flex items-center justify-center">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Delete Report?</h3>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs body-text dark:text-slate-400">
+                Are you sure you want to delete this report? This action cannot be undone.
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Only reports in SUBMITTED or UNDER_VERIFICATION status can be deleted.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setDeletingReportId(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteReport(deletingReportId)}
+                className="px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-600/30"
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete Report"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
