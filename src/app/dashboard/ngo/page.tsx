@@ -48,6 +48,15 @@ export default function NgoDashboard() {
         setAssignments(data.data || []);
       })
       .catch(() => setAssignments([]));
+
+    // Fetch all reports for NGO decision making
+    fetch("/api/reports")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setAllReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+      })
+      .catch(() => setAllReports([]));
   }, []);
 
   const [opportunities, setOpportunities] = useState<any[]>([]);
@@ -88,6 +97,11 @@ export default function NgoDashboard() {
   }, [uniqueSharedIssues, dbReports]);
 
   const [commitments, setCommitments] = useState<any[]>([]);
+  const [allReports, setAllReports] = useState<any[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [filterCategory, setFilterCategory] = useState<string>("ALL");
+  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [decisionNote, setDecisionNote] = useState("");
 
   const [pledgingCase, setPledgingCase] = useState<any | null>(null);
   const [pledgeType, setPledgeType] = useState("VOLUNTEERS");
@@ -112,6 +126,32 @@ export default function NgoDashboard() {
     setPledgingCase(null);
     setPledgeDesc("");
   };
+
+  const handleReportDecision = async (reportId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/reports/${reportId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        setAllReports(allReports.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
+        setSelectedReport(null);
+        setDecisionNote("");
+      }
+    } catch (error) {
+      console.error("Failed to update report status:", error);
+    }
+  };
+
+  const filteredReports = React.useMemo(() => {
+    return allReports.filter((report) => {
+      const statusMatch = filterStatus === "ALL" || report.status === filterStatus;
+      const categoryMatch = filterCategory === "ALL" || report.category === filterCategory;
+      return statusMatch && categoryMatch;
+    });
+  }, [allReports, filterStatus, filterCategory]);
 
   return (
     <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
@@ -225,6 +265,91 @@ export default function NgoDashboard() {
         </div>
       </div>
 
+      {/* All Reports Section with Decision Making */}
+      <div className="max-w-7xl mx-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg page-title dark:text-white">All Reports - Decision Making</h2>
+          <span className="text-xs body-text dark:text-slate-400 font-mono">{filteredReports.length} reports</span>
+        </div>
+
+        {/* Filters */}
+        <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4 flex flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold card-heading dark:text-slate-300">Status:</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="card-light dark:bg-slate-950 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs card-heading dark:text-white focus:outline-none focus:border-teal-500"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="SUBMITTED">Submitted</option>
+              <option value="UNDER_VERIFICATION">Under Verification</option>
+              <option value="VERIFIED">Verified</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="RESOLVED">Resolved</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold card-heading dark:text-slate-300">Category:</label>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="card-light dark:bg-slate-950 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs card-heading dark:text-white focus:outline-none focus:border-teal-500"
+            >
+              <option value="ALL">All Categories</option>
+              <option value="ROADS">Roads</option>
+              <option value="DRAINAGE">Drainage</option>
+              <option value="WATER">Water</option>
+              <option value="STREETLIGHTS">Streetlights</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Reports List */}
+        {filteredReports.length === 0 ? (
+          <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-12 text-center space-y-3">
+            <CheckCircle2 className="w-10 h-10 text-slate-400 mx-auto" />
+            <h3 className="text-base card-heading dark:text-white">No Reports Found</h3>
+            <p className="text-xs body-text dark:text-slate-400">No reports match the current filters.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredReports.map((report) => (
+              <div
+                key={report.id}
+                className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-teal-400">{report.referenceNo || report.caseNumber}</span>
+                    <StatusBadge status={report.status} size="sm" />
+                  </div>
+                  <PriorityIndicator score={report.priorityScore || 50} />
+                </div>
+
+                <div>
+                  <h3 className="text-base card-heading dark:text-white">{report.title}</h3>
+                  <p className="text-xs body-text dark:text-slate-400 mt-1">{report.description}</p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-border dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs body-text dark:text-slate-400">{report.address}</span>
+                    <span className="text-xs body-text dark:text-slate-400">• {report.category}</span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedReport(report)}
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold"
+                  >
+                    Make Decision
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Assigned Tasks Tracking */}
       <div className="max-w-7xl mx-auto space-y-4">
         <h2 className="text-lg page-title dark:text-white">Assigned Tasks Tracking</h2>
@@ -291,7 +416,7 @@ export default function NgoDashboard() {
                           body: JSON.stringify({ id: assignment.id, status: "ACCEPTED" }),
                         })
                           .then(() => {
-                            setAssignments(assignments.map(a => 
+                            setAssignments(assignments.map(a =>
                               a.id === assignment.id ? { ...a, status: "ACCEPTED", acceptedAt: new Date() } : a
                             ));
                           });
@@ -395,6 +520,85 @@ export default function NgoDashboard() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Report Decision Modal */}
+      {selectedReport && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
+            <div className="border-b border-slate-800 pb-3">
+              <span className="font-mono icon-orange dark:text-teal-400 font-bold">{selectedReport.referenceNo || selectedReport.caseNumber}</span>
+              <h3 className="text-lg card-heading dark:text-white">Make Decision on Report</h3>
+            </div>
+
+            <div className="p-3 rounded-2xl card-light dark:bg-slate-950 dark:border-slate-800 text-xs">
+              <h4 className="font-bold card-heading dark:text-white text-sm">{selectedReport.title}</h4>
+              <p className="body-text dark:text-slate-400 mt-1">{selectedReport.description}</p>
+              <p className="text-slate-500 mt-2">{selectedReport.address}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <StatusBadge status={selectedReport.status} size="sm" />
+                <span className="body-text dark:text-slate-400">{selectedReport.category}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold card-heading dark:text-slate-300 uppercase tracking-wider mb-2">
+                Decision Note (Optional)
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Add notes about your decision..."
+                value={decisionNote}
+                onChange={(e) => setDecisionNote(e.target.value)}
+                className="w-full card-light dark:bg-slate-950 dark:border-slate-800 rounded-xl p-3 text-xs card-heading dark:text-white focus:outline-none focus:border-teal-500"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-xs font-bold card-heading dark:text-slate-300 uppercase tracking-wider mb-2">
+                Select Action
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleReportDecision(selectedReport.id, "VERIFIED")}
+                  className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold"
+                >
+                  Mark as Verified
+                </button>
+                <button
+                  onClick={() => handleReportDecision(selectedReport.id, "IN_PROGRESS")}
+                  className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold"
+                >
+                  Mark as In Progress
+                </button>
+                <button
+                  onClick={() => handleReportDecision(selectedReport.id, "RESOLVED")}
+                  className="px-4 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold"
+                >
+                  Mark as Resolved
+                </button>
+                <button
+                  onClick={() => handleReportDecision(selectedReport.id, "SUBMITTED")}
+                  className="px-4 py-3 bg-slate-600 hover:bg-slate-500 text-white rounded-xl text-xs font-bold"
+                >
+                  Return to Submitted
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setSelectedReport(null);
+                  setDecisionNote("");
+                }}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
