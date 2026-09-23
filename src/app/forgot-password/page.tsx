@@ -47,7 +47,7 @@ export default function ForgotPasswordPage() {
 
           {/* Clerk's SignIn component - users can click "Forgot password" link */}
           <SignIn 
-            afterSignInUrl="/dashboard"
+            forceRedirectUrl="/dashboard"
             signUpUrl="/login"
             routing="hash"
           />
