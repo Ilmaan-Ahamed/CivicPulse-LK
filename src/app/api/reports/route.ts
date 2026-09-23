@@ -28,12 +28,14 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
+        referenceNo: true,
         title: true,
         description: true,
         summary: true,
         category: true,
         status: true,
         district: true,
+        address: true,
         createdAt: true,
         aiConfidence: true,
       },
@@ -41,7 +43,18 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      data: reports,
+      data: reports.map((report) => ({
+        id: report.id,
+        caseNumber: report.referenceNo,
+        title: report.title,
+        description: report.description,
+        category: report.category,
+        status: report.status,
+        district: report.district,
+        address: report.address,
+        priorityScore: report.aiConfidence || 50,
+        createdAt: report.createdAt,
+      })),
     });
   } catch (error) {
     console.error("[REPORT GET ERROR]", error);

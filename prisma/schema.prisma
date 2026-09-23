@@ -132,6 +132,7 @@ model User {
   notifications        Notification[]
   roleRequests         RoleRequest[]     @relation("UserRoleRequests")
   reviewedRoleRequests RoleRequest[]     @relation("ReviewedRequests")
+  pledges              Pledge[]          @relation("NGOPledges")
 
   @@index([clerkId])
   @@index([role])
@@ -170,6 +171,7 @@ model Report {
   verifications Verification[]
   assignments   Assignment[]
   statusHistory StatusHistory[]
+  pledges       Pledge[]
 
   @@index([citizenId])
   @@index([status])
@@ -372,4 +374,24 @@ model RoleRequest {
   @@index([status])
   @@index([requestedRole])
   @@index([createdAt])
+}
+
+model Pledge {
+  id          String   @id @default(cuid())
+  reportId    String
+  ngoId       String
+  pledgeType  String   // VOLUNTEERS, FUNDING, MATERIALS, TECHNICAL_SUPPORT
+  description String
+  amountLkr   Int?
+  status      String   @default("PLEDGED") // PLEDGED, ACTIVE, COMPLETED, CANCELLED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  ngo    User    @relation("NGOPledges", fields: [ngoId], references: [id])
+
+  @@index([reportId])
+  @@index([ngoId])
+  @@index([status])
 }

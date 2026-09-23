@@ -225,7 +225,7 @@ export default function DSConsolePage() {
               <select
                 value={selectedAgency}
                 onChange={(e) => setSelectedAgency(e.target.value)}
-                className="w-full border rounded-md px-3 py-2"
+                className="w-full border rounded-md px-3 py-2 bg-white dark:bg-slate-950 text-gray-900 dark:text-white"
               >
                 <option value="">Choose an agency...</option>
                 {agencies.map((agency) => (
@@ -240,7 +240,7 @@ export default function DSConsolePage() {
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full border rounded-md px-3 py-2"
+                className="w-full border rounded-md px-3 py-2 bg-white dark:bg-slate-950 text-gray-900 dark:text-white"
                 rows={3}
                 placeholder="Add any instructions or notes..."
               />

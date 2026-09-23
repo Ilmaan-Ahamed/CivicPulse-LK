@@ -138,7 +138,7 @@ export function CaseCard({ caseData, onSelect, onVerify, onAssign, onEdit, onDel
                 <span>Edit</span>
               </button>
             )}
-            {onDelete && (
+            {onDelete && ["SUBMITTED", "UNDER_VERIFICATION"].includes(caseData.status) && (
               <button
                 onClick={() => onDelete(caseData.id)}
                 className="flex-1 py-1.5 px-3 bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 border border-rose-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"

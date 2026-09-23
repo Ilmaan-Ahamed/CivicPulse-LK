@@ -64,6 +64,26 @@ export default function CitizenDashboard() {
       })
       .catch(() => setVerificationQueue([]));
 
+    // Fetch inspection tasks (for citizens, show their own reports that are being inspected)
+    fetch("/api/reports/dashboard?status=IN_PROGRESS")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        // Map reports to inspection task format
+        const tasks = (data.data || []).map((r: any) => ({
+          id: r.id,
+          caseNumber: r.caseNumber,
+          title: r.title,
+          description: r.description,
+          category: r.category,
+          address: r.address,
+          status: r.status,
+          priorityScore: r.priorityScore,
+        }));
+        setInspectionTasks(tasks);
+      })
+      .catch(() => setInspectionTasks([]));
+
     // Fetch notifications
     fetch("/api/notifications")
       .then(async (response) => {
@@ -104,6 +124,7 @@ export default function CitizenDashboard() {
   const [editCategory, setEditCategory] = useState("");
   const [editAddress, setEditAddress] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [editError, setEditError] = useState("");
   const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -217,6 +238,7 @@ export default function CitizenDashboard() {
     e.preventDefault();
     if (!editingReport) return;
 
+    setEditError("");
     setIsEditing(true);
     try {
       const response = await fetch(`/api/reports/${editingReport.id}`, {
@@ -233,7 +255,7 @@ export default function CitizenDashboard() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        console.error("Edit failed:", result.error);
+        setEditError(result.error || "Failed to save changes");
         return;
       }
 
@@ -249,7 +271,7 @@ export default function CitizenDashboard() {
 
       setEditingReport(null);
     } catch (error) {
-      console.error("Edit submission error:", error);
+      setEditError("Failed to save changes. Please try again.");
     } finally {
       setIsEditing(false);
     }
@@ -267,11 +289,12 @@ export default function CitizenDashboard() {
 
       if (!response.ok || !result.success) {
         console.error("Delete failed:", result.error);
+        alert(`Delete failed: ${result.error || "Unknown error"}`);
         return;
       }
 
-      // Refresh reports
-      fetch("/api/reports/dashboard")
+      // Refresh reports and close dialog
+      await fetch("/api/reports/dashboard")
         .then(async (res) => {
           if (res.ok) {
             const data = await res.json();
@@ -283,6 +306,7 @@ export default function CitizenDashboard() {
       setDeletingReportId(null);
     } catch (error) {
       console.error("Delete submission error:", error);
+      alert("Delete failed: Network error");
     } finally {
       setIsDeleting(false);
     }
@@ -323,12 +347,10 @@ export default function CitizenDashboard() {
     longitude: report.longitude,
   }));
 
-  const myReports: CaseCardData[] = Array.from(
-    new Map([...sharedCitizenReports, ...dbReportsAsCards].map((report) => [report.id, report])).values()
-  );
+  const myReports: CaseCardData[] = dbReportsAsCards; // Only show actual database reports for "my-reports"
   const nearbyReports: CaseCardData[] = Array.from(
     new Map([...sharedCitizenReports, ...dbReportsAsCards].map((report) => [report.id, report])).values()
-  );
+  ).filter((report) => dbReportsAsCards.some((r) => r.id === report.id)); // Only show reports that exist in database
 
   const mapMarkers = Array.from(
     new Map(
@@ -449,8 +471,8 @@ export default function CitizenDashboard() {
             <CaseCard 
               key={c.id} 
               caseData={c} 
-              onEdit={handleEditReport}
-              onDelete={handleDeleteReport}
+              onEdit={activeTab === "my-reports" ? handleEditReport : undefined}
+              onDelete={activeTab === "my-reports" ? handleDeleteReport : undefined}
               isOwnReport={activeTab === "my-reports"}
             />
           ))}
@@ -843,6 +865,11 @@ export default function CitizenDashboard() {
               />
             </div>
 
+            {editError && (
+              <div className="p-3 rounded-xl bg-rose-950/60 text-rose-300 border border-rose-800 text-xs">
+                {editError}
+              </div>
+            )}
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"

@@ -18,7 +18,7 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
 };
 
 async function createAssignment(req: Request) {
-  const { userId } = await requireRole(["DS_OFFICER"] as any);
+  const { userId, role } = await requireRole(["DS_OFFICER"] as any);
   const body = await req.json();
   const { reportId, agencyId, notes } = body;
 
@@ -26,6 +26,19 @@ async function createAssignment(req: Request) {
     return NextResponse.json(
       { success: false, error: "reportId and agencyId are required" },
       { status: 400 }
+    );
+  }
+
+  // Get user ID from clerkId
+  const user = await db.user.findUnique({
+    where: { clerkId: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: "User not found" },
+      { status: 404 }
     );
   }
 
@@ -73,7 +86,7 @@ async function createAssignment(req: Request) {
       data: {
         reportId,
         agencyId,
-        assignedById: userId,
+        assignedById: user.id,
         status: "PENDING" as any,
         notes,
       },
@@ -90,14 +103,14 @@ async function createAssignment(req: Request) {
         reportId,
         fromStatus: report.status,
         toStatus: ReportStatus.ASSIGNED,
-        changedBy: userId,
+        changedBy: user.id,
         reason: "Report assigned to agency",
       },
     });
 
     await tx.auditLog.create({
       data: {
-        actorId: userId,
+        actorId: user.id,
         action: "ASSIGNMENT_CREATED",
         entity: "Assignment",
         entityId: assignment.id,

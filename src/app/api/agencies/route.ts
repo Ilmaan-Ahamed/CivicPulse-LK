@@ -10,7 +10,9 @@ async function listAgencies(req: Request) {
   const type = url.searchParams.get("type");
   const district = url.searchParams.get("district");
 
-  const where: any = {};
+  const where: any = {
+    isActive: true, // Only show active agencies (exclude soft-deleted)
+  };
   if (type) where.type = type;
   if (district) where.district = district;
 
