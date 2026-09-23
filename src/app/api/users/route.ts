@@ -25,7 +25,7 @@ async function getUsers(req: Request) {
     success: true,
     data: users.map((user) => ({
       id: user.id,
-      name: `${user.firstName} ${user.lastName}`,
+      name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unknown User",
       email: user.email,
       role: user.role,
       status: "ACTIVE",

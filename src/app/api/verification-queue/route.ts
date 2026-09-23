@@ -5,7 +5,7 @@ import { ReportStatus } from "@prisma/client";
 
 export async function GET(request: Request) {
   try {
-    const { userId } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+    const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
 
     // Get user from clerkId
     const user = await db.user.findUnique({
@@ -20,16 +20,21 @@ export async function GET(request: Request) {
       );
     }
 
+    // Citizens see their own reports for verification tracking
+    // Other roles see reports they can verify (excluding their own)
+    const where: any = {
+      status: {
+        in: [ReportStatus.SUBMITTED, ReportStatus.UNDER_VERIFICATION],
+      },
+    };
+
+    if (role !== "CITIZEN") {
+      where.citizenId = { not: user.id }; // Exclude own reports for non-citizens
+    }
+
     // Get reports that need verification (SUBMITTED or UNDER_VERIFICATION)
     const reports = await db.report.findMany({
-      where: {
-        status: {
-          in: [ReportStatus.SUBMITTED, ReportStatus.UNDER_VERIFICATION],
-        },
-        citizenId: {
-          not: user.id, // Exclude own reports
-        },
-      },
+      where,
       select: {
         id: true,
         referenceNo: true,

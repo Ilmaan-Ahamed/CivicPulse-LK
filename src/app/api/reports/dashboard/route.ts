@@ -23,6 +23,8 @@ async function getDashboardReports(req: Request) {
       where.citizenId = user.id;
     }
   }
+  // ADMIN sees all reports (no filtering)
+  // NGO_PARTNER and DS_OFFICER also see all reports
 
   const reports = await db.report.findMany({
     where,

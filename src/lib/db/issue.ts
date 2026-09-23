@@ -107,6 +107,15 @@ export async function createIssue(data: CreateIssueInput) {
     }
   );
 
+  // Create notification for the user about report submission
+  await createNotification(
+    user.id,
+    "Report Submitted Successfully",
+    `Your report "${data.title}" has been submitted and is now visible in the system.`,
+    "REPORT_SUBMITTED",
+    report.id
+  );
+
   // If flagged as duplicate, mark it
   if (duplicateOfId) {
     await markAsDuplicate(report.id, duplicateOfId);

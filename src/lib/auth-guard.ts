@@ -11,9 +11,10 @@ export async function requireRole(allowed: Role[]) {
   const role = normalizeRole(roleClaim);
 
   if (!userId) throw new Error("Unauthorized: not signed in");
-  if (role && !allowed.includes(role)) {
-    throw new Error(`Forbidden: requires one of [${allowed.join(", ")}]`);
+  if (!role) throw new Error("Unauthorized: role not found in session");
+  if (!allowed.includes(role)) {
+    throw new Error(`Forbidden: requires one of [${allowed.join(", ")}] but got ${role}`);
   }
 
-  return { userId, role: role ?? allowed[0] };
+  return { userId, role };
 }

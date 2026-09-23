@@ -18,20 +18,37 @@ export default function AdminConsole() {
   const [inspectingIssueId, setInspectingIssueId] = useState<string | null>(null);
   const [dbReports, setDbReports] = useState<any[]>([]);
   const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
-  const [allReports, setAllReports] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [editingReport, setEditingReport] = useState<any | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   React.useEffect(() => {
     fetch("/api/reports/dashboard")
       .then(async (response) => {
-        if (!response.ok) throw new Error("Failed");
+        if (!response.ok) {
+          console.error("Failed to fetch reports:", response.status);
+          throw new Error("Failed");
+        }
         const data = await response.json();
+        console.log("Admin reports data:", data);
         setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
       })
-      .catch(() => setDbReports([]));
+      .catch((error) => {
+        console.error("Error fetching reports:", error);
+        setDbReports([]);
+      });
 
     // Fetch all reports for map (like transparency page)
     fetch("/api/transparency")
@@ -42,14 +59,14 @@ export default function AdminConsole() {
       })
       .catch(() => setTransparencyReports([]));
 
-    // Fetch all reports for Admin decision making
-    fetch("/api/reports")
+    // Fetch dashboard analytics data
+    fetch("/api/dashboard")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
-        setAllReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+        setDashboardData(data.data || null);
       })
-      .catch(() => setAllReports([]));
+      .catch(() => setDashboardData(null));
   }, []);
 
   const [users, setUsers] = useState<any[]>([]);
@@ -61,7 +78,7 @@ export default function AdminConsole() {
   // Calculate statistics from real data
   const stats = React.useMemo(() => {
     const totalReports = dbReports.length;
-    const verifiedReports = dbReports.filter(r => r.status === "VERIFIED").length;
+    const verifiedReports = dbReports.filter(r => r.status === "VERIFIED" || r.status === "FIELD_VERIFIED").length;
     const resolvedReports = dbReports.filter(r => r.status === "RESOLVED").length;
     const inProgressReports = dbReports.filter(r => r.status === "IN_PROGRESS").length;
     
@@ -71,7 +88,9 @@ export default function AdminConsole() {
     }, {} as Record<string, number>);
     
     const districtCounts = dbReports.reduce((acc, r) => {
-      acc[r.district] = (acc[r.district] || 0) + 1;
+      if (r.district) {
+        acc[r.district] = (acc[r.district] || 0) + 1;
+      }
       return acc;
     }, {} as Record<string, number>);
     
@@ -116,6 +135,14 @@ export default function AdminConsole() {
   };
 
   const handleReportDecision = async (reportId: string, newStatus: string) => {
+    // Verify the report exists in the database before attempting to update
+    const reportExists = dbReports.some((r) => r.id === reportId);
+    if (!reportExists) {
+      console.error("Cannot update: Report not found in database");
+      alert("Cannot update: Report not found in database");
+      return;
+    }
+
     try {
       const response = await fetch(`/api/reports/${reportId}`, {
         method: "PATCH",
@@ -123,23 +150,124 @@ export default function AdminConsole() {
         body: JSON.stringify({ status: newStatus }),
       });
 
-      if (response.ok) {
-        setAllReports(allReports.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
-        setSelectedReport(null);
-        setDecisionNote("");
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("Decision failed:", result.error);
+        alert(`Decision failed: ${result.error || "Unknown error"}`);
+        return;
       }
+
+      setDbReports(dbReports.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
+      setSelectedReport(null);
+      setDecisionNote("");
     } catch (error) {
       console.error("Failed to update report status:", error);
+      alert("Failed to update report status: Network error");
+    }
+  };
+
+  const handleEditReport = (report: any) => {
+    setEditingReport(report);
+    setEditTitle(report.title);
+    setEditDescription(report.description);
+    setEditCategory(report.category);
+    setEditAddress(report.address);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingReport) return;
+
+    setEditError("");
+    setIsEditing(true);
+    try {
+      const response = await fetch(`/api/reports/${editingReport.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDescription,
+          category: editCategory,
+          address: editAddress,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        setEditError(result.error || "Failed to save changes");
+        return;
+      }
+
+      // Refresh reports
+      fetch("/api/reports/dashboard")
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+          }
+        })
+        .catch(() => {});
+
+      setEditingReport(null);
+    } catch (error) {
+      setEditError("Failed to save changes. Please try again.");
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  const handleDeleteReport = (reportId: string) => {
+    setDeletingReportId(reportId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteReport = async () => {
+    if (!deletingReportId) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/reports/${deletingReportId}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("Delete failed:", result.error);
+        alert(`Delete failed: ${result.error || "Unknown error"}`);
+        return;
+      }
+
+      // Refresh reports
+      fetch("/api/reports/dashboard")
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+          }
+        })
+        .catch(() => {});
+
+      setIsDeleteModalOpen(false);
+      setDeletingReportId(null);
+    } catch (error) {
+      console.error("Delete submission error:", error);
+      alert("Delete failed: Network error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const filteredReports = React.useMemo(() => {
-    return allReports.filter((report) => {
+    // Filter database reports directly
+    return dbReports.filter((report) => {
       const statusMatch = filterStatus === "ALL" || report.status === filterStatus;
       const categoryMatch = filterCategory === "ALL" || report.category === filterCategory;
       return statusMatch && categoryMatch;
     });
-  }, [allReports, filterStatus, filterCategory]);
+  }, [dbReports, filterStatus, filterCategory]);
 
   return (
     <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
@@ -246,34 +374,45 @@ export default function AdminConsole() {
         <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
           <h4 className="text-sm font-bold card-heading dark:text-white">Top DS Divisions</h4>
           <div className="space-y-3">
-            {Object.entries(stats.districtCounts)
-              .sort(([, a], [, b]) => (b as number) - (a as number))
-              .slice(0, 5)
-              .map(([district, count], index) => {
+            {dashboardData?.topDivisions && dashboardData.topDivisions.length > 0 ? (
+              dashboardData.topDivisions.slice(0, 5).map((item: any, index: number) => {
                 const colors = ["icon-orange", "text-blue-400", "text-cyan-400", "text-amber-400", "text-purple-400"];
                 return (
-                  <div key={district} className="flex items-center justify-between">
-                    <span className="text-xs body-text dark:text-slate-400">{district}</span>
-                    <span className={`text-xs font-mono ${colors[index] || "text-slate-400"} font-bold`}>{count as number}</span>
+                  <div key={item.name} className="flex items-center justify-between">
+                    <span className="text-xs body-text dark:text-slate-400">{item.name || "Unknown"}</span>
+                    <span className={`text-xs font-mono ${colors[index] || "text-slate-400"} font-bold`}>{item.count}</span>
                   </div>
                 );
-              })}
-            {Object.keys(stats.districtCounts).length === 0 && (
+              })
+            ) : (
               <p className="text-xs body-text dark:text-slate-400">No data available</p>
             )}
           </div>
         </div>
 
-        {/* Weekly Trend - Placeholder */}
+        {/* Weekly Trend */}
         <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
           <h4 className="text-sm font-bold card-heading dark:text-white">Weekly Trend</h4>
           <div className="flex items-end justify-between h-24 gap-2">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, index) => (
-              <div key={day} className="flex flex-col items-center gap-1 flex-1">
-                <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: `${30 + Math.random() * 60}%` }}></div>
-                <span className="text-[10px] body-text dark:text-slate-400">{day}</span>
-              </div>
-            ))}
+            {dashboardData?.weeklyTrend ? (
+              dashboardData.weeklyTrend.map((item: any) => {
+                const maxCount = Math.max(...dashboardData.weeklyTrend.map((d: any) => d.count), 1);
+                const height = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+                return (
+                  <div key={item.day} className="flex flex-col items-center gap-1 flex-1">
+                    <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: `${Math.max(height, 5)}%` }}></div>
+                    <span className="text-[10px] body-text dark:text-slate-400">{item.day}</span>
+                  </div>
+                );
+              })
+            ) : (
+              ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                <div key={day} className="flex flex-col items-center gap-1 flex-1">
+                  <div className="w-full bg-slate-700 dark:bg-slate-800 rounded-t" style={{ height: "5%" }}></div>
+                  <span className="text-[10px] body-text dark:text-slate-400">{day}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -392,7 +531,7 @@ export default function AdminConsole() {
             activeAdminTab === "reports" ? "bg-rose-600 text-white" : "text-slate-400 hover:text-white"
           }`}
         >
-          All Reports ({allReports.length})
+          All Reports ({dbReports.length})
         </button>
 
         <button
@@ -434,7 +573,7 @@ export default function AdminConsole() {
                 <tbody className="divide-y divide-border dark:divide-slate-800">
                   {users.map((u) => (
                     <tr key={u.id}>
-                      <td className="py-3 font-bold card-heading dark:text-white">{u.name}</td>
+                      <td className="py-3 font-bold card-heading dark:text-white">{u.name || "Unknown"}</td>
                       <td className="py-3 body-text dark:text-slate-400">{u.email}</td>
                       <td className="py-3">
                         <RoleBadge role={u.role as "CITIZEN" | "NGO_PARTNER" | "DS_OFFICER" | "ADMIN"} />
@@ -567,12 +706,26 @@ export default function AdminConsole() {
                         <span className="text-xs body-text dark:text-slate-400">{report.address}</span>
                         <span className="text-xs body-text dark:text-slate-400">• {report.category}</span>
                       </div>
-                      <button
-                        onClick={() => setSelectedReport(report)}
-                        className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold"
-                      >
-                        Make Decision
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEditReport(report)}
+                          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteReport(report.id)}
+                          className="px-3 py-2 bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 border border-rose-800 rounded-xl text-xs font-bold"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          onClick={() => setSelectedReport(report)}
+                          className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold"
+                        >
+                          Make Decision
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -744,6 +897,144 @@ export default function AdminConsole() {
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Report Modal */}
+      {editingReport && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <form
+            onSubmit={handleSaveEdit}
+            className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl"
+          >
+            <div className="border-b border-slate-800 pb-3">
+              <span className="font-mono icon-orange dark:text-rose-400 font-bold">{editingReport.referenceNo || editingReport.caseNumber}</span>
+              <h3 className="text-lg card-heading dark:text-white">Edit Report</h3>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold card-heading dark:text-slate-300 uppercase tracking-wider mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full card-light dark:bg-slate-950 dark:border-slate-800 rounded-xl px-4 py-3 text-xs card-heading dark:text-white focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold card-heading dark:text-slate-300 uppercase tracking-wider mb-2">
+                  Description
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full card-light dark:bg-slate-950 dark:border-slate-800 rounded-xl px-4 py-3 text-xs card-heading dark:text-white focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold card-heading dark:text-slate-300 uppercase tracking-wider mb-2">
+                  Category
+                </label>
+                <select
+                  required
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  className="w-full card-light dark:bg-slate-950 dark:border-slate-800 rounded-xl px-4 py-3 text-xs card-heading dark:text-white focus:outline-none focus:border-rose-500"
+                >
+                  <option value="ROADS">Roads</option>
+                  <option value="DRAINAGE">Drainage</option>
+                  <option value="WATER">Water</option>
+                  <option value="STREETLIGHTS">Streetlights</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold card-heading dark:text-slate-300 uppercase tracking-wider mb-2">
+                  Address
+                </label>
+                <input
+                  type="text"
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  className="w-full card-light dark:bg-slate-950 dark:border-slate-800 rounded-xl px-4 py-3 text-xs card-heading dark:text-white focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              {editError && (
+                <p className="text-xs text-rose-400">{editError}</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingReport(null);
+                  setEditError("");
+                }}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+                disabled={isEditing}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-xs"
+                disabled={isEditing}
+              >
+                {isEditing ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+            <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
+              <div className="w-10 h-10 rounded-full bg-rose-950/60 text-rose-400 flex items-center justify-center">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Delete Report?</h3>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs body-text dark:text-slate-400">
+                Are you sure you want to delete this report? This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setDeletingReportId(null);
+                }}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteReport}
+                className="px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-xs"
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>

@@ -49,33 +49,20 @@ export default function NgoDashboard() {
       })
       .catch(() => setAssignments([]));
 
-    // Fetch all reports for NGO decision making
-    fetch("/api/reports")
+    // Fetch pledges
+    fetch("/api/pledges")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
-        setAllReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+        setCommitments(data.data || []);
       })
-      .catch(() => setAllReports([]));
+      .catch(() => setCommitments([]));
   }, []);
 
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
 
   React.useEffect(() => {
-    const syncedOpportunities = uniqueSharedIssues
-      .filter((issue) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(issue.status))
-      .map((issue) => ({
-        id: issue.id,
-        caseNumber: issue.caseNumber,
-        title: issue.title,
-        description: issue.description,
-        category: issue.category,
-        priorityScore: issue.priorityScore,
-        address: issue.address,
-        supportNeeded: "Volunteer mobilization and on-ground support required",
-      }));
-
     const dbOpportunities = dbReports
       .filter((report) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(report.status))
       .map((report) => ({
@@ -89,15 +76,11 @@ export default function NgoDashboard() {
         supportNeeded: "Volunteer mobilization and on-ground support required",
       }));
 
-    setOpportunities(
-      Array.from(
-        new Map([...dbOpportunities, ...syncedOpportunities].map((opp) => [opp.id, opp])).values()
-      )
-    );
-  }, [uniqueSharedIssues, dbReports]);
+    // Only show database reports for pledging (shared issues may not exist in DB)
+    setOpportunities(dbOpportunities);
+  }, [dbReports]);
 
   const [commitments, setCommitments] = useState<any[]>([]);
-  const [allReports, setAllReports] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
@@ -108,26 +91,55 @@ export default function NgoDashboard() {
   const [pledgeDesc, setPledgeDesc] = useState("");
   const [amountLkr, setAmountLkr] = useState("50000");
 
-  const handlePledgeSubmit = (e: React.FormEvent) => {
+  const handlePledgeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pledgingCase) return;
 
-    setCommitments([
-      {
-        id: `pledge-${Date.now()}`,
-        caseNumber: pledgingCase.caseNumber,
-        pledgeType: pledgeType,
-        description: pledgeDesc || `Pledged ${pledgeType} support to case ${pledgingCase.caseNumber}`,
-        status: "PLEDGED & ACTIVE",
-      },
-      ...commitments,
-    ]);
+    try {
+      const response = await fetch("/api/pledges", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reportId: pledgingCase.id,
+          pledgeType,
+          description: pledgeDesc,
+          amountLkr: pledgeType === "FUNDING" ? parseInt(amountLkr) : undefined,
+        }),
+      });
 
-    setPledgingCase(null);
-    setPledgeDesc("");
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("Pledge failed:", result.error);
+        return;
+      }
+
+      // Refresh pledges
+      fetch("/api/pledges")
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            setCommitments(data.data || []);
+          }
+        })
+        .catch(() => {});
+
+      setPledgingCase(null);
+      setPledgeDesc("");
+    } catch (error) {
+      console.error("Pledge submission error:", error);
+    }
   };
 
   const handleReportDecision = async (reportId: string, newStatus: string) => {
+    // Verify the report exists in the database before attempting to update
+    const reportExists = dbReports.some((r) => r.id === reportId);
+    if (!reportExists) {
+      console.error("Cannot update: Report not found in database");
+      alert("Cannot update: Report not found in database");
+      return;
+    }
+
     try {
       const response = await fetch(`/api/reports/${reportId}`, {
         method: "PATCH",
@@ -135,23 +147,31 @@ export default function NgoDashboard() {
         body: JSON.stringify({ status: newStatus }),
       });
 
-      if (response.ok) {
-        setAllReports(allReports.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
-        setSelectedReport(null);
-        setDecisionNote("");
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("Decision failed:", result.error);
+        alert(`Decision failed: ${result.error || "Unknown error"}`);
+        return;
       }
+
+      setDbReports(dbReports.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
+      setSelectedReport(null);
+      setDecisionNote("");
     } catch (error) {
       console.error("Failed to update report status:", error);
+      alert("Failed to update report status: Network error");
     }
   };
 
   const filteredReports = React.useMemo(() => {
-    return allReports.filter((report) => {
+    // Filter database reports directly
+    return dbReports.filter((report) => {
       const statusMatch = filterStatus === "ALL" || report.status === filterStatus;
       const categoryMatch = filterCategory === "ALL" || report.category === filterCategory;
       return statusMatch && categoryMatch;
     });
-  }, [allReports, filterStatus, filterCategory]);
+  }, [dbReports, filterStatus, filterCategory]);
 
   return (
     <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
@@ -253,7 +273,7 @@ export default function NgoDashboard() {
           {commitments.map((c) => (
             <div key={c.id} className="p-4 rounded-2xl card-light dark:bg-slate-900 dark:border-slate-800 flex items-center justify-between text-xs">
               <div>
-                <span className="font-mono icon-orange dark:text-teal-400 font-bold mr-2">{c.caseNumber}</span>
+                <span className="font-mono icon-orange dark:text-teal-400 font-bold mr-2">{c.report?.referenceNo}</span>
                 <span className="card-heading dark:text-white font-bold">{c.pledgeType}: </span>
                 <span className="body-text dark:text-slate-300">{c.description}</span>
               </div>
