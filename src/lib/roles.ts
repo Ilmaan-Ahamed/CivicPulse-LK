@@ -7,7 +7,7 @@ export const ROLES = [
 
 export type Role = (typeof ROLES)[number];
 
-export const SIGNUP_ROLES = ["CITIZEN", "NGO_PARTNER", "DS_OFFICER"] as const;
+export const SIGNUP_ROLES = ["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as const;
 export type SignupRole = (typeof SIGNUP_ROLES)[number];
 
 export function isSignupRole(role?: string | null): role is SignupRole {

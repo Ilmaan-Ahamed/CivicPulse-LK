@@ -22,6 +22,7 @@ import {
   Users,
   Building2,
   Landmark,
+  Crown,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -35,6 +36,7 @@ const ROLE_OPTIONS: { value: UserRole; label: string; description: string; icon:
   { value: "CITIZEN", label: "Citizen", description: "Report infrastructure issues in your community", icon: Users },
   { value: "NGO_PARTNER", label: "NGO", description: "Pledge support and manage assigned infrastructure cases", icon: Building2 },
   { value: "DS_OFFICER", label: "DS Officer", description: "Triage cases and coordinate agency assignments", icon: Landmark },
+  { value: "ADMIN", label: "Admin", description: "Platform administrator with full system access", icon: Crown },
 ];
 
 function dashboardPathForRole(role?: UserRole | string | null) {
@@ -317,6 +319,16 @@ export default function LoginPage() {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => window.location.href = "/forgot-password"}
+                    className="text-xs text-[#F97316] dark:text-orange-400 hover:underline font-medium"
+                  >
+                    Forgot Password?
+                  </button>
                 </div>
 
                 <button
