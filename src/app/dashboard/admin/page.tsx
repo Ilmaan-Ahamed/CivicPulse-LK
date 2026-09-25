@@ -9,6 +9,7 @@ import { InteractiveMap } from "@/components/map/InteractiveMap";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSharedIssues } from "@/lib/report-sync";
+import { ReportPhotoGallery } from "@/components/shared/ReportPhotoGallery";
 
 export default function AdminConsole() {
   const { currentUser } = useAuth();
@@ -447,6 +448,7 @@ export default function AdminConsole() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {dbReports.slice(0, 6).map((issue) => (
             <div key={issue.id} className="p-4 rounded-2xl card-light dark:bg-slate-950 dark:border-slate-800">
+              <ReportPhotoGallery title={issue.title} photos={issue.photos} imageUrl={issue.imageUrl} maxItems={1} />
               <div className="flex items-center justify-between gap-3 mb-2">
                 <span className="font-mono text-[10px] text-rose-400 font-bold">{issue.referenceNo}</span>
                 <span className="px-2 py-0.5 rounded bg-rose-950/80 text-rose-300 text-[10px] font-bold border border-rose-800">
@@ -492,6 +494,7 @@ export default function AdminConsole() {
                   </button>
                 </div>
                 <div className="mt-5 space-y-3 text-xs">
+                  <ReportPhotoGallery title={issue.title} photos={issue.photos} imageUrl={issue.imageUrl} />
                   <p className="body-text dark:text-slate-300">{issue.description}</p>
                   <p className="text-slate-500">{issue.address}</p>
                   <div className="flex items-center gap-3 font-mono text-[10px]">
@@ -698,6 +701,7 @@ export default function AdminConsole() {
 
                     <div>
                       <h3 className="text-base card-heading dark:text-white">{report.title}</h3>
+                      <ReportPhotoGallery title={report.title} photos={report.photos} imageUrl={report.imageUrl} maxItems={1} />
                       <p className="text-xs body-text dark:text-slate-400 mt-1">{report.description}</p>
                     </div>
 
@@ -835,6 +839,7 @@ export default function AdminConsole() {
 
             <div className="p-3 rounded-2xl card-light dark:bg-slate-950 dark:border-slate-800 text-xs">
               <h4 className="font-bold card-heading dark:text-white text-sm">{selectedReport.title}</h4>
+              <ReportPhotoGallery title={selectedReport.title} photos={selectedReport.photos} imageUrl={selectedReport.imageUrl} />
               <p className="body-text dark:text-slate-400 mt-1">{selectedReport.description}</p>
               <p className="text-slate-500 mt-2">{selectedReport.address}</p>
               <div className="flex items-center gap-2 mt-2">
