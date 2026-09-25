@@ -8,6 +8,7 @@ import { InteractiveMap } from "@/components/map/InteractiveMap";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSharedIssues } from "@/lib/report-sync";
+import { ReportPhotoGallery } from "@/components/shared/ReportPhotoGallery";
 
 export default function NgoDashboard() {
   const { currentUser } = useAuth();
@@ -73,6 +74,8 @@ export default function NgoDashboard() {
         category: report.category,
         priorityScore: report.priorityScore,
         address: report.address,
+        imageUrl: report.imageUrl,
+        photos: report.photos,
         supportNeeded: "Volunteer mobilization and on-ground support required",
       }));
 
@@ -236,6 +239,7 @@ export default function NgoDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {opportunities.map((opp) => (
             <div key={opp.id} className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
+              <ReportPhotoGallery title={opp.title} photos={opp.photos} imageUrl={opp.imageUrl} maxItems={1} />
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs font-bold text-teal-400">{opp.caseNumber}</span>
                 <PriorityIndicator score={opp.priorityScore} />
@@ -554,6 +558,7 @@ export default function NgoDashboard() {
 
             <div className="p-3 rounded-2xl card-light dark:bg-slate-950 dark:border-slate-800 text-xs">
               <h4 className="font-bold card-heading dark:text-white text-sm">{selectedReport.title}</h4>
+              <ReportPhotoGallery title={selectedReport.title} photos={selectedReport.photos} imageUrl={selectedReport.imageUrl} />
               <p className="body-text dark:text-slate-400 mt-1">{selectedReport.description}</p>
               <p className="text-slate-500 mt-2">{selectedReport.address}</p>
               <div className="flex items-center gap-2 mt-2">

@@ -9,6 +9,7 @@ import { InteractiveMap } from "@/components/map/InteractiveMap";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSharedIssues } from "@/lib/report-sync";
+import { ReportPhotoGallery } from "@/components/shared/ReportPhotoGallery";
 
 export default function DsOfficerConsole() {
   const { currentUser } = useAuth();
@@ -95,6 +96,7 @@ export default function DsOfficerConsole() {
         aiSummary: `Citizen-submitted ${report.category.toLowerCase()} issue. This report is now visible to the DS Office dashboard for triage.`,
         address: report.address,
         imageUrl: report.imageUrl,
+        photos: report.photos,
         verificationCount: report.verificationCount || 0,
         age: "Just submitted",
         slaBreachRisk: (report.priorityScore || report.aiConfidence || 50) >= 80,
@@ -715,13 +717,7 @@ export default function DsOfficerConsole() {
 
             <div className="p-3 rounded-2xl card-light dark:bg-slate-950 dark:border-slate-800 text-xs">
               <h4 className="font-bold card-heading dark:text-white text-sm">{selectedReport.title}</h4>
-              {selectedReport.imageUrl && (
-                <img
-                  src={selectedReport.imageUrl}
-                  alt={selectedReport.title}
-                  className="mt-3 h-48 w-full rounded-xl object-cover"
-                />
-              )}
+              <ReportPhotoGallery title={selectedReport.title} photos={selectedReport.photos} imageUrl={selectedReport.imageUrl} />
               <p className="body-text dark:text-slate-400 mt-1">{selectedReport.description}</p>
               <p className="text-slate-500 mt-2">{selectedReport.address}</p>
               <div className="flex items-center gap-2 mt-2">

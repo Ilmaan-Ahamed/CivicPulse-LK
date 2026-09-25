@@ -31,7 +31,7 @@ async function getDashboardReports(req: Request) {
     where,
     include: {
       photos: {
-        take: 1,
+        orderBy: { createdAt: "asc" },
       },
       verifications: {
         take: 3,
@@ -42,7 +42,14 @@ async function getDashboardReports(req: Request) {
 
   return NextResponse.json({
     success: true,
-    data: await Promise.all(reports.map(async (report) => ({
+    data: await Promise.all(reports.map(async (report) => {
+      const photos = await Promise.all(report.photos.map(async (photo) => ({
+        id: photo.id,
+        caption: photo.caption,
+        url: await tryGetPresignedUrl(photo.key),
+      })));
+
+      return {
       id: report.id,
       caseNumber: report.referenceNo,
       title: report.title,
@@ -54,11 +61,13 @@ async function getDashboardReports(req: Request) {
       district: report.district,
       latitude: report.latitude,
       longitude: report.longitude,
-      imageUrl: report.photos[0]?.key ? await tryGetPresignedUrl(report.photos[0].key) : null,
+      imageUrl: photos[0]?.url ?? null,
+      photos,
       verificationCount: report.verifications.length,
       verificationThreshold: 3,
       createdAt: report.createdAt.toISOString(),
-    }))),
+      };
+    })),
   });
 }
 

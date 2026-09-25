@@ -37,7 +37,7 @@ function matchesImageSignature(bytes: Buffer, contentType: string) {
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await requireRole(["CITIZEN"]);
+    const { userId } = await requireRole(["CITIZEN", "DS_OFFICER", "ADMIN"]);
     const user = await db.user.findUnique({
       where: { clerkId: userId },
       select: { id: true },
