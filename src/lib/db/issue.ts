@@ -14,6 +14,7 @@ export type CreateIssueInput = {
   longitude?: number;
   address?: string;
   status?: ReportStatus | keyof typeof ReportStatus | string;
+  photoKeys?: string[];
 };
 
 function toCategory(value?: CreateIssueInput["category"]): Category {
@@ -61,6 +62,19 @@ export async function createIssue(data: CreateIssueInput) {
     throw new Error("User profile is not synchronized with the database");
   }
 
+  const photoKeys = data.photoKeys ?? [];
+  const photoKeyPrefix = `reports/${user.id}/`;
+  if (
+    photoKeys.length > 5 ||
+    new Set(photoKeys).size !== photoKeys.length ||
+    photoKeys.some((key) =>
+      !key.startsWith(photoKeyPrefix) ||
+      !/^[0-9a-f-]{36}\.(jpg|png|webp)$/.test(key.slice(photoKeyPrefix.length))
+    )
+  ) {
+    throw new Error("Invalid report photo reference");
+  }
+
   const category = toCategory(data.category);
   const status = toReportStatus(data.status);
   const lat = data.latitude ?? 6.9271;
@@ -87,6 +101,9 @@ export async function createIssue(data: CreateIssueInput) {
       status,
       duplicateOfId,
       isDuplicate: !!duplicateOfId,
+      photos: {
+        create: photoKeys.map((key) => ({ key, url: key })),
+      },
     },
   });
 

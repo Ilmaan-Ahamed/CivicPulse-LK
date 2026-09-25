@@ -16,6 +16,22 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Local report image storage
+
+Set `MINIO_ENDPOINT`, `MINIO_PORT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`,
+`MINIO_USE_SSL`, and `MINIO_BUCKET_NAME` from `.env.local.example`. For the
+local Compose MinIO service, the endpoint is `localhost:9000`; the console is
+at `http://localhost:9001` with the development credentials in
+`docker-compose.yml`. The application creates the private bucket on the first
+upload. If running the application inside Compose, its internal endpoint is
+`minio`, while `MINIO_PUBLIC_ENDPOINT` should be the host that browsers use to
+reach MinIO (usually `localhost`).
+
+Run `docker compose up -d postgres minio`, then `npx prisma db push` after
+confirming `DATABASE_URL` points to the intended development database. Report
+images are uploaded through the authenticated application API and read via
+short-lived presigned URLs.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

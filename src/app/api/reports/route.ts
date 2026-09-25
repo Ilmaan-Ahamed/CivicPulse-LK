@@ -11,6 +11,7 @@ const createReportSchema = z.object({
   latitude: z.number().finite().optional(),
   longitude: z.number().finite().optional(),
   address: z.string().trim().max(500).optional(),
+  photoKeys: z.array(z.string().min(1).max(300)).max(5).optional(),
 });
 
 export async function GET(request: Request) {
@@ -103,7 +104,13 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[REPORT CREATE ERROR]", error);
     const message = error instanceof Error ? error.message : "Unable to create report";
-    const status = message.startsWith("Unauthorized") ? 401 : message.startsWith("Forbidden") ? 403 : 500;
+    const status = message.startsWith("Unauthorized")
+      ? 401
+      : message.startsWith("Forbidden")
+        ? 403
+        : message === "Invalid report photo reference"
+          ? 400
+          : 500;
     return NextResponse.json({ success: false, error: message }, { status });
   }
 }

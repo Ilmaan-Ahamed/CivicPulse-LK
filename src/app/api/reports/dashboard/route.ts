@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth-guard";
+import { tryGetPresignedUrl } from "@/lib/minio";
 
 async function getDashboardReports(req: Request) {
   const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
@@ -41,7 +42,7 @@ async function getDashboardReports(req: Request) {
 
   return NextResponse.json({
     success: true,
-    data: reports.map((report) => ({
+    data: await Promise.all(reports.map(async (report) => ({
       id: report.id,
       caseNumber: report.referenceNo,
       title: report.title,
@@ -53,11 +54,11 @@ async function getDashboardReports(req: Request) {
       district: report.district,
       latitude: report.latitude,
       longitude: report.longitude,
-      imageUrl: report.photos[0]?.url || null,
+      imageUrl: report.photos[0]?.key ? await tryGetPresignedUrl(report.photos[0].key) : null,
       verificationCount: report.verifications.length,
       verificationThreshold: 3,
       createdAt: report.createdAt.toISOString(),
-    })),
+    }))),
   });
 }
 

@@ -4,6 +4,7 @@ import { ReportStatus, Category } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import { requireRole } from "@/lib/auth-guard";
+import { tryGetPresignedUrl } from "@/lib/minio";
 
 const updateReportSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
@@ -119,9 +120,14 @@ async function getReportById(req: Request, { params }: { params: Promise<{ id: s
     );
   }
 
+  const photos = await Promise.all(report.photos.map(async ({ key, ...photo }) => ({
+    ...photo,
+    url: await tryGetPresignedUrl(key),
+  })));
+
   return NextResponse.json({
     success: true,
-    data: report,
+    data: { ...report, photos },
   });
 }
 

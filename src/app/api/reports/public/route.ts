@@ -8,9 +8,6 @@ async function getPublicReports(req: Request) {
   const reports = await db.report.findMany({
     take: limit,
     include: {
-      photos: {
-        take: 1,
-      },
       verifications: {
         take: 3,
       },
@@ -30,7 +27,7 @@ async function getPublicReports(req: Request) {
       priorityScore: report.aiConfidence || 50,
       address: report.address,
       dsDivisionName: report.district,
-      imageUrl: report.photos[0]?.url || null,
+      imageUrl: null,
       verificationCount: report.verifications.length,
       verificationThreshold: 3,
       createdAt: report.createdAt.toISOString(),
