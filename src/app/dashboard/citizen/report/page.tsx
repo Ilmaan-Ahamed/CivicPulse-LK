@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Camera, MapPin, Sparkles, CheckCircle2, Upload, AlertCircle, ArrowLeft, ArrowRight } from "lucide-react";
+import { Camera, MapPin, Sparkles, CheckCircle2, Upload, AlertCircle, ArrowLeft, ArrowRight, LoaderCircle, RefreshCw, X } from "lucide-react";
 import { Map, MapControls, MapMarker, MarkerContent } from "@/components/ui/map";
 import { analyzeReportWithAi } from "@/lib/ai/triage";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -12,6 +12,15 @@ type NominatimResult = {
   display_name: string;
   lat: string;
   lon: string;
+};
+
+type ReportPhoto = {
+  id: string;
+  src: string;
+  file: File;
+  status: "uploading" | "uploaded" | "failed";
+  key?: string;
+  error?: string;
 };
 
 export default function ReportIssuePage() {
@@ -27,9 +36,7 @@ export default function ReportIssuePage() {
   const [locationSuggestions, setLocationSuggestions] = useState<NominatimResult[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [isSelectionPending, setIsSelectionPending] = useState(false);
-  const [photos, setPhotos] = useState<Array<{ id: string; src: string; file?: File }>>([
-    { id: "sample-1", src: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80" },
-  ]);
+  const [photos, setPhotos] = useState<ReportPhoto[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -105,10 +112,103 @@ export default function ReportIssuePage() {
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasUploadingPhotos = photos.some((photo) => photo.status === "uploading");
+  const hasFailedPhotos = photos.some((photo) => photo.status === "failed");
+
+  const uploadPhoto = async (photo: ReportPhoto) => {
+    setSubmitError(null);
+    setPhotos((current) => current.map((item) =>
+      item.id === photo.id ? { ...item, status: "uploading", key: undefined, error: undefined } : item
+    ));
+
+    try {
+      const body = new FormData();
+      body.append("file", photo.file);
+      const response = await fetch("/api/upload", { method: "POST", body, credentials: "include" });
+      const result = (await response.json().catch(() => null)) as {
+        success?: boolean;
+        key?: string;
+        error?: string;
+      } | null;
+
+      if (!response.ok || !result?.success || !result.key) {
+        throw new Error(result?.error || `Photo upload failed (${response.status})`);
+      }
+
+      setPhotos((current) => current.map((item) =>
+        item.id === photo.id ? { ...item, status: "uploaded", key: result.key, error: undefined } : item
+      ));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Photo upload failed";
+      const details = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      console.error(`[REPORT PHOTO UPLOAD] photoId=${photo.id}: ${details}`);
+      setPhotos((current) => current.map((item) =>
+        item.id === photo.id ? { ...item, status: "failed", key: undefined, error: message } : item
+      ));
+    }
+  };
+
+  const removePhoto = (photo: ReportPhoto) => {
+    URL.revokeObjectURL(photo.src);
+    setPhotos((current) => current.filter((item) => item.id !== photo.id));
+  };
+
+  const renderPhotoGrid = () => (
+    <div className="grid grid-cols-2 gap-4">
+      {photos.map((photo, index) => (
+        <div key={photo.id} className="relative h-40 overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+          <img src={photo.src} alt={`Evidence ${index + 1}`} className="h-full w-full object-cover" />
+          <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-2 bg-black/75 px-2 py-1.5">
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] ${
+                photo.status === "uploaded" ? "text-emerald-300" : photo.status === "failed" ? "text-red-300" : "text-white"
+              }`}
+              role={photo.status === "failed" ? "alert" : "status"}
+            >
+              {photo.status === "uploading" ? <LoaderCircle className="h-3 w-3 animate-spin" /> : null}
+              {photo.status === "uploaded" ? <CheckCircle2 className="h-3 w-3" /> : null}
+              {photo.status === "failed" ? <AlertCircle className="h-3 w-3" /> : null}
+              {photo.status === "uploading" ? "Uploading" : photo.status === "uploaded" ? "Uploaded" : "Failed"}
+            </span>
+            <div className="flex items-center gap-1">
+              {photo.status === "failed" && (
+                <button
+                  type="button"
+                  onClick={() => void uploadPhoto(photo)}
+                  className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[10px] text-white hover:bg-slate-700"
+                  aria-label={`Retry upload for photo ${index + 1}`}
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Retry
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => removePhoto(photo)}
+                className="rounded bg-slate-800 p-1 text-white hover:bg-slate-700"
+                aria-label={`Remove photo ${index + 1}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+          {photo.status === "failed" && photo.error && (
+            <p className="absolute inset-x-0 top-0 truncate bg-red-950/90 px-2 py-1 text-[10px] text-red-100" title={photo.error}>
+              {photo.error}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 
   const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
+    if (hasUploadingPhotos || hasFailedPhotos || photos.some((photo) => photo.status !== "uploaded" || !photo.key)) {
+      setSubmitError("Finish or retry each photo upload before submitting.");
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -123,6 +223,7 @@ export default function ReportIssuePage() {
           latitude: lat,
           longitude: lng,
           address: address.trim() || undefined,
+          photoKeys: photos.flatMap((photo) => (photo.key ? [photo.key] : [])),
         }),
       });
       const result = (await response.json()) as {
@@ -157,7 +258,6 @@ export default function ReportIssuePage() {
         priorityScore: 66,
         address: report.address || "Colombo, Sri Lanka",
         dsDivisionName: "Colombo DS Office",
-        imageUrl: photos[0]?.src,
         createdAt: report.createdAt,
       });
       setSubmittedCaseId(report.caseNumber);
@@ -336,7 +436,7 @@ export default function ReportIssuePage() {
                       const files = e.target.files;
                       if (!files || files.length === 0) return;
 
-                      const newItems: Array<{ id: string; src: string; file?: File }> = [];
+                      const newItems: ReportPhoto[] = [];
                       for (let i = 0; i < files.length; i++) {
                         const f = files[i];
                         // Validate type
@@ -352,13 +452,18 @@ export default function ReportIssuePage() {
                         // Prevent duplicates by name+size
                         const exists = photos.some((p) => p.file?.name === f.name && p.file?.size === f.size);
                         if (exists) continue;
+                        if (photos.length + newItems.length >= 5) {
+                          setUploadError("A report can include up to 5 photos.");
+                          break;
+                        }
 
                         const objectUrl = URL.createObjectURL(f);
-                        newItems.push({ id: `${Date.now()}-${i}`, src: objectUrl, file: f });
+                          newItems.push({ id: crypto.randomUUID(), src: objectUrl, file: f, status: "uploading" });
                       }
 
                       if (newItems.length > 0) {
                         setPhotos((prev) => [...prev, ...newItems]);
+                        newItems.forEach((item) => void uploadPhoto(item));
                       }
 
                       // Reset input to allow same file selection again
@@ -382,30 +487,8 @@ export default function ReportIssuePage() {
 
                 {photos.length > 0 && (
                   <div>
-                    <span className="text-xs font-bold text-slate-300 block mb-2">Uploaded Photo Preview</span>
-                    <div className="grid grid-cols-2 gap-4">
-                      {photos.map((p, idx) => (
-                        <div key={p.id} className="relative h-40 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
-                          <img src={p.src} alt={`Evidence ${idx + 1}`} className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              // Revoke object URL if created from file
-                              try {
-                                if (p.file) URL.revokeObjectURL(p.src);
-                              } catch (e) {}
-                              setPhotos((prev) => prev.filter((x) => x.id !== p.id));
-                            }}
-                            className="absolute top-2 right-2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1"
-                            aria-label={`Remove photo ${idx + 1}`}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M6.707 5.293a1 1 0 00-1.414 1.414L8.586 10l-3.293 3.293a1 1 0 001.414 1.414L10 11.414l3.293 3.293a1 1 0 001.414-1.414L11.414 10l3.293-3.293a1 1 0 00-1.414-1.414L10 8.586 6.707 5.293z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                    <span className="text-xs font-bold text-slate-300 block mb-2">Evidence Photos</span>
+                    {renderPhotoGrid()}
                   </div>
                 )}
               </div>
@@ -526,6 +609,15 @@ export default function ReportIssuePage() {
                     <span className="font-medium text-slate-200">{address}</span>
                   </div>
                 </div>
+
+                {photos.length > 0 && (
+                  <section className="space-y-2" aria-label="Photo upload status">
+                    <h3 className="text-xs font-bold text-slate-300">Evidence Photos</h3>
+                    {renderPhotoGrid()}
+                    {hasUploadingPhotos && <p className="text-xs text-slate-300">Photo uploads are still in progress.</p>}
+                    {hasFailedPhotos && <p className="text-xs text-red-300">Retry or remove failed photos before submitting.</p>}
+                  </section>
+                )}
               </div>
             )}
 
@@ -561,8 +653,8 @@ export default function ReportIssuePage() {
               ) : (
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="btn-glass-orange-solid px-8 py-3 text-xs"
+                  disabled={isSubmitting || hasUploadingPhotos || hasFailedPhotos}
+                  className="btn-glass-orange-solid px-8 py-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSubmitting ? "Submitting..." : t("form.btn.submit")}
                 </button>

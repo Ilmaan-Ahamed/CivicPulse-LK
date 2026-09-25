@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { MapPin, Calendar, ArrowRight, ShieldCheck, CheckCircle2, Building2, Edit, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PriorityIndicator } from "@/components/ui/PriorityIndicator";
@@ -33,9 +34,10 @@ interface CaseCardProps {
   onEdit?: (caseData: CaseCardData) => void;
   onDelete?: (caseId: string) => void;
   isOwnReport?: boolean;
+  detailsHref?: string;
 }
 
-export function CaseCard({ caseData, onSelect, onVerify, onAssign, onEdit, onDelete, isOwnReport }: CaseCardProps) {
+export function CaseCard({ caseData, onSelect, onVerify, onAssign, onEdit, onDelete, isOwnReport, detailsHref }: CaseCardProps) {
   const { currentRole } = useAuth();
   const { t } = useLanguage();
 
@@ -158,6 +160,15 @@ export function CaseCard({ caseData, onSelect, onVerify, onAssign, onEdit, onDel
             <span>{t("btn.viewDetails")}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
+        )}
+        {detailsHref && (
+          <Link
+            href={detailsHref}
+            className="btn-secondary-orange mt-2 w-full py-1.5 px-3 text-xs flex items-center justify-center gap-1"
+          >
+            Full report
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         )}
       </div>
     </div>

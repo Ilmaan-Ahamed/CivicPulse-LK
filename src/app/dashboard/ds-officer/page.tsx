@@ -76,6 +76,7 @@ export default function DsOfficerConsole() {
         priorityScore: issue.priorityScore,
         aiSummary: `Citizen-submitted ${issue.category.toLowerCase()} issue. This report is now visible to the DS Office dashboard for triage.`,
         address: issue.address,
+        imageUrl: issue.imageUrl,
         verificationCount: 1,
         age: "Just submitted",
         slaBreachRisk: issue.priorityScore >= 80,
@@ -93,6 +94,7 @@ export default function DsOfficerConsole() {
         priorityScore: report.priorityScore || report.aiConfidence || 50,
         aiSummary: `Citizen-submitted ${report.category.toLowerCase()} issue. This report is now visible to the DS Office dashboard for triage.`,
         address: report.address,
+        imageUrl: report.imageUrl,
         verificationCount: report.verificationCount || 0,
         age: "Just submitted",
         slaBreachRisk: (report.priorityScore || report.aiConfidence || 50) >= 80,
@@ -100,7 +102,7 @@ export default function DsOfficerConsole() {
 
     setTriageCases(
       Array.from(
-        new Map([...dbQueue, ...syncedQueue].map((item) => [item.id, item])).values()
+        new Map([...syncedQueue, ...dbQueue].map((item) => [item.id, item])).values()
       )
     );
   }, [uniqueSharedIssues, dbReports]);
@@ -713,6 +715,13 @@ export default function DsOfficerConsole() {
 
             <div className="p-3 rounded-2xl card-light dark:bg-slate-950 dark:border-slate-800 text-xs">
               <h4 className="font-bold card-heading dark:text-white text-sm">{selectedReport.title}</h4>
+              {selectedReport.imageUrl && (
+                <img
+                  src={selectedReport.imageUrl}
+                  alt={selectedReport.title}
+                  className="mt-3 h-48 w-full rounded-xl object-cover"
+                />
+              )}
               <p className="body-text dark:text-slate-400 mt-1">{selectedReport.description}</p>
               <p className="text-slate-500 mt-2">{selectedReport.address}</p>
               <div className="flex items-center gap-2 mt-2">

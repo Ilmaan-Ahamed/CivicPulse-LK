@@ -52,10 +52,12 @@ services:
       DATABASE_URL: postgresql://civicpulse_user:civicpulse_pass@postgres:5432/civicpulse
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
+      MINIO_PUBLIC_ENDPOINT: localhost
+      MINIO_PUBLIC_PORT: 9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_USE_SSL: "false"
-      MINIO_BUCKET: civicpulse-uploads
+      MINIO_BUCKET_NAME: civicpulse-reports
     depends_on:
       postgres:
         condition: service_healthy

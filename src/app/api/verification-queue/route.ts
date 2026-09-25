@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth-guard";
 import { db } from "@/lib/db";
 import { ReportStatus } from "@prisma/client";
+import { tryGetPresignedUrl } from "@/lib/minio";
 
 export async function GET(request: Request) {
   try {
@@ -74,7 +75,7 @@ export async function GET(request: Request) {
     );
 
     // Calculate verification data for each report
-    const queueData = availableReports.map((report) => {
+    const queueData = await Promise.all(availableReports.map(async (report) => {
       const verificationCount = report.verifyCount || 0;
       const threshold = 3;
       const currentConfirmations = verificationCount;
@@ -100,7 +101,7 @@ export async function GET(request: Request) {
         status: report.status,
         priorityScore,
         address: report.address || "Unknown location",
-        imageUrl: report.photos[0]?.url || null,
+        imageUrl: report.photos[0]?.key ? await tryGetPresignedUrl(report.photos[0].key) : null,
         distance,
         currentConfirmations,
         threshold,
@@ -109,7 +110,7 @@ export async function GET(request: Request) {
         latitude: report.latitude,
         longitude: report.longitude,
       };
-    });
+    }));
 
     return NextResponse.json({
       success: true,

@@ -474,6 +474,7 @@ export default function CitizenDashboard() {
               onEdit={activeTab === "my-reports" ? handleEditReport : undefined}
               onDelete={activeTab === "my-reports" ? handleDeleteReport : undefined}
               isOwnReport={activeTab === "my-reports"}
+              detailsHref={activeTab === "my-reports" ? `/dashboard/citizen/report/${c.id}` : undefined}
             />
           ))}
         </div>
