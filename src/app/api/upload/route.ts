@@ -85,12 +85,26 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, key }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to upload image";
+    const message = error instanceof Error ? error.message : String(error);
     const errorCode = typeof error === "object" && error !== null && "code" in error
       ? String(error.code)
       : "UNKNOWN";
-    console.error("[UPLOAD ERROR]", { name: error instanceof Error ? error.name : "UnknownError", code: errorCode, message });
     const status = message.startsWith("Unauthorized") ? 401 : message.startsWith("Forbidden") ? 403 : 500;
-    return NextResponse.json({ success: false, error: status === 500 ? "Unable to upload image" : message }, { status });
+    console.error("[UPLOAD ERROR]", {
+      name: error instanceof Error ? error.name : "UnknownError",
+      code: errorCode,
+      message,
+      status,
+    });
+
+    const safeMessage = status === 401
+      ? "Please sign in to upload a photo."
+      : status === 403
+        ? "You do not have permission to upload this photo."
+        : "Failed to upload photo, please try again.";
+    return NextResponse.json(
+      { success: false, error: safeMessage },
+      { status, headers: { "Cache-Control": "no-store" } }
+    );
   }
 }
