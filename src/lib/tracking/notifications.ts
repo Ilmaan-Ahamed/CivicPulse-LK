@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 
 /**
@@ -43,8 +44,10 @@ export async function createNotification(
  */
 export async function getNotifications(userId: string, unreadOnly = false) {
   try {
-    const where: any = { userId };
-    if (unreadOnly) where.isRead = false;
+    const where: Prisma.NotificationWhereInput = {
+      userId,
+      isRead: unreadOnly ? false : undefined,
+    };
 
     const notifications = await db.notification.findMany({
       where,

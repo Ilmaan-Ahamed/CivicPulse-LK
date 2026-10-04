@@ -15,7 +15,7 @@ export function Footer() {
             <span className="text-lg font-black text-slate-900 dark:text-white">CivicPulse LK</span>
           </div>
           <p className="text-xs text-slate-500 dark:text-[#B0B0B0] leading-relaxed">
-            Sri Lanka's premier community-verified public infrastructure reporting and governance transparency platform.
+            Sri Lanka&apos;s premier community-verified public infrastructure reporting and governance transparency platform.
           </p>
           <div className="flex items-center gap-1.5 text-xs text-[#F97316] dark:text-[#FF8C00] font-mono">
             <MapPin className="w-3.5 h-3.5" />

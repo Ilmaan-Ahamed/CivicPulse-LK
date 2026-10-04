@@ -215,7 +215,7 @@ export default function LandingPage() {
             </h2>
             <h3 className="text-3xl page-title">National Infrastructure Analytics</h3>
             <p className="text-sm body-text max-w-2xl mx-auto">
-              Real-time visualization of reported infrastructure issues across Sri Lanka's Divisional Secretariats.
+              Real-time visualization of reported infrastructure issues across Sri Lanka&apos;s Divisional Secretariats.
             </p>
           </div>
 

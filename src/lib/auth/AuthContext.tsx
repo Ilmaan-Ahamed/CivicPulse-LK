@@ -20,6 +20,14 @@ interface RegisterData {
   dsDivisionId?: string;
 }
 
+interface RegisterResult {
+  success: boolean;
+  error?: string;
+  role?: UserRole;
+  needsVerification?: boolean;
+  email?: string;
+}
+
 type VerificationType = "email_code" | "totp" | "phone_code";
 
 interface LoginResult {
@@ -32,6 +40,41 @@ interface LoginResult {
   verificationType?: VerificationType;
 }
 
+interface ClerkFactor {
+  strategy: string;
+  emailAddressId?: string;
+  phoneNumberId?: string;
+}
+
+interface ClerkAuthResource {
+  status?: string;
+  createdSessionId?: string;
+  supportedFirstFactors?: unknown;
+  supportedSecondFactors?: unknown;
+}
+
+interface ClassicSignIn extends ClerkAuthResource {
+  prepareFirstFactor?: (params: { strategy: "email_code"; emailAddressId: string }) => Promise<unknown>;
+  prepareSecondFactor?: (params: { strategy: "phone_code"; phoneNumberId: string }) => Promise<unknown>;
+  attemptFirstFactor?: (params: { strategy: "email_code"; code: string }) => Promise<ClerkAuthResource>;
+  attemptSecondFactor?: (params: { strategy: "totp" | "phone_code"; code: string }) => Promise<ClerkAuthResource>;
+}
+
+interface ClassicSignUp {
+  prepareEmailAddressVerification?: (params: { strategy: "email_code" }) => Promise<unknown>;
+  attemptEmailAddressVerification?: (params: { code: string }) => Promise<ClerkAuthResource>;
+}
+
+interface ClassicClerkApi {
+  client?: {
+    signIn?: ClassicSignIn;
+    signUp?: ClassicSignUp;
+  };
+  setActive?: (params: { session: string }) => Promise<unknown>;
+}
+
+type FutureSignUpExtensions = ClassicSignUp;
+
 interface AuthContextType {
   currentUser: UserProfile;
   currentRole: UserRole;
@@ -40,7 +83,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (data: LoginData) => Promise<LoginResult>;
   verifySignIn: (code: string) => Promise<{ success: boolean; error?: string; role?: UserRole }>;
-  register: (data: RegisterData) => Promise<{ success: boolean; error?: string; role?: UserRole } | any>;
+  register: (data: RegisterData) => Promise<RegisterResult>;
   // Verify and resend helpers for the sign-up email verification flow
   verifySignUp: (code: string) => Promise<{ success: boolean; error?: string; role?: UserRole }>;
   resendSignUpVerification: () => Promise<{ success: boolean; error?: string }>;
@@ -52,6 +95,47 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const STORAGE_KEY = "civicpulse_auth";
 const ROLE_KEY = "civicpulse_role";
 const PENDING_SIGNUP_ROLE_KEY = "civicpulse_pending_signup_role";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (!isRecord(error)) return fallback;
+
+  const firstError = Array.isArray(error.errors) && isRecord(error.errors[0])
+    ? error.errors[0]
+    : undefined;
+  const message = firstError?.longMessage ?? firstError?.message ?? error.longMessage ?? error.message;
+  return typeof message === "string" ? message : fallback;
+}
+
+function getSupportedFactors(value: unknown): ClerkFactor[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((factor): factor is ClerkFactor =>
+    isRecord(factor) && typeof factor.strategy === "string"
+  );
+}
+
+function getClassicClerkApi(clerk: ReturnType<typeof useClerk>): ClassicClerkApi {
+  return clerk as unknown as ClassicClerkApi;
+}
+
+function isUserRole(value: unknown): value is UserRole {
+  return value === "CITIZEN" || value === "NGO_PARTNER" || value === "DS_OFFICER" || value === "ADMIN";
+}
+
+function isUserProfile(value: unknown): value is UserProfile {
+  return isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.email === "string" &&
+    isUserRole(value.role) &&
+    typeof value.trustScore === "number" &&
+    typeof value.dsDivisionCode === "string" &&
+    typeof value.dsDivisionName === "string" &&
+    typeof value.preferredLanguage === "string";
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -92,8 +176,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!res.ok) return null;
-      const data = await res.json();
-      if (data.success && data.user) return data.user as UserProfile;
+      const data: unknown = await res.json();
+      if (isRecord(data) && data.success === true && isUserProfile(data.user)) {
+        return data.user;
+      }
     } catch {
       // DB sync is non-critical; silently ignore
     }
@@ -117,8 +203,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             writeAuthValue(ROLE_KEY, dbUser.role);
           } else {
             // Robust fallback if DB sync is temporarily slow or failing
-            const clerkRole = user.unsafeMetadata?.role as UserRole | undefined;
-            const savedRole = readAuthValue(ROLE_KEY) as UserRole | null;
+            const metadataRole: unknown = user.unsafeMetadata?.role;
+            const clerkRole = isUserRole(metadataRole) ? metadataRole : undefined;
+            const savedRoleValue = readAuthValue(ROLE_KEY);
+            const savedRole = isUserRole(savedRoleValue) ? savedRoleValue : undefined;
             const activeRole: UserRole = clerkRole || savedRole || "CITIZEN";
             const fallbackUser: UserProfile = {
               id: user.id,
@@ -191,19 +279,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (createError) {
-          const msg =
-            (createError as any).longMessage ||
-            (createError as any).message ||
-            "Login failed. Please check your credentials.";
-          return { success: false, error: msg };
+          return {
+            success: false,
+            error: getErrorMessage(createError, "Login failed. Please check your credentials."),
+          };
         }
 
         if (signIn.status === "complete") {
           // finalize() sets the active session (replaces setActive in v7)
           const { error: finalizeError } = await signIn.finalize();
           if (finalizeError) {
-            const msg = (finalizeError as any).message || "Failed to establish session.";
-            return { success: false, error: msg };
+            return { success: false, error: getErrorMessage(finalizeError, "Failed to establish session.") };
           }
 
           const dbUser = await syncWithDb();
@@ -224,10 +310,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Device not yet trusted — Clerk emails a verification code.
           // prepareFirstFactor lives on the classic SignInResource (clerk.client.signIn),
           // NOT on the v7 Future SignInFutureResource returned by useSignIn().
-          const classicSignIn = (clerk as any).client?.signIn;
-          const factors = classicSignIn?.supportedFirstFactors ?? (signIn as any).supportedFirstFactors;
-          const emailFactor = (factors as any[])?.find((f: any) => f.strategy === "email_code");
-          if (emailFactor && classicSignIn?.prepareFirstFactor) {
+          const classicSignIn = getClassicClerkApi(clerk).client?.signIn;
+          const futureSignIn = signIn as unknown as ClerkAuthResource | null;
+          const factors = getSupportedFactors(classicSignIn?.supportedFirstFactors ?? futureSignIn?.supportedFirstFactors);
+          const emailFactor = factors.find((factor) => factor.strategy === "email_code");
+          if (emailFactor?.emailAddressId && classicSignIn?.prepareFirstFactor) {
             await classicSignIn.prepareFirstFactor({
               strategy: "email_code",
               emailAddressId: emailFactor.emailAddressId,
@@ -237,15 +324,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         } else if (signIn.status === "needs_second_factor") {
           // MFA is enabled — use the classic resource for prepare (future resource lacks it).
-          const classicSignIn = (clerk as any).client?.signIn;
-          const factors = classicSignIn?.supportedSecondFactors ?? (signIn as any).supportedSecondFactors;
-          const totpFactor   = (factors as any[])?.find((f: any) => f.strategy === "totp");
-          const phoneFactor  = (factors as any[])?.find((f: any) => f.strategy === "phone_code");
+          const classicSignIn = getClassicClerkApi(clerk).client?.signIn;
+          const futureSignIn = signIn as unknown as ClerkAuthResource | null;
+          const factors = getSupportedFactors(classicSignIn?.supportedSecondFactors ?? futureSignIn?.supportedSecondFactors);
+          const totpFactor = factors.find((factor) => factor.strategy === "totp");
+          const phoneFactor = factors.find((factor) => factor.strategy === "phone_code");
 
           if (totpFactor) {
             // TOTP: user opens their authenticator app — no prepare step needed
             return { success: false, needsVerification: true, verificationType: "totp" };
-          } else if (phoneFactor && classicSignIn?.prepareSecondFactor) {
+          } else if (phoneFactor?.phoneNumberId && classicSignIn?.prepareSecondFactor) {
             await classicSignIn.prepareSecondFactor({
               strategy: "phone_code",
               phoneNumberId: phoneFactor.phoneNumberId,
@@ -265,14 +353,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             error: `Sign-in requires additional steps (status: ${signIn.status}).`,
           };
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Login error:", error);
-        const errorMessage =
-          error?.errors?.[0]?.longMessage ||
-          error?.errors?.[0]?.message ||
-          error?.message ||
-          "Login failed. Please check your credentials.";
-        return { success: false, error: errorMessage };
+        return { success: false, error: getErrorMessage(error, "Login failed. Please check your credentials.") };
       }
     },
     [signIn, signInFetchStatus, syncWithDb, clerk]
@@ -290,7 +373,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verifySignIn = useCallback(
     async (code: string): Promise<{ success: boolean; error?: string; role?: UserRole }> => {
       // Classic SignInResource — has prepareFirstFactor / attemptFirstFactor etc.
-      const classicSignIn = (clerk as any).client?.signIn;
+      const classicSignIn = getClassicClerkApi(clerk).client?.signIn;
 
       if (!classicSignIn) {
         return { success: false, error: "No active sign-in session. Please start over." };
@@ -298,17 +381,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const currentStatus: string = classicSignIn.status ?? signIn?.status ?? "";
-        let updatedResource: any = null;
+        let updatedResource: ClerkAuthResource | null = null;
 
         if (currentStatus === "needs_client_trust" || currentStatus === "needs_first_factor") {
+          if (!classicSignIn.attemptFirstFactor) {
+            return { success: false, error: "Email verification is unavailable. Please sign in again." };
+          }
           updatedResource = await classicSignIn.attemptFirstFactor({
             strategy: "email_code",
             code,
           });
         } else if (currentStatus === "needs_second_factor") {
-          const isTotp = classicSignIn.supportedSecondFactors?.some(
-            (f: any) => f.strategy === "totp"
-          );
+          if (!classicSignIn.attemptSecondFactor) {
+            return { success: false, error: "Multi-factor verification is unavailable. Please sign in again." };
+          }
+          const isTotp = getSupportedFactors(classicSignIn.supportedSecondFactors)
+            .some((factor) => factor.strategy === "totp");
           const strategy = isTotp ? "totp" : "phone_code";
           updatedResource = await classicSignIn.attemptSecondFactor({ strategy, code });
         } else {
@@ -319,7 +407,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If we reach here without an exception, check the updated status.
         if (updatedResource?.status === "complete") {
           // Establish the Clerk session via setActive (classic API — works in v6 & v7)
-          await (clerk as any).setActive({ session: updatedResource.createdSessionId });
+          const setActive = getClassicClerkApi(clerk).setActive;
+          if (!updatedResource.createdSessionId || !setActive) {
+            return { success: false, error: "Unable to establish the verified session." };
+          }
+          await setActive({ session: updatedResource.createdSessionId });
 
           const dbUser = await syncWithDb();
           if (dbUser) {
@@ -340,21 +432,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           success: false,
           error: `Unexpected sign-in state after verification: ${updatedResource?.status ?? "unknown"}`,
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Verify sign-in error:", error);
-        const errorMessage =
-          error?.errors?.[0]?.longMessage ||
-          error?.errors?.[0]?.message ||
-          error?.message ||
-          "Verification failed. Please try again.";
-        return { success: false, error: errorMessage };
+        return { success: false, error: getErrorMessage(error, "Verification failed. Please try again.") };
       }
     },
     [clerk, signIn, syncWithDb]
   );
 
   const register = useCallback(
-    async (data: RegisterData): Promise<{ success: boolean; error?: string } | any> => {
+    async (data: RegisterData): Promise<RegisterResult> => {
       if (!signUp || signUpFetchStatus === "fetching") {
         return { success: false, error: "Authentication system is initializing. Please try again." };
       }
@@ -379,19 +466,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (createError) {
-          const msg =
-            (createError as any).longMessage ||
-            (createError as any).message ||
-            "Registration failed. Please try again.";
-          return { success: false, error: msg };
+          return {
+            success: false,
+            error: getErrorMessage(createError, "Registration failed. Please try again."),
+          };
         }
 
         // If signUp is complete immediately, finalize and create DB user
         if (signUp.status === "complete") {
           const { error: finalizeError } = await signUp.finalize();
           if (finalizeError) {
-            const msg = (finalizeError as any).message || "Failed to establish session.";
-            return { success: false, error: msg };
+            return { success: false, error: getErrorMessage(finalizeError, "Failed to establish session.") };
           }
 
           const dbUser = await syncWithDb(selectedRole);
@@ -419,26 +504,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             writeAuthValue("civicpulse_pending_signup_email", data.email);
 
             // Try to send verification email using the future signUp resource if available
-            if ((signUp as any).prepareEmailAddressVerification) {
+            const futureSignUp = signUp as unknown as FutureSignUpExtensions;
+            if (futureSignUp.prepareEmailAddressVerification) {
               try {
-                await (signUp as any).prepareEmailAddressVerification({ strategy: "email_code" });
-              } catch (e) {
+                await futureSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
+              } catch {
                 // ignore — we'll fallback to classic client below
               }
             }
 
             // Fallback: use classic client signUp resource if available
-            const classicSignUp = (clerk as any).client?.signUp;
+            const classicSignUp = getClassicClerkApi(clerk).client?.signUp;
             if (classicSignUp?.prepareEmailAddressVerification) {
               try {
                 await classicSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
-              } catch (e) {
+              } catch {
                 // ignore
               }
             }
-          } catch (e) {
+          } catch {
             // best-effort — do not fail the whole flow
-            console.warn("prepareEmailAddressVerification failed", e);
+            console.warn("prepareEmailAddressVerification failed");
           }
 
           // Return a signal to the UI to show a verification screen (don't treat as fatal error)
@@ -449,14 +535,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           success: false,
           error: `Sign-up requires additional steps (status: ${signUp.status}).`,
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Register error:", error);
-        const errorMessage =
-          error?.errors?.[0]?.longMessage ||
-          error?.errors?.[0]?.message ||
-          error?.message ||
-          "Registration failed. Please try again.";
-        return { success: false, error: errorMessage };
+        return { success: false, error: getErrorMessage(error, "Registration failed. Please try again.") };
       }
     },
     [signUp, signUpFetchStatus, syncWithDb, clerk]
@@ -465,22 +546,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Resend a sign-up verification email (tries future resource then classic client)
   const resendSignUpVerification = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      if (signUp && (signUp as any).prepareEmailAddressVerification) {
-        await (signUp as any).prepareEmailAddressVerification({ strategy: "email_code" });
+      const futureSignUp = signUp as unknown as FutureSignUpExtensions | null;
+      if (futureSignUp?.prepareEmailAddressVerification) {
+        await futureSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
         return { success: true };
       }
 
-      const classicSignUp = (clerk as any).client?.signUp;
+      const classicSignUp = getClassicClerkApi(clerk).client?.signUp;
       if (classicSignUp && classicSignUp.prepareEmailAddressVerification) {
         await classicSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
         return { success: true };
       }
 
       return { success: false, error: "Unable to send verification email. Please try again." };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Resend sign-up verification error:", error);
-      const errorMessage = error?.message || "Failed to resend verification email.";
-      return { success: false, error: errorMessage };
+      return { success: false, error: getErrorMessage(error, "Failed to resend verification email.") };
     }
   }, [signUp, clerk]);
 
@@ -488,13 +569,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verifySignUp = useCallback(async (code: string): Promise<{ success: boolean; error?: string; role?: UserRole }> => {
     // Try future resource first, then classic client
     try {
-      let updatedResource: any = null;
+      let updatedResource: ClerkAuthResource | null = null;
+      const futureSignUp = signUp as unknown as FutureSignUpExtensions | null;
 
-      if (signUp && (signUp as any).attemptEmailAddressVerification) {
-        updatedResource = await (signUp as any).attemptEmailAddressVerification({ code });
+      if (futureSignUp?.attemptEmailAddressVerification) {
+        updatedResource = await futureSignUp.attemptEmailAddressVerification({ code });
       } else {
-        const classicSignUp = (clerk as any).client?.signUp;
-        if (!classicSignUp) {
+        const classicSignUp = getClassicClerkApi(clerk).client?.signUp;
+        if (!classicSignUp?.attemptEmailAddressVerification) {
           return { success: false, error: "No active sign-up session. Please start over." };
         }
         updatedResource = await classicSignUp.attemptEmailAddressVerification({ code });
@@ -502,7 +584,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (updatedResource?.status === "complete") {
         // Establish the Clerk session — classic & future setActive compatible
-        await (clerk as any).setActive({ session: updatedResource.createdSessionId });
+        const setActive = getClassicClerkApi(clerk).setActive;
+        if (!updatedResource.createdSessionId || !setActive) {
+          return { success: false, error: "Unable to establish the verified session." };
+        }
+        await setActive({ session: updatedResource.createdSessionId });
 
         const pendingRole = readAuthValue(PENDING_SIGNUP_ROLE_KEY) as UserRole | null;
         const savedRole = (readAuthValue(ROLE_KEY) as UserRole | null) || undefined;
@@ -528,11 +614,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       return { success: false, error: `Unexpected sign-up state after verification: ${updatedResource?.status ?? "unknown"}` };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Verify sign-up error:", error);
-      const errorMessage =
-        error?.errors?.[0]?.longMessage || error?.errors?.[0]?.message || error?.message || "Verification failed. Please try again.";
-      return { success: false, error: errorMessage };
+      return { success: false, error: getErrorMessage(error, "Verification failed. Please try again.") };
     }
   }, [signUp, clerk, syncWithDb]);
 

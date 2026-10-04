@@ -3,11 +3,12 @@ import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import { requireRole } from "@/lib/auth-guard";
 
-async function getAssignmentById(req: Request, { params }: { params: { id: string } }) {
-  const { userId } = await requireRole(["DS_OFFICER", "NGO_PARTNER", "ADMIN"] as any);
+async function getAssignmentById(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { userId } = await requireRole(["DS_OFFICER", "NGO_PARTNER", "ADMIN"]);
+  const { id } = await params;
   
   const assignment = await db.assignment.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       report: {
         select: {

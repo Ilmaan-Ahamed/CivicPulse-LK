@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth-guard";
 import { db } from "@/lib/db";
 import { ReportStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { tryGetPresignedUrl } from "@/lib/minio";
 
 export async function GET(request: Request) {
   try {
-    const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+    const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"]);
 
     // Get user from clerkId
     const user = await db.user.findUnique({
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
 
     // Citizens see their own reports for verification tracking
     // Other roles see reports they can verify (excluding their own)
-    const where: any = {
+    const where: Prisma.ReportWhereInput = {
       status: {
         in: [ReportStatus.SUBMITTED, ReportStatus.UNDER_VERIFICATION],
       },

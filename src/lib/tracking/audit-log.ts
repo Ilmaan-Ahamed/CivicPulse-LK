@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { headers } from "next/headers";
 
@@ -14,7 +15,7 @@ export async function logAuditAction(
   targetType?: string,
   targetId?: string,
   actorId?: string,
-  metadata?: any
+  metadata?: Prisma.InputJsonValue
 ) {
   try {
     const headersList = await headers();
@@ -58,11 +59,12 @@ export async function getAuditLogs(filters?: {
   try {
     const { actorId, targetType, action, targetId, limit = 50 } = filters || {};
 
-    const where: any = {};
-    if (actorId) where.actorId = actorId;
-    if (targetType) where.targetType = targetType;
-    if (action) where.action = action;
-    if (targetId) where.targetId = targetId;
+    const where: Prisma.AuditLogWhereInput = {
+      actorId: actorId || undefined,
+      targetType: targetType || undefined,
+      action: action || undefined,
+      targetId: targetId || undefined,
+    };
 
     const logs = await db.auditLog.findMany({
       where,

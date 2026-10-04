@@ -3,11 +3,12 @@ import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import { requireRole } from "@/lib/auth-guard";
 
-async function getInspectionById(req: Request, { params }: { params: { id: string } }) {
-  const { userId } = await requireRole(["NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+async function getInspectionById(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { userId } = await requireRole(["NGO_PARTNER", "DS_OFFICER", "ADMIN"]);
+  const { id } = await params;
   
   const inspection = await db.fieldInspection.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       assignment: {
         include: {

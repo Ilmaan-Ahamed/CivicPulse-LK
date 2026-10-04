@@ -41,11 +41,11 @@ export default async function WelcomePage() {
         </p>
 
         <p className="text-sm text-slate-600 dark:text-[#B0B0B0] mb-8">
-          You're registered as a <span className="font-semibold text-[#F97316] dark:text-orange-400">{roleLabel}</span>.
+          You&apos;re registered as a <span className="font-semibold text-[#F97316] dark:text-orange-400">{roleLabel}</span>.
         </p>
 
         <div className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border border-[#E8D5B5]/80 dark:border-[#333333]/80 rounded-2xl shadow-xl p-6 mb-6 text-left">
-          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">What's next</p>
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">What&apos;s next</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Head to your dashboard to get started. You can always switch roles or update your
             profile later from account settings.

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
-type RouteHandler = (req: Request, ...args: any[]) => Promise<Response>;
+type RouteHandler<Args extends unknown[] = unknown[]> = (req: Request, ...args: Args) => Promise<Response>;
 
 /**
  * Wraps an API route handler so that ANY thrown error — Prisma errors,
  * bugs, missing env vars, whatever — is always caught and returned as
  * JSON, never as Next.js's default HTML error page.
  */
-export function withErrorHandler(handler: RouteHandler): RouteHandler {
+export function withErrorHandler<Args extends unknown[]>(handler: RouteHandler<Args>): RouteHandler<Args> {
   return async (req, ...args) => {
     try {
       return await handler(req, ...args);

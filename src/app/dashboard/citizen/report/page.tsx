@@ -46,12 +46,7 @@ export default function ReportIssuePage() {
   const [submittedCaseId, setSubmittedCaseId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!address.trim() || isSelectionPending) {
-      if (!address.trim()) {
-        setLocationSuggestions([]);
-      }
-      return;
-    }
+    if (!address.trim() || isSelectionPending) return;
 
     const timer = window.setTimeout(async () => {
       try {
@@ -514,6 +509,7 @@ export default function ReportIssuePage() {
                     onChange={(e) => {
                       const nextValue = e.target.value;
                       setAddress(nextValue);
+                      if (!nextValue.trim()) setLocationSuggestions([]);
                     }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-orange-500 mb-4"
                     placeholder="Search for a place, landmark, or district in Sri Lanka..."
@@ -632,7 +628,7 @@ export default function ReportIssuePage() {
               {step > 1 ? (
                 <button
                   type="button"
-                  onClick={() => setStep((step - 1) as any)}
+                  onClick={() => setStep(step === 4 ? 3 : step === 3 ? 2 : 1)}
                   className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
                 >
                   Previous
@@ -644,7 +640,7 @@ export default function ReportIssuePage() {
               {step < 4 ? (
                 <button
                   type="button"
-                  onClick={() => setStep((step + 1) as any)}
+                  onClick={() => setStep(step === 1 ? 2 : step === 2 ? 3 : 4)}
                   className="btn-glass-orange-solid px-6 py-2.5 text-xs flex items-center gap-1.5"
                 >
                   <span>Next Step</span>

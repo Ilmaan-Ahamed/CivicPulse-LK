@@ -13,15 +13,76 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSharedIssues } from "@/lib/report-sync";
 
+type CitizenReport = {
+  id: string;
+  referenceNo?: string;
+  caseNumber: string;
+  title: string;
+  description: string;
+  category: string;
+  status: string;
+  priorityScore?: number | null;
+  address?: string | null;
+  district?: string | null;
+  imageUrl?: string | null;
+  verificationCount?: number;
+  verificationThreshold?: number;
+  createdAt: string;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+type VerificationQueueItem = {
+  id: string;
+  caseNumber: string;
+  title: string;
+  description: string;
+  category: string;
+  status: string;
+  priorityScore: number;
+  address: string;
+  imageUrl?: string | null;
+  distance: string;
+  currentConfirmations: number;
+  threshold: number;
+  reporterTrust: number;
+  aiDuplicateNotice?: string | null;
+};
+
+type VerificationHistoryItem = {
+  id: string;
+  caseNumber: string;
+  title: string;
+  decision: string;
+  timestamp: string;
+};
+
+type InspectionTask = Pick<CitizenReport, "id" | "caseNumber" | "title" | "description" | "category" | "status"> & {
+  address?: string | null;
+  priorityScore?: number | null;
+  distance?: string;
+  dueDate?: string;
+};
+
+type NotificationItem = {
+  id: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  isRead: boolean;
+};
+
 export default function CitizenDashboard() {
   const { currentUser } = useAuth();
   const { t } = useLanguage();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState<"my-reports" | "nearby" | "verification" | "inspections" | "notifications">("my-reports");
+  const [activeTab, setActiveTab] = useState<"my-reports" | "nearby" | "verification" | "inspections" | "notifications">(() =>
+    tabParam === "verification" || tabParam === "inspections" ? tabParam : "my-reports"
+  );
   const sharedIssues = useSharedIssues();
-  const [dbReports, setDbReports] = useState<any[]>([]);
-  const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
+  const [dbReports, setDbReports] = useState<CitizenReport[]>([]);
+  const [transparencyReports, setTransparencyReports] = useState<CitizenReport[]>([]);
 
   // Deduplicate sharedIssues with useMemo to prevent infinite loop
   const uniqueSharedIssues = React.useMemo(
@@ -29,20 +90,19 @@ export default function CitizenDashboard() {
     [sharedIssues]
   );
 
-  const [verificationQueue, setVerificationQueue] = useState<any[]>([]);
-  const [verificationHistory, setVerificationHistory] = useState<any[]>([]);
-  const [inspectionTasks, setInspectionTasks] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [verificationQueue, setVerificationQueue] = useState<VerificationQueueItem[]>([]);
+  const [verificationHistory, setVerificationHistory] = useState<VerificationHistoryItem[]>([]);
+  const [inspectionTasks, setInspectionTasks] = useState<InspectionTask[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [selectedReportHistory, setSelectedReportHistory] = useState<any | null>(null);
 
   useEffect(() => {
     // Fetch reports from database (role-filtered)
     fetch("/api/reports/dashboard")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
-        setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+        const data = await response.json() as { data?: CitizenReport[] };
+        setDbReports(Array.from(new Map((data.data || []).map((report) => [report.id, report])).values()));
       })
       .catch(() => setDbReports([]));
 
@@ -50,8 +110,8 @@ export default function CitizenDashboard() {
     fetch("/api/transparency")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
-        setTransparencyReports(Array.from(new Map((data.cases || []).map((r: any) => [r.id, r])).values()));
+        const data = await response.json() as { cases?: CitizenReport[] };
+        setTransparencyReports(Array.from(new Map((data.cases || []).map((report) => [report.id, report])).values()));
       })
       .catch(() => setTransparencyReports([]));
 
@@ -59,7 +119,7 @@ export default function CitizenDashboard() {
     fetch("/api/verification-queue")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
+        const data = await response.json() as { data?: VerificationQueueItem[] };
         setVerificationQueue(data.data || []);
       })
       .catch(() => setVerificationQueue([]));
@@ -68,17 +128,17 @@ export default function CitizenDashboard() {
     fetch("/api/reports/dashboard?status=IN_PROGRESS")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
+        const data = await response.json() as { data?: CitizenReport[] };
         // Map reports to inspection task format
-        const tasks = (data.data || []).map((r: any) => ({
-          id: r.id,
-          caseNumber: r.caseNumber,
-          title: r.title,
-          description: r.description,
-          category: r.category,
-          address: r.address,
-          status: r.status,
-          priorityScore: r.priorityScore,
+        const tasks = (data.data || []).map((report) => ({
+          id: report.id,
+          caseNumber: report.caseNumber,
+          title: report.title,
+          description: report.description,
+          category: report.category,
+          address: report.address,
+          status: report.status,
+          priorityScore: report.priorityScore,
         }));
         setInspectionTasks(tasks);
       })
@@ -88,7 +148,7 @@ export default function CitizenDashboard() {
     fetch("/api/notifications")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
+        const data = await response.json() as { data?: NotificationItem[] };
         setNotifications(data.data || []);
       })
       .catch(() => setNotifications([]));
@@ -97,20 +157,15 @@ export default function CitizenDashboard() {
     fetch("/api/notifications/unread-count")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
+        const data = await response.json() as { count?: number };
         setUnreadCount(data.count || 0);
       })
       .catch(() => setUnreadCount(0));
 
-    if (tabParam === "verification") {
-      setActiveTab("verification");
-    } else if (tabParam === "inspections") {
-      setActiveTab("inspections");
-    }
   }, [tabParam]);
 
 
-  const [inspectingTask, setInspectingTask] = useState<any | null>(null);
+  const [inspectingTask, setInspectingTask] = useState<InspectionTask | null>(null);
   const [observedCondition, setObservedCondition] = useState("");
   const [notes, setNotes] = useState("");
   const [isInspectionSubmitted, setIsInspectionSubmitted] = useState(false);
@@ -172,7 +227,7 @@ export default function CitizenDashboard() {
       fetch("/api/verification-queue")
         .then(async (res) => {
           if (res.ok) {
-            const data = await res.json();
+            const data = await res.json() as { data?: VerificationQueueItem[] };
             setVerificationQueue(data.data || []);
           }
         })
@@ -263,8 +318,8 @@ export default function CitizenDashboard() {
       fetch("/api/reports/dashboard")
         .then(async (res) => {
           if (res.ok) {
-            const data = await res.json();
-            setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+            const data = await res.json() as { data?: CitizenReport[] };
+            setDbReports(Array.from(new Map((data.data || []).map((report) => [report.id, report])).values()));
           }
         })
         .catch(() => {});
@@ -297,8 +352,8 @@ export default function CitizenDashboard() {
       await fetch("/api/reports/dashboard")
         .then(async (res) => {
           if (res.ok) {
-            const data = await res.json();
-            setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+            const data = await res.json() as { data?: CitizenReport[] };
+            setDbReports(Array.from(new Map((data.data || []).map((report) => [report.id, report])).values()));
           }
         })
         .catch(() => {});
@@ -336,10 +391,10 @@ export default function CitizenDashboard() {
     description: report.description,
     category: report.category,
     status: report.status,
-    priorityScore: report.priorityScore,
-    address: report.address,
-    dsDivisionName: report.district,
-    imageUrl: report.imageUrl,
+    priorityScore: report.priorityScore ?? 50,
+    address: report.address || "Location not provided",
+    dsDivisionName: report.district || undefined,
+    imageUrl: report.imageUrl || undefined,
     verificationCount: report.verificationCount,
     verificationThreshold: report.verificationThreshold,
     createdAt: report.createdAt,
@@ -361,9 +416,9 @@ export default function CitizenDashboard() {
           title: report.title,
           category: report.category,
           status: report.status,
-          latitude: report.latitude || (report.category === "ROADS" ? 6.8905 : report.category === "DRAINAGE" ? 6.9344 : report.category === "WATER" ? 6.0268 : 7.2625),
-          longitude: report.longitude || (report.category === "ROADS" ? 79.855 : report.category === "DRAINAGE" ? 79.8519 : report.category === "WATER" ? 80.217 : 80.5972),
-          address: report.address,
+          latitude: ("latitude" in report ? report.latitude : undefined) || (report.category === "ROADS" ? 6.8905 : report.category === "DRAINAGE" ? 6.9344 : report.category === "WATER" ? 6.0268 : 7.2625),
+          longitude: ("longitude" in report ? report.longitude : undefined) || (report.category === "ROADS" ? 79.855 : report.category === "DRAINAGE" ? 79.8519 : report.category === "WATER" ? 80.217 : 80.5972),
+          address: report.address || "Location not provided",
         },
       ])
     ).values()
@@ -494,7 +549,7 @@ export default function CitizenDashboard() {
                   className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-center shadow-xl"
                 >
                   <div className="relative h-48 rounded-2xl overflow-hidden card-light dark:bg-slate-950">
-                    <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                    <img src={item.imageUrl || ""} alt={item.title} className="w-full h-full object-cover" />
                     <div className="absolute top-2 left-2">
                       <span className="px-2 py-0.5 rounded card-light dark:bg-slate-950/80 backdrop-blur-md text-[10px] font-mono card-heading dark:text-white font-bold">
                         {item.distance}
@@ -617,7 +672,7 @@ export default function CitizenDashboard() {
             <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-12 text-center space-y-3">
               <ShieldCheck className="w-10 h-10 text-slate-400 mx-auto" />
               <h3 className="text-base card-heading dark:text-white">No Notifications</h3>
-              <p className="text-xs body-text dark:text-slate-400">You're all caught up!</p>
+              <p className="text-xs body-text dark:text-slate-400">You&apos;re all caught up!</p>
             </div>
           ) : (
             <div className="space-y-3">

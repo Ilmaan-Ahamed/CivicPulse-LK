@@ -79,9 +79,18 @@ function calculateFallbackPriority(title: string, description: string): number {
 function generateAdvisoryFallback(title: string, description: string, category: string): AiTriageResult {
   const priorityScore = calculateFallbackPriority(title, description);
   const isHighUrgency = priorityScore >= 75;
+  const validCategories: AiTriageResult["category"][] = [
+    "ROADS",
+    "DRAINAGE",
+    "STREETLIGHTS",
+    "WATER",
+    "PUBLIC_BUILDINGS",
+    "SANITATION",
+    "OTHER",
+  ];
 
   return {
-    category: (category as any) || "ROADS",
+    category: validCategories.find((validCategory) => validCategory === category) || "ROADS",
     priorityScore,
     summary: `Advisory Triage: Reported "${title}" at ${category.toLowerCase()} infrastructure level. Priority assigned based on hazard proximity and public impact.`,
     isHighUrgency,

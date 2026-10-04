@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { InspectionResult, ReportStatus, AssignmentStatus } from "@prisma/client";
+import { InspectionResult, Prisma, ReportStatus, AssignmentStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import { requireRole } from "@/lib/auth-guard";
@@ -15,7 +15,7 @@ const createInspectionSchema = z.object({
 });
 
 async function createInspection(req: Request) {
-  const { userId } = await requireRole(["NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+  const { userId } = await requireRole(["NGO_PARTNER", "DS_OFFICER", "ADMIN"]);
   const body = await req.json();
   
   const parsed = createInspectionSchema.safeParse(body);
@@ -171,16 +171,24 @@ async function createInspection(req: Request) {
 }
 
 async function listInspections(req: Request) {
-  const { userId } = await requireRole(["NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+  const { userId } = await requireRole(["NGO_PARTNER", "DS_OFFICER", "ADMIN"]);
   const url = new URL(req.url);
   const assignmentId = url.searchParams.get("assignmentId");
   const inspectorId = url.searchParams.get("inspectorId");
-  const result = url.searchParams.get("result");
+  const resultParam = url.searchParams.get("result");
 
-  const where: any = {};
-  if (assignmentId) where.assignmentId = assignmentId;
-  if (inspectorId) where.inspectorId = inspectorId;
-  if (result) where.result = result;
+  const result = resultParam
+    ? Object.values(InspectionResult).find((inspectionResult) => inspectionResult === resultParam)
+    : undefined;
+  if (resultParam && !result) {
+    return NextResponse.json({ success: false, error: "Invalid inspection result" }, { status: 400 });
+  }
+
+  const where: Prisma.FieldInspectionWhereInput = {
+    assignmentId: assignmentId || undefined,
+    inspectorId: inspectorId || undefined,
+    result,
+  };
 
   const inspections = await db.fieldInspection.findMany({
     where,

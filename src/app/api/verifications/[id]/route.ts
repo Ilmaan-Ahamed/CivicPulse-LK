@@ -3,11 +3,12 @@ import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import { requireRole } from "@/lib/auth-guard";
 
-async function getVerificationById(req: Request, { params }: { params: { id: string } }) {
-  const { userId } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+async function getVerificationById(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { userId } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"]);
+  const { id } = await params;
   
   const verification = await db.verification.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       report: {
         select: {

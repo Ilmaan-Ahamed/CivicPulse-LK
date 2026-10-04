@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth-guard";
 
 async function getAuditLogs(req: Request) {
-  const { userId } = await requireRole(["ADMIN"] as any);
+  const { userId } = await requireRole(["ADMIN"]);
 
   const logs = await db.auditLog.findMany({
     include: {

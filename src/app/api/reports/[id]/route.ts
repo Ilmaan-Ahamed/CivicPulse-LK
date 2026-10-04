@@ -17,7 +17,7 @@ const updateReportSchema = z.object({
 });
 
 async function getReportById(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+  const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"]);
   const { id } = await params;
   
   const report = await db.report.findUnique({
@@ -132,7 +132,7 @@ async function getReportById(req: Request, { params }: { params: Promise<{ id: s
 }
 
 async function updateReport(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+  const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"]);
   const body = await req.json();
   const { id } = await params;
   
@@ -269,7 +269,7 @@ async function updateReport(req: Request, { params }: { params: Promise<{ id: st
 }
 
 async function deleteReport(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { userId, role } = await requireRole(["CITIZEN", "ADMIN"] as any);
+  const { userId, role } = await requireRole(["CITIZEN", "ADMIN"]);
   const { id } = await params;
   
   // Check if report exists
