@@ -5,9 +5,7 @@ import { normalizeDatabaseUrl } from "./database-url";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-const connectionString = normalizeDatabaseUrl(
-  process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/civicpulse"
-);
+const connectionString = normalizeDatabaseUrl(process.env.DATABASE_URL);
 
 const adapter = new PrismaPg({ connectionString });
 

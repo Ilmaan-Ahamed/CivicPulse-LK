@@ -16,21 +16,32 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Local report image storage
+## Report photo uploads and image storage
 
-Set `MINIO_ENDPOINT`, `MINIO_PORT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`,
-`MINIO_USE_SSL`, and `MINIO_BUCKET_NAME` from `.env.local.example`. For the
-local Compose MinIO service, the endpoint is `localhost:9000`; the console is
-at `http://localhost:9001` with the development credentials in
-`docker-compose.yml`. The application creates the private bucket on the first
-upload. If running the application inside Compose, its internal endpoint is
-`minio`, while `MINIO_PUBLIC_ENDPOINT` should be the host that browsers use to
-reach MinIO (usually `localhost`).
+New report photos are uploaded to Cloudinary through the authenticated
+`/api/upload` route. Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and
+`CLOUDINARY_API_SECRET` in `.env.local` for local development and in Vercel for
+each deployment environment that needs uploads. The API reports missing
+Cloudinary variable names in server logs; it does not expose storage credentials
+to the browser. In Vercel, enable these variables for Production, Preview, and
+Development as needed, then redeploy after changing them; existing deployments
+keep the environment values they were built with.
+
+`DATABASE_URL` is also required: upload authentication, user lookup, and rate
+limiting use the application database. The application no longer falls back to
+a localhost database URL when it is unset.
+
+MinIO configuration (`MINIO_ENDPOINT`, `MINIO_PORT`, `MINIO_ACCESS_KEY`,
+`MINIO_SECRET_KEY`, `MINIO_USE_SSL`, and `MINIO_BUCKET_NAME`) is separate from
+the current Cloudinary upload path. MinIO is used to generate URLs for report
+photos stored there. For the local Compose MinIO service, the endpoint is
+`localhost:9000`; the console is at `http://localhost:9001` with the development
+credentials in `docker-compose.yml`. If running the application inside Compose,
+its internal endpoint is `minio`, while `MINIO_PUBLIC_ENDPOINT` should be the
+host that browsers use to reach MinIO (usually `localhost`).
 
 Run `docker compose up -d postgres minio`, then `npx prisma db push` after
-confirming `DATABASE_URL` points to the intended development database. Report
-images are uploaded through the authenticated application API and read via
-short-lived presigned URLs.
+confirming `DATABASE_URL` points to the intended development database.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

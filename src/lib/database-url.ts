@@ -1,7 +1,7 @@
 export function normalizeDatabaseUrl(url: string | undefined): string {
   if (!url) {
     throw new Error(
-      "DATABASE_URL is not set. Add it to your .env file (Neon connection string)."
+      "DATABASE_URL is not set. Configure it in the environment before starting the application."
     );
   }
 
