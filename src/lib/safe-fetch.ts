@@ -3,7 +3,7 @@
  * If the server returns non-JSON (HTML error page, empty body, etc.),
  * this surfaces a readable error instead of crashing on res.json().
  */
-export async function safeFetchJson<T = any>(
+export async function safeFetchJson<T = unknown>(
   url: string,
   options?: RequestInit
 ): Promise<{ ok: boolean; data?: T; error?: string }> {
@@ -11,7 +11,7 @@ export async function safeFetchJson<T = any>(
 
   try {
     res = await fetch(url, options);
-  } catch (networkError) {
+  } catch {
     return { ok: false, error: "Network error. Please check your connection." };
   }
 
@@ -26,11 +26,15 @@ export async function safeFetchJson<T = any>(
     };
   }
 
-  const data = await res.json();
+  const data: unknown = await res.json();
 
   if (!res.ok) {
-    return { ok: false, error: data.error || `Request failed (${res.status})` };
+    const errorMessage =
+      typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
+        ? data.error
+        : `Request failed (${res.status})`;
+    return { ok: false, error: errorMessage };
   }
 
-  return { ok: true, data };
+  return { ok: true, data: data as T };
 }

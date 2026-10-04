@@ -263,7 +263,9 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
   const isControlled = viewport !== undefined && onViewportChange !== undefined;
 
   const onViewportChangeRef = useRef(onViewportChange);
-  onViewportChangeRef.current = onViewportChange;
+  useEffect(() => {
+    onViewportChangeRef.current = onViewportChange;
+  }, [onViewportChange]);
 
   const stableStyles = useStableValue(styles);
 
@@ -379,7 +381,6 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
   useEffect(() => {
     if (!mapInstance || !pendingStyle) return;
 
-    setPendingStyle(null);
     styleSwapInFlightRef.current = true;
     // Full reload (no diff) so `style.load` fires deterministically. A
     // successful diff would never fire it, leaving isStyleLoaded stuck false.
@@ -475,14 +476,16 @@ function MapMarker({
     onDrag,
     onDragEnd,
   });
-  callbacksRef.current = {
-    onClick,
-    onMouseEnter,
-    onMouseLeave,
-    onDragStart,
-    onDrag,
-    onDragEnd,
-  };
+  useEffect(() => {
+    callbacksRef.current = {
+      onClick,
+      onMouseEnter,
+      onMouseLeave,
+      onDragStart,
+      onDrag,
+      onDragEnd,
+    };
+  }, [onClick, onMouseEnter, onMouseLeave, onDragStart, onDrag, onDragEnd]);
 
   const marker = useMemo(() => {
     const markerInstance = new MapLibreGL.Marker({
@@ -490,37 +493,6 @@ function MapMarker({
       element: document.createElement("div"),
       draggable,
     }).setLngLat([longitude, latitude]);
-
-    const handleClick = (e: MouseEvent) => callbacksRef.current.onClick?.(e);
-    const handleMouseEnter = (e: MouseEvent) =>
-      callbacksRef.current.onMouseEnter?.(e);
-    const handleMouseLeave = (e: MouseEvent) =>
-      callbacksRef.current.onMouseLeave?.(e);
-
-    markerInstance.getElement()?.addEventListener("click", handleClick);
-    markerInstance
-      .getElement()
-      ?.addEventListener("mouseenter", handleMouseEnter);
-    markerInstance
-      .getElement()
-      ?.addEventListener("mouseleave", handleMouseLeave);
-
-    const handleDragStart = () => {
-      const lngLat = markerInstance.getLngLat();
-      callbacksRef.current.onDragStart?.({ lng: lngLat.lng, lat: lngLat.lat });
-    };
-    const handleDrag = () => {
-      const lngLat = markerInstance.getLngLat();
-      callbacksRef.current.onDrag?.({ lng: lngLat.lng, lat: lngLat.lat });
-    };
-    const handleDragEnd = () => {
-      const lngLat = markerInstance.getLngLat();
-      callbacksRef.current.onDragEnd?.({ lng: lngLat.lng, lat: lngLat.lat });
-    };
-
-    markerInstance.on("dragstart", handleDragStart);
-    markerInstance.on("drag", handleDrag);
-    markerInstance.on("dragend", handleDragEnd);
 
     return markerInstance;
 
@@ -530,9 +502,38 @@ function MapMarker({
   useEffect(() => {
     if (!map) return;
 
+    const element = marker.getElement();
+    const handleClick = (event: MouseEvent) => callbacksRef.current.onClick?.(event);
+    const handleMouseEnter = (event: MouseEvent) => callbacksRef.current.onMouseEnter?.(event);
+    const handleMouseLeave = (event: MouseEvent) => callbacksRef.current.onMouseLeave?.(event);
+    const handleDragStart = () => {
+      const lngLat = marker.getLngLat();
+      callbacksRef.current.onDragStart?.({ lng: lngLat.lng, lat: lngLat.lat });
+    };
+    const handleDrag = () => {
+      const lngLat = marker.getLngLat();
+      callbacksRef.current.onDrag?.({ lng: lngLat.lng, lat: lngLat.lat });
+    };
+    const handleDragEnd = () => {
+      const lngLat = marker.getLngLat();
+      callbacksRef.current.onDragEnd?.({ lng: lngLat.lng, lat: lngLat.lat });
+    };
+
+    element.addEventListener("click", handleClick);
+    element.addEventListener("mouseenter", handleMouseEnter);
+    element.addEventListener("mouseleave", handleMouseLeave);
+    marker.on("dragstart", handleDragStart);
+    marker.on("drag", handleDrag);
+    marker.on("dragend", handleDragEnd);
     marker.addTo(map);
 
     return () => {
+      element.removeEventListener("click", handleClick);
+      element.removeEventListener("mouseenter", handleMouseEnter);
+      element.removeEventListener("mouseleave", handleMouseLeave);
+      marker.off("dragstart", handleDragStart);
+      marker.off("drag", handleDrag);
+      marker.off("dragend", handleDragEnd);
       marker.remove();
     };
 
@@ -1037,7 +1038,9 @@ function MapPopup({
 }: MapPopupProps) {
   const { map } = useMap();
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
   const container = useMemo(() => document.createElement("div"), []);
   const { offset, maxWidth } = popupOptions;
 
@@ -1371,7 +1374,9 @@ function MapGeoJSON<
     [defaults.line, linePaint],
   );
   const latestRef = useRef({ onClick, onHover });
-  latestRef.current = { onClick, onHover };
+  useEffect(() => {
+    latestRef.current = { onClick, onHover };
+  }, [onClick, onHover]);
 
   // Add source on mount.
   useEffect(() => {
@@ -1722,7 +1727,9 @@ function MapArc<T extends MapArcDatum = MapArcDatum>({
   );
 
   const latestRef = useRef({ data, onClick, onHover });
-  latestRef.current = { data, onClick, onHover };
+  useEffect(() => {
+    latestRef.current = { data, onClick, onHover };
+  }, [data, onClick, onHover]);
 
   // Add source and layers on mount.
   useEffect(() => {

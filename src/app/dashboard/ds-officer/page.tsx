@@ -10,13 +10,65 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSharedIssues } from "@/lib/report-sync";
 import { ReportPhotoGallery } from "@/components/shared/ReportPhotoGallery";
+import type { DashboardResponse } from "@/types/dashboard";
+
+type ReportPhoto = { id: string; caption: string | null; url: string | null };
+
+type ReportView = {
+  id: string;
+  referenceNo?: string;
+  caseNumber: string;
+  title: string;
+  description: string;
+  category: string;
+  status: string;
+  priorityScore?: number | null;
+  aiConfidence?: number | null;
+  address?: string | null;
+  district?: string | null;
+  imageUrl?: string | null;
+  photos?: ReportPhoto[];
+  verificationCount?: number;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+type TriageCase = ReportView & {
+  priorityScore: number;
+  aiSummary: string;
+  age: string;
+  slaBreachRisk: boolean;
+  verificationCount: number;
+};
+
+type AssignmentView = {
+  id: string;
+  status: string;
+  acceptedAt?: string | null;
+  deadline?: string | null;
+  notes?: string | null;
+  report?: Pick<ReportView, "referenceNo" | "title" | "address">;
+  agency?: { name: string; type: string } | null;
+  inspections?: unknown[];
+};
 
 export default function DsOfficerConsole() {
   const { currentUser } = useAuth();
   const { t } = useLanguage();
   const sharedIssues = useSharedIssues();
-  const [dbReports, setDbReports] = useState<any[]>([]);
-  const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
+  const [dbReports, setDbReports] = useState<ReportView[]>([]);
+  const [transparencyReports, setTransparencyReports] = useState<ReportView[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentView[]>([]);
+  const [dismissedTriageCaseIds, setDismissedTriageCaseIds] = useState<Set<string>>(() => new Set());
+  const [assigningCase, setAssigningCase] = useState<TriageCase | null>(null);
+  const [selectedAgency, setSelectedAgency] = useState("RDA Western Province");
+  const [instructions, setInstructions] = useState("");
+  const [assignedCasesCount, setAssignedCasesCount] = useState(0);
+  const [filterStatus, setFilterStatus] = useState("ALL");
+  const [filterCategory, setFilterCategory] = useState("ALL");
+  const [selectedReport, setSelectedReport] = useState<ReportView | null>(null);
+  const [decisionNote, setDecisionNote] = useState("");
+  const [dashboardData, setDashboardData] = useState<DashboardResponse["data"] | null>(null);
 
   // Deduplicate sharedIssues with useMemo to prevent infinite loop
   const uniqueSharedIssues = React.useMemo(
@@ -28,8 +80,8 @@ export default function DsOfficerConsole() {
     fetch("/api/reports/dashboard")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
-        setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+        const data = await response.json() as { data?: ReportView[] };
+        setDbReports(Array.from(new Map((data.data || []).map((report) => [report.id, report])).values()));
       })
       .catch(() => setDbReports([]));
 
@@ -37,8 +89,8 @@ export default function DsOfficerConsole() {
     fetch("/api/transparency")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
-        setTransparencyReports(Array.from(new Map((data.cases || []).map((r: any) => [r.id, r])).values()));
+        const data = await response.json() as { cases?: ReportView[] };
+        setTransparencyReports(Array.from(new Map((data.cases || []).map((report) => [report.id, report])).values()));
       })
       .catch(() => setTransparencyReports([]));
 
@@ -46,7 +98,7 @@ export default function DsOfficerConsole() {
     fetch("/api/assignments")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
+        const data = await response.json() as { data?: AssignmentView[] };
         setAssignments(data.data || []);
       })
       .catch(() => setAssignments([]));
@@ -55,16 +107,13 @@ export default function DsOfficerConsole() {
     fetch("/api/dashboard")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
+        const data = await response.json() as DashboardResponse;
         setDashboardData(data.data || null);
       })
       .catch(() => setDashboardData(null));
   }, []);
 
-  const [triageCases, setTriageCases] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
-
-  React.useEffect(() => {
+  const triageCases = React.useMemo<TriageCase[]>(() => {
     const syncedQueue = uniqueSharedIssues
       .filter((issue) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(issue.status) && issue.status !== "WITHDRAWN")
       .map((issue) => ({
@@ -102,22 +151,10 @@ export default function DsOfficerConsole() {
         slaBreachRisk: (report.priorityScore || report.aiConfidence || 50) >= 80,
       }));
 
-    setTriageCases(
-      Array.from(
-        new Map([...syncedQueue, ...dbQueue].map((item) => [item.id, item])).values()
-      )
-    );
-  }, [uniqueSharedIssues, dbReports]);
-
-  const [assigningCase, setAssigningCase] = useState<any | null>(null);
-  const [selectedAgency, setSelectedAgency] = useState("RDA Western Province");
-  const [instructions, setInstructions] = useState("");
-  const [assignedCasesCount, setAssignedCasesCount] = useState(0);
-  const [filterStatus, setFilterStatus] = useState<string>("ALL");
-  const [filterCategory, setFilterCategory] = useState<string>("ALL");
-  const [selectedReport, setSelectedReport] = useState<any | null>(null);
-  const [decisionNote, setDecisionNote] = useState("");
-  const [dashboardData, setDashboardData] = useState<any>(null);
+    return Array.from(
+      new Map([...syncedQueue, ...dbQueue].map((item) => [item.id, item])).values()
+    ).filter((item) => !dismissedTriageCaseIds.has(item.id));
+  }, [uniqueSharedIssues, dbReports, dismissedTriageCaseIds]);
 
   // Calculate statistics from real data
   const stats = React.useMemo(() => {
@@ -154,7 +191,7 @@ export default function DsOfficerConsole() {
     e.preventDefault();
     if (!assigningCase) return;
 
-    setTriageCases(triageCases.filter((c) => c.id !== assigningCase.id));
+    setDismissedTriageCaseIds((ids) => new Set(ids).add(assigningCase.id));
     setAssignedCasesCount(assignedCasesCount + 1);
     setAssigningCase(null);
     setInstructions("");
@@ -337,7 +374,7 @@ export default function DsOfficerConsole() {
           <h4 className="text-sm font-bold card-heading dark:text-white">Top DS Divisions</h4>
           <div className="space-y-3">
             {dashboardData?.topDivisions && dashboardData.topDivisions.length > 0 ? (
-              dashboardData.topDivisions.slice(0, 5).map((item: any, index: number) => {
+              dashboardData.topDivisions.slice(0, 5).map((item, index) => {
                 const colors = ["icon-orange", "text-blue-400", "text-cyan-400", "text-amber-400", "text-purple-400"];
                 return (
                   <div key={item.name} className="flex items-center justify-between">
@@ -357,8 +394,8 @@ export default function DsOfficerConsole() {
           <h4 className="text-sm font-bold card-heading dark:text-white">Weekly Trend</h4>
           <div className="flex items-end justify-between h-24 gap-2">
             {dashboardData?.weeklyTrend ? (
-              dashboardData.weeklyTrend.map((item: any) => {
-                const maxCount = Math.max(...dashboardData.weeklyTrend.map((d: any) => d.count), 1);
+              dashboardData.weeklyTrend.map((item) => {
+                const maxCount = Math.max(...dashboardData.weeklyTrend.map((day) => day.count), 1);
                 const height = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
                 return (
                   <div key={item.day} className="flex flex-col items-center gap-1 flex-1">
@@ -399,7 +436,7 @@ export default function DsOfficerConsole() {
                   status: item.status,
                   latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
                   longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
-                  address: item.address,
+                  address: item.address || "Location not provided",
                 },
               ])
             ).values()

@@ -13,12 +13,11 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const roleClaim =
-    (sessionClaims as any)?.metadata?.role ??
-    (sessionClaims as any)?.role ??
-    (sessionClaims as any)?.publicMetadata?.role ??
-    (sessionClaims as any)?.userRole;
-  const role = normalizeRole(roleClaim);
+  const claims = sessionClaims as Record<string, unknown> | null | undefined;
+  const metadata = claims?.metadata as Record<string, unknown> | undefined;
+  const publicMetadata = claims?.publicMetadata as Record<string, unknown> | undefined;
+  const roleClaim = metadata?.role ?? claims?.role ?? publicMetadata?.role ?? claims?.userRole;
+  const role = normalizeRole(typeof roleClaim === "string" ? roleClaim : undefined);
 
   const matchedPrefix = Object.keys(ROUTE_ACCESS).find((prefix) =>
     path.startsWith(prefix)

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createIssue } from "@/lib/db/issue";
 import { db } from "@/lib/db";
-import { ReportStatus } from "@prisma/client";
+import { Prisma, ReportStatus } from "@prisma/client";
 
 const createReportSchema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -17,12 +17,15 @@ const createReportSchema = z.object({
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const status = url.searchParams.get("status");
+    const statusParam = url.searchParams.get("status");
 
-    const where: any = {};
-    if (status) {
-      where.status = status;
+    const status = statusParam
+      ? Object.values(ReportStatus).find((reportStatus) => reportStatus === statusParam)
+      : undefined;
+    if (statusParam && !status) {
+      return NextResponse.json({ success: false, error: "Invalid report status" }, { status: 400 });
     }
+    const where: Prisma.ReportWhereInput = { status };
 
     const reports = await db.report.findMany({
       where,

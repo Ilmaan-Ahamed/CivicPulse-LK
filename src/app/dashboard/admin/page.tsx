@@ -10,6 +10,37 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSharedIssues } from "@/lib/report-sync";
 import { ReportPhotoGallery } from "@/components/shared/ReportPhotoGallery";
+import type { UserRole } from "@/lib/auth/rbac";
+import type { DashboardResponse } from "@/types/dashboard";
+
+type AdminReport = {
+  id: string;
+  referenceNo?: string;
+  caseNumber?: string;
+  title: string;
+  description: string;
+  category: string;
+  status: string;
+  district?: string | null;
+  address?: string | null;
+  priorityScore?: number | null;
+  imageUrl?: string | null;
+  photos?: { id: string; caption: string | null; url: string | null }[];
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+type AdminUser = { id: string; name: string; email: string; role: UserRole; status: string; trustScore: number };
+type RoleRequest = { id: string; name: string; email: string; requestedRole: string; reason: string };
+type AuditEntry = {
+  id: string;
+  createdAt: string;
+  action: string;
+  targetType?: string | null;
+  targetId?: string | null;
+  ipAddress?: string | null;
+  user?: { firstName?: string | null; lastName?: string | null; email?: string; role?: UserRole } | null;
+};
 
 export default function AdminConsole() {
   const { currentUser } = useAuth();
@@ -17,14 +48,14 @@ export default function AdminConsole() {
   const sharedIssues = useSharedIssues();
   const [activeAdminTab, setActiveAdminTab] = useState<"users" | "role-requests" | "settings" | "audit" | "reports">("users");
   const [inspectingIssueId, setInspectingIssueId] = useState<string | null>(null);
-  const [dbReports, setDbReports] = useState<any[]>([]);
-  const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
+  const [dbReports, setDbReports] = useState<AdminReport[]>([]);
+  const [transparencyReports, setTransparencyReports] = useState<AdminReport[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
-  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [selectedReport, setSelectedReport] = useState<AdminReport | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [editingReport, setEditingReport] = useState<any | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardResponse["data"] | null>(null);
+  const [editingReport, setEditingReport] = useState<AdminReport | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editCategory, setEditCategory] = useState("");
@@ -42,9 +73,9 @@ export default function AdminConsole() {
           console.error("Failed to fetch reports:", response.status);
           throw new Error("Failed");
         }
-        const data = await response.json();
+        const data = await response.json() as { data?: AdminReport[] };
         console.log("Admin reports data:", data);
-        setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+        setDbReports(Array.from(new Map((data.data || []).map((report) => [report.id, report])).values()));
       })
       .catch((error) => {
         console.error("Error fetching reports:", error);
@@ -55,8 +86,8 @@ export default function AdminConsole() {
     fetch("/api/transparency")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
-        setTransparencyReports(Array.from(new Map((data.cases || []).map((r: any) => [r.id, r])).values()));
+        const data = await response.json() as { cases?: AdminReport[] };
+        setTransparencyReports(Array.from(new Map((data.cases || []).map((report) => [report.id, report])).values()));
       })
       .catch(() => setTransparencyReports([]));
 
@@ -64,15 +95,15 @@ export default function AdminConsole() {
     fetch("/api/dashboard")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
+        const data = await response.json() as DashboardResponse;
         setDashboardData(data.data || null);
       })
       .catch(() => setDashboardData(null));
   }, []);
 
-  const [users, setUsers] = useState<any[]>([]);
-  const [roleRequests, setRoleRequests] = useState<any[]>([]);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [roleRequests, setRoleRequests] = useState<RoleRequest[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([]);
   const [verificationThreshold, setVerificationThreshold] = useState("3");
   const [autoAiEnabled, setAutoAiEnabled] = useState(true);
 
@@ -110,7 +141,7 @@ export default function AdminConsole() {
     fetch("/api/users")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
+        const data = await response.json() as { data?: AdminUser[] };
         setUsers(data.data || []);
       })
       .catch(() => setUsers([]));
@@ -119,7 +150,7 @@ export default function AdminConsole() {
     fetch("/api/audit?limit=50")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
+        const data = await response.json() as { data?: AuditEntry[] };
         setAuditLogs(data.data || []);
       })
       .catch(() => setAuditLogs([]));
@@ -168,12 +199,12 @@ export default function AdminConsole() {
     }
   };
 
-  const handleEditReport = (report: any) => {
+  const handleEditReport = (report: AdminReport) => {
     setEditingReport(report);
     setEditTitle(report.title);
     setEditDescription(report.description);
     setEditCategory(report.category);
-    setEditAddress(report.address);
+    setEditAddress(report.address || "");
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -205,8 +236,8 @@ export default function AdminConsole() {
       fetch("/api/reports/dashboard")
         .then(async (res) => {
           if (res.ok) {
-            const data = await res.json();
-            setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+            const data = await res.json() as { data?: AdminReport[] };
+            setDbReports(Array.from(new Map((data.data || []).map((report) => [report.id, report])).values()));
           }
         })
         .catch(() => {});
@@ -245,8 +276,8 @@ export default function AdminConsole() {
       fetch("/api/reports/dashboard")
         .then(async (res) => {
           if (res.ok) {
-            const data = await res.json();
-            setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+            const data = await res.json() as { data?: AdminReport[] };
+            setDbReports(Array.from(new Map((data.data || []).map((report) => [report.id, report])).values()));
           }
         })
         .catch(() => {});
@@ -376,7 +407,7 @@ export default function AdminConsole() {
           <h4 className="text-sm font-bold card-heading dark:text-white">Top DS Divisions</h4>
           <div className="space-y-3">
             {dashboardData?.topDivisions && dashboardData.topDivisions.length > 0 ? (
-              dashboardData.topDivisions.slice(0, 5).map((item: any, index: number) => {
+              dashboardData.topDivisions.slice(0, 5).map((item, index) => {
                 const colors = ["icon-orange", "text-blue-400", "text-cyan-400", "text-amber-400", "text-purple-400"];
                 return (
                   <div key={item.name} className="flex items-center justify-between">
@@ -396,8 +427,8 @@ export default function AdminConsole() {
           <h4 className="text-sm font-bold card-heading dark:text-white">Weekly Trend</h4>
           <div className="flex items-end justify-between h-24 gap-2">
             {dashboardData?.weeklyTrend ? (
-              dashboardData.weeklyTrend.map((item: any) => {
-                const maxCount = Math.max(...dashboardData.weeklyTrend.map((d: any) => d.count), 1);
+              dashboardData.weeklyTrend.map((item) => {
+                const maxCount = Math.max(...dashboardData.weeklyTrend.map((day) => day.count), 1);
                 const height = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
                 return (
                   <div key={item.day} className="flex flex-col items-center gap-1 flex-1">
@@ -436,7 +467,7 @@ export default function AdminConsole() {
                   status: item.status,
                   latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
                   longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
-                  address: item.address,
+                  address: item.address || "Location not provided",
                 },
               ])
             ).values()
@@ -621,7 +652,7 @@ export default function AdminConsole() {
                     <div>
                       <h4 className="font-bold card-heading dark:text-white">{req.name} ({req.email})</h4>
                       <p className="body-text dark:text-slate-400 mt-0.5">Requested Role: <strong className="text-emerald-400">{req.requestedRole}</strong></p>
-                      <p className="text-slate-500 italic mt-1 font-mono">"{req.reason}"</p>
+                      <p className="text-slate-500 italic mt-1 font-mono">&quot;{req.reason}&quot;</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button

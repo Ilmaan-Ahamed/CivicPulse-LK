@@ -449,7 +449,7 @@ export default function LoginPage() {
                     <div className="text-center">
                       <p className="text-sm font-bold text-slate-900 dark:text-white">Verify Your Email</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-[260px]">
-                        We've sent a verification link to:
+                        We&apos;ve sent a verification link to:
                       </p>
                       <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 font-mono">{signupVerificationEmail}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
@@ -512,9 +512,9 @@ export default function LoginPage() {
                           setIsResendProcessing(false);
                           if (!res.success) setError(res.error || "Failed to resend verification email.");
                           else setSuccess("Verification email resent. Check your inbox.");
-                        } catch (e) {
+                        } catch (error) {
                           setIsResendProcessing(false);
-                          setError((e as any)?.message || "Failed to resend verification email.");
+                          setError(error instanceof Error ? error.message : "Failed to resend verification email.");
                         }
                       }}
                       disabled={isResendProcessing}

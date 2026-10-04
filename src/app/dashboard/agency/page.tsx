@@ -7,6 +7,8 @@ import { PriorityIndicator } from "@/components/ui/PriorityIndicator";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
+type RepairCase = { id: string; caseNumber: string; title: string };
+
 export default function AgencyWorkstation() {
   const { currentUser } = useAuth();
   const { t } = useLanguage();
@@ -37,7 +39,7 @@ export default function AgencyWorkstation() {
     },
   ]);
 
-  const [repairModalCase, setRepairModalCase] = useState<any | null>(null);
+  const [repairModalCase, setRepairModalCase] = useState<RepairCase | null>(null);
   const [repairNotes, setRepairNotes] = useState("");
   const [afterPhotoUrl, setAfterPhotoUrl] = useState(
     "https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=800&q=80"

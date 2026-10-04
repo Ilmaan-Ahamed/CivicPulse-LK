@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AssignmentStatus, ReportStatus } from "@prisma/client";
+import { AssignmentStatus, Prisma, ReportStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import { requireRole } from "@/lib/auth-guard";
@@ -18,7 +18,7 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
 };
 
 async function createAssignment(req: Request) {
-  const { userId, role } = await requireRole(["DS_OFFICER"] as any);
+  const { userId, role } = await requireRole(["DS_OFFICER"]);
   const body = await req.json();
   const { reportId, agencyId, notes } = body;
 
@@ -87,7 +87,7 @@ async function createAssignment(req: Request) {
         reportId,
         agencyId,
         assignedById: user.id,
-        status: "PENDING" as any,
+        status: AssignmentStatus.PENDING,
         notes,
       },
     });
@@ -144,16 +144,24 @@ async function createAssignment(req: Request) {
 }
 
 async function listAssignments(req: Request) {
-  const { userId } = await requireRole(["DS_OFFICER", "NGO_PARTNER", "ADMIN"] as any);
+  const { userId } = await requireRole(["DS_OFFICER", "NGO_PARTNER", "ADMIN"]);
   const url = new URL(req.url);
-  const status = url.searchParams.get("status");
+  const statusParam = url.searchParams.get("status");
   const agencyId = url.searchParams.get("agencyId");
   const reportId = url.searchParams.get("reportId");
 
-  const where: any = {};
-  if (status) where.status = status;
-  if (agencyId) where.agencyId = agencyId;
-  if (reportId) where.reportId = reportId;
+  const status = statusParam
+    ? Object.values(AssignmentStatus).find((assignmentStatus) => assignmentStatus === statusParam)
+    : undefined;
+  if (statusParam && !status) {
+    return NextResponse.json({ success: false, error: "Invalid assignment status" }, { status: 400 });
+  }
+
+  const where: Prisma.AssignmentWhereInput = {
+    status,
+    agencyId: agencyId || undefined,
+    reportId: reportId || undefined,
+  };
 
   const assignments = await db.assignment.findMany({
     where,
@@ -215,7 +223,7 @@ async function listAssignments(req: Request) {
 }
 
 async function updateAssignment(req: Request) {
-  const { userId } = await requireRole(["DS_OFFICER", "NGO_PARTNER"] as any);
+  const { userId } = await requireRole(["DS_OFFICER", "NGO_PARTNER"]);
   const body = await req.json();
   const { id, status } = body;
 
@@ -239,9 +247,14 @@ async function updateAssignment(req: Request) {
     );
   }
 
+  const requestedStatus = Object.values(AssignmentStatus).find((assignmentStatus) => assignmentStatus === status);
+  if (!requestedStatus) {
+    return NextResponse.json({ success: false, error: "Invalid assignment status" }, { status: 400 });
+  }
+
   // Validate status transition
-  const allowedTransitions = STATUS_TRANSITIONS[assignment.status as string] || [];
-  if (!allowedTransitions.includes(status as string)) {
+  const allowedTransitions = STATUS_TRANSITIONS[assignment.status] || [];
+  if (!allowedTransitions.includes(requestedStatus)) {
     return NextResponse.json(
       {
         success: false,
@@ -256,10 +269,10 @@ async function updateAssignment(req: Request) {
     const updatedAssignment = await tx.assignment.update({
       where: { id },
       data: {
-        status: status as any,
+        status: requestedStatus,
         updatedAt: new Date(),
-        ...(status === "ACCEPTED" && { acceptedAt: new Date() }),
-        ...(status === "COMPLETED" && { completedAt: new Date() }),
+        ...(requestedStatus === AssignmentStatus.ACCEPTED && { acceptedAt: new Date() }),
+        ...(requestedStatus === AssignmentStatus.COMPLETED && { completedAt: new Date() }),
       },
     });
 
@@ -271,7 +284,7 @@ async function updateAssignment(req: Request) {
         entityId: id,
         metadata: {
           previousStatus: assignment.status,
-          newStatus: status,
+          newStatus: requestedStatus,
         },
         ipAddress: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || undefined,
       },
@@ -281,7 +294,7 @@ async function updateAssignment(req: Request) {
   });
 
   // Update report status based on assignment status
-  if (status === "IN_PROGRESS" && assignment.report.status === "ASSIGNED") {
+  if (requestedStatus === AssignmentStatus.IN_PROGRESS && assignment.report.status === "ASSIGNED") {
     await db.report.update({
       where: { id: assignment.reportId },
       data: { status: ReportStatus.IN_PROGRESS },
@@ -289,7 +302,7 @@ async function updateAssignment(req: Request) {
     await logStatusChange(assignment.reportId, ReportStatus.IN_PROGRESS, userId, "Assignment in progress");
   }
 
-  if (status === "COMPLETED") {
+  if (requestedStatus === AssignmentStatus.COMPLETED) {
     await db.report.update({
       where: { id: assignment.reportId },
       data: { status: ReportStatus.FIELD_VERIFIED },
@@ -302,7 +315,7 @@ async function updateAssignment(req: Request) {
     await createNotification(
       assignment.assignedById,
       "Assignment Status Updated",
-      `Assignment status changed to ${status}`,
+      `Assignment status changed to ${requestedStatus}`,
       "ASSIGNMENT_UPDATE",
       id
     );

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
@@ -12,7 +13,7 @@ const createPledgeSchema = z.object({
 });
 
 async function createPledge(req: Request) {
-  const { userId, role } = await requireRole(["NGO_PARTNER", "ADMIN"] as any);
+  const { userId, role } = await requireRole(["NGO_PARTNER", "ADMIN"]);
   const body = await req.json();
   
   const parsed = createPledgeSchema.safeParse(body);
@@ -83,15 +84,12 @@ async function createPledge(req: Request) {
 }
 
 async function getPledges(req: Request) {
-  const { userId, role } = await requireRole(["NGO_PARTNER", "ADMIN", "DS_OFFICER"] as any);
+  const { userId, role } = await requireRole(["NGO_PARTNER", "ADMIN", "DS_OFFICER"]);
   
   const url = new URL(req.url);
   const reportId = url.searchParams.get("reportId");
 
-  const where: any = {};
-  if (reportId) {
-    where.reportId = reportId;
-  }
+  const where: Prisma.PledgeWhereInput = { reportId: reportId || undefined };
 
   // NGO partners see only their pledges
   if (role === "NGO_PARTNER") {

@@ -1,20 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AgencyType, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import { requireRole } from "@/lib/auth-guard";
-import { Role } from "@/lib/roles";
 
 async function listAgencies(req: Request) {
-  const { userId } = await requireRole(["DS_OFFICER", "ADMIN", "NGO_PARTNER"] as any);
+  const { userId } = await requireRole(["DS_OFFICER", "ADMIN", "NGO_PARTNER"]);
   const url = new URL(req.url);
-  const type = url.searchParams.get("type");
+  const typeParam = url.searchParams.get("type");
   const district = url.searchParams.get("district");
+  const type = typeParam
+    ? Object.values(AgencyType).find((agencyType) => agencyType === typeParam)
+    : undefined;
+  if (typeParam && !type) {
+    return NextResponse.json({ success: false, error: "Invalid agency type" }, { status: 400 });
+  }
 
-  const where: any = {
+  const where: Prisma.AgencyWhereInput = {
     isActive: true, // Only show active agencies (exclude soft-deleted)
+    type,
+    district: district || undefined,
   };
-  if (type) where.type = type;
-  if (district) where.district = district;
 
   const agencies = await db.agency.findMany({
     where,
@@ -28,7 +34,7 @@ async function listAgencies(req: Request) {
 }
 
 async function createAgency(req: Request) {
-  const { userId } = await requireRole(["DS_OFFICER", "ADMIN"] as any);
+  const { userId } = await requireRole(["DS_OFFICER", "ADMIN"]);
   const body = await req.json();
   const { name, type, contactName, contactPhone, contactEmail, district } = body;
 
@@ -92,7 +98,7 @@ async function createAgency(req: Request) {
 }
 
 async function updateAgency(req: Request) {
-  const { userId } = await requireRole(["DS_OFFICER", "ADMIN"] as any);
+  const { userId } = await requireRole(["DS_OFFICER", "ADMIN"]);
   const body = await req.json();
   const { id, name, type, contactName, contactPhone, contactEmail, district, active } = body;
 
@@ -197,7 +203,7 @@ async function updateAgency(req: Request) {
 }
 
 async function deleteAgency(req: Request) {
-  const { userId } = await requireRole(["DS_OFFICER", "ADMIN"] as any);
+  const { userId } = await requireRole(["DS_OFFICER", "ADMIN"]);
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
 

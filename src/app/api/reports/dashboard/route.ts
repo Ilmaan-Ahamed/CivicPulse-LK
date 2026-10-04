@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
+import { Prisma, ReportStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth-guard";
 import { tryGetPresignedUrl } from "@/lib/minio";
 
 async function getDashboardReports(req: Request) {
-  const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+  const { userId, role } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"]);
   const url = new URL(req.url);
-  const status = url.searchParams.get("status");
+  const statusParam = url.searchParams.get("status");
 
-  const where: any = {};
-  if (status) {
-    where.status = status;
+  const status = statusParam
+    ? Object.values(ReportStatus).find((reportStatus) => reportStatus === statusParam)
+    : undefined;
+  if (statusParam && !status) {
+    return NextResponse.json({ success: false, error: "Invalid report status" }, { status: 400 });
   }
+  const where: Prisma.ReportWhereInput = { status };
 
   // Role-based filtering
   if (role === "CITIZEN") {

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth-guard";
 
 async function getUsers(req: Request) {
-  const { userId } = await requireRole(["ADMIN"] as any);
+  const { userId } = await requireRole(["ADMIN"]);
 
   const users = await db.user.findMany({
     select: {

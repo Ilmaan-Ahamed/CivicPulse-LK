@@ -1,3 +1,4 @@
+import { Category } from "@prisma/client";
 import { db } from "@/lib/db";
 
 /**
@@ -54,12 +55,15 @@ async function findDuplicatesFallback(
   radiusMeters: number = 100
 ) {
   try {
+    const validCategory = category
+      ? Object.values(Category).find((candidate) => candidate === category)
+      : undefined;
     const reports = await db.report.findMany({
       where: {
         status: {
           notIn: ["RESOLVED", "CLOSED", "REJECTED"],
         },
-        ...(category && { category: category as any }),
+        ...(validCategory && { category: validCategory }),
       },
       select: {
         id: true,

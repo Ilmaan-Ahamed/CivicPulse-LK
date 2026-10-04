@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { VerificationStatus, ReportStatus } from "@prisma/client";
+import { Prisma, VerificationStatus, ReportStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import { requireRole } from "@/lib/auth-guard";
@@ -16,7 +16,7 @@ const createVerificationSchema = z.object({
 });
 
 async function createVerification(req: Request) {
-  const { userId } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+  const { userId } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"]);
   const body = await req.json();
   
   const parsed = createVerificationSchema.safeParse(body);
@@ -170,16 +170,24 @@ async function createVerification(req: Request) {
 }
 
 async function listVerifications(req: Request) {
-  const { userId } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"] as any);
+  const { userId } = await requireRole(["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"]);
   const url = new URL(req.url);
   const reportId = url.searchParams.get("reportId");
   const verifierId = url.searchParams.get("verifierId");
-  const status = url.searchParams.get("status");
+  const statusParam = url.searchParams.get("status");
 
-  const where: any = {};
-  if (reportId) where.reportId = reportId;
-  if (verifierId) where.verifierId = verifierId;
-  if (status) where.status = status;
+  const status = statusParam
+    ? Object.values(VerificationStatus).find((verificationStatus) => verificationStatus === statusParam)
+    : undefined;
+  if (statusParam && !status) {
+    return NextResponse.json({ success: false, error: "Invalid verification status" }, { status: 400 });
+  }
+
+  const where: Prisma.VerificationWhereInput = {
+    reportId: reportId || undefined,
+    verifierId: verifierId || undefined,
+    status,
+  };
 
   const verifications = await db.verification.findMany({
     where,

@@ -34,31 +34,36 @@ export default function DSConsolePage() {
   const [selectedAgency, setSelectedAgency] = useState("");
   const [notes, setNotes] = useState("");
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
-    try {
-      const [verifiedRes, assignedRes, agenciesRes] = await Promise.all([
-        fetch("/api/reports?status=VERIFIED"),
-        fetch("/api/reports?status=ASSIGNED"),
-        fetch("/api/agencies"),
-      ]);
+    const [verifiedRes, assignedRes, agenciesRes] = await Promise.all([
+      fetch("/api/reports?status=VERIFIED"),
+      fetch("/api/reports?status=ASSIGNED"),
+      fetch("/api/agencies"),
+    ]);
 
-      const verifiedData = await verifiedRes.json();
-      const assignedData = await assignedRes.json();
-      const agenciesData = await agenciesRes.json();
+    const [verifiedData, assignedData, agenciesData] = await Promise.all([
+      verifiedRes.json(),
+      assignedRes.json(),
+      agenciesRes.json(),
+    ]);
 
-      setVerifiedReports(verifiedData.data || []);
-      setAssignedReports(assignedData.data || []);
-      setAgencies(agenciesData.data || []);
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-    } finally {
-      setLoading(false);
-    }
+    return {
+      verifiedReports: verifiedData.data || [],
+      assignedReports: assignedData.data || [],
+      agencies: agenciesData.data || [],
+    };
   };
+
+  useEffect(() => {
+    fetchData()
+      .then((data) => {
+        setVerifiedReports(data.verifiedReports);
+        setAssignedReports(data.assignedReports);
+        setAgencies(data.agencies);
+      })
+      .catch((error: unknown) => console.error("Failed to fetch data:", error))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleAssign = async () => {
     if (!assigningReport || !selectedAgency) return;
@@ -81,7 +86,11 @@ export default function DSConsolePage() {
         setAssigningReport(null);
         setSelectedAgency("");
         setNotes("");
-        fetchData(); // Refresh data
+        fetchData().then((data) => {
+          setVerifiedReports(data.verifiedReports);
+          setAssignedReports(data.assignedReports);
+          setAgencies(data.agencies);
+        });
       } else {
         alert(data.error || "Failed to assign report");
       }

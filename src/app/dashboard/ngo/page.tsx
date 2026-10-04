@@ -1,34 +1,80 @@
 "use client";
 
 import React, { useState } from "react";
-import { Building, HeartHandshake, CheckCircle2, DollarSign, Users, Package, Sparkles } from "lucide-react";
+import { Building, HeartHandshake, CheckCircle2 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PriorityIndicator } from "@/components/ui/PriorityIndicator";
 import { InteractiveMap } from "@/components/map/InteractiveMap";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
-import { useSharedIssues } from "@/lib/report-sync";
 import { ReportPhotoGallery } from "@/components/shared/ReportPhotoGallery";
+
+type ReportPhoto = {
+  id: string;
+  caption: string | null;
+  url: string | null;
+};
+
+type ReportView = {
+  id: string;
+  referenceNo?: string;
+  caseNumber?: string;
+  title: string;
+  description: string;
+  category: string;
+  status: string;
+  priorityScore?: number | null;
+  address?: string | null;
+  imageUrl?: string | null;
+  photos?: ReportPhoto[];
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+type Opportunity = ReportView & {
+  supportNeeded: string;
+};
+
+type AssignmentView = {
+  id: string;
+  status: string;
+  acceptedAt?: string | null;
+  deadline?: string | null;
+  notes?: string | null;
+  report?: Pick<ReportView, "referenceNo" | "title" | "address">;
+  inspections?: unknown[];
+};
+
+type CommitmentView = {
+  id: string;
+  pledgeType: string;
+  description: string;
+  status: string;
+  report?: Pick<ReportView, "referenceNo">;
+};
 
 export default function NgoDashboard() {
   const { currentUser } = useAuth();
   const { t } = useLanguage();
-  const sharedIssues = useSharedIssues();
-  const [dbReports, setDbReports] = useState<any[]>([]);
-  const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
-
-  // Deduplicate sharedIssues with useMemo to prevent infinite loop
-  const uniqueSharedIssues = React.useMemo(
-    () => Array.from(new Map(sharedIssues.map((issue) => [issue.id, issue])).values()),
-    [sharedIssues]
-  );
+  const [dbReports, setDbReports] = useState<ReportView[]>([]);
+  const [transparencyReports, setTransparencyReports] = useState<ReportView[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentView[]>([]);
+  const [commitments, setCommitments] = useState<CommitmentView[]>([]);
+  const [filterStatus, setFilterStatus] = useState("ALL");
+  const [filterCategory, setFilterCategory] = useState("ALL");
+  const [selectedReport, setSelectedReport] = useState<ReportView | null>(null);
+  const [decisionNote, setDecisionNote] = useState("");
+  const [pledgingCase, setPledgingCase] = useState<Opportunity | null>(null);
+  const [pledgeType, setPledgeType] = useState("VOLUNTEERS");
+  const [pledgeDesc, setPledgeDesc] = useState("");
+  const [amountLkr, setAmountLkr] = useState("50000");
 
   React.useEffect(() => {
     fetch("/api/reports/dashboard")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
-        setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+        const data = await response.json() as { data?: ReportView[] };
+        setDbReports(Array.from(new Map((data.data || []).map((report) => [report.id, report])).values()));
       })
       .catch(() => setDbReports([]));
 
@@ -36,8 +82,8 @@ export default function NgoDashboard() {
     fetch("/api/transparency")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
-        setTransparencyReports(Array.from(new Map((data.cases || []).map((r: any) => [r.id, r])).values()));
+        const data = await response.json() as { cases?: ReportView[] };
+        setTransparencyReports(Array.from(new Map((data.cases || []).map((report) => [report.id, report])).values()));
       })
       .catch(() => setTransparencyReports([]));
 
@@ -45,7 +91,7 @@ export default function NgoDashboard() {
     fetch("/api/assignments")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
+        const data = await response.json() as { data?: AssignmentView[] };
         setAssignments(data.data || []);
       })
       .catch(() => setAssignments([]));
@@ -54,17 +100,14 @@ export default function NgoDashboard() {
     fetch("/api/pledges")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = await response.json();
+        const data = await response.json() as { data?: CommitmentView[] };
         setCommitments(data.data || []);
       })
       .catch(() => setCommitments([]));
   }, []);
 
-  const [opportunities, setOpportunities] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
-
-  React.useEffect(() => {
-    const dbOpportunities = dbReports
+  const opportunities = React.useMemo<Opportunity[]>(
+    () => dbReports
       .filter((report) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(report.status))
       .map((report) => ({
         id: report.id,
@@ -72,27 +115,15 @@ export default function NgoDashboard() {
         title: report.title,
         description: report.description,
         category: report.category,
+        status: report.status,
         priorityScore: report.priorityScore,
         address: report.address,
         imageUrl: report.imageUrl,
         photos: report.photos,
         supportNeeded: "Volunteer mobilization and on-ground support required",
-      }));
-
-    // Only show database reports for pledging (shared issues may not exist in DB)
-    setOpportunities(dbOpportunities);
-  }, [dbReports]);
-
-  const [commitments, setCommitments] = useState<any[]>([]);
-  const [filterStatus, setFilterStatus] = useState<string>("ALL");
-  const [filterCategory, setFilterCategory] = useState<string>("ALL");
-  const [selectedReport, setSelectedReport] = useState<any | null>(null);
-  const [decisionNote, setDecisionNote] = useState("");
-
-  const [pledgingCase, setPledgingCase] = useState<any | null>(null);
-  const [pledgeType, setPledgeType] = useState("VOLUNTEERS");
-  const [pledgeDesc, setPledgeDesc] = useState("");
-  const [amountLkr, setAmountLkr] = useState("50000");
+      })),
+    [dbReports]
+  );
 
   const handlePledgeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,7 +253,7 @@ export default function NgoDashboard() {
                   status: item.status || "SUBMITTED",
                   latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
                   longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
-                  address: item.address,
+                  address: item.address || "Location not provided",
                 },
               ])
             ).values()
@@ -242,7 +273,7 @@ export default function NgoDashboard() {
               <ReportPhotoGallery title={opp.title} photos={opp.photos} imageUrl={opp.imageUrl} maxItems={1} />
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs font-bold text-teal-400">{opp.caseNumber}</span>
-                <PriorityIndicator score={opp.priorityScore} />
+                <PriorityIndicator score={opp.priorityScore ?? 50} />
               </div>
 
               <div>
@@ -441,7 +472,7 @@ export default function NgoDashboard() {
                         })
                           .then(() => {
                             setAssignments(assignments.map(a =>
-                              a.id === assignment.id ? { ...a, status: "ACCEPTED", acceptedAt: new Date() } : a
+                              a.id === assignment.id ? { ...a, status: "ACCEPTED", acceptedAt: new Date().toISOString() } : a
                             ));
                           });
                       }}

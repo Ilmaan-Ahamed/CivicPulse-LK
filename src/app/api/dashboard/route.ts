@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Category, ReportStatus } from "@prisma/client";
+import { Category, Prisma, ReportStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import type {
@@ -23,15 +23,15 @@ async function getDashboardData(req: Request): Promise<NextResponse<DashboardRes
   const dateFrom = searchParams.get("dateFrom");
   const dateTo = searchParams.get("dateTo");
 
-  const where: any = {};
-  if (district) where.district = district;
-  if (category) where.category = category;
-  if (status) where.status = status;
-  if (dateFrom || dateTo) {
-    where.createdAt = {};
-    if (dateFrom) where.createdAt.gte = new Date(dateFrom);
-    if (dateTo) where.createdAt.lte = new Date(dateTo);
-  }
+  const where: Prisma.ReportWhereInput = {
+    district: district || undefined,
+    category: category || undefined,
+    status: status || undefined,
+    createdAt: dateFrom || dateTo ? {
+      gte: dateFrom ? new Date(dateFrom) : undefined,
+      lte: dateTo ? new Date(dateTo) : undefined,
+    } : undefined,
+  };
 
   const [
     totalReports,
@@ -92,7 +92,7 @@ async function getDashboardData(req: Request): Promise<NextResponse<DashboardRes
     db.report.findMany({
       select: { district: true },
       distinct: ["district"],
-    }).then((reports) => reports.map((r: any) => r.district).filter(Boolean)),
+    }).then((reports) => reports.map((report) => report.district).filter((district): district is string => district !== null)),
   ]);
 
   const resolvedReports = await db.report.findMany({
@@ -105,7 +105,7 @@ async function getDashboardData(req: Request): Promise<NextResponse<DashboardRes
 
   let avgResolutionTimeDays: number | null = null;
   if (resolvedReports.length > 0) {
-    const totalDays = resolvedReports.reduce((sum: number, report: any) => {
+    const totalDays = resolvedReports.reduce((sum, report) => {
       const days = report.resolvedAt!
         .getTime() - report.createdAt.getTime();
       return sum + days / (1000 * 60 * 60 * 24);
@@ -122,17 +122,17 @@ async function getDashboardData(req: Request): Promise<NextResponse<DashboardRes
     avgResolutionTimeDays,
   };
 
-  const statusCounts: StatusCount[] = statusDistribution.map((item: any) => ({
+  const statusCounts: StatusCount[] = statusDistribution.map((item) => ({
     status: item.status,
     count: item._count,
   }));
 
-  const categoryCounts: CategoryCount[] = categoryBreakdown.map((item: any) => ({
+  const categoryCounts: CategoryCount[] = categoryBreakdown.map((item) => ({
     category: item.category,
     count: item._count,
   }));
 
-  const activity: RecentActivity[] = recentActivity.map((item: any) => ({
+  const activity: RecentActivity[] = recentActivity.map((item) => ({
     id: item.id,
     category: item.category,
     status: item.status,
@@ -140,7 +140,7 @@ async function getDashboardData(req: Request): Promise<NextResponse<DashboardRes
     timestamp: item.createdAt.toISOString(),
   }));
 
-  const locations: ReportLocation[] = reportLocations.map((item: any) => ({
+  const locations: ReportLocation[] = reportLocations.map((item) => ({
     id: item.id,
     latitude: item.latitude,
     longitude: item.longitude,
@@ -149,12 +149,12 @@ async function getDashboardData(req: Request): Promise<NextResponse<DashboardRes
     address: item.address,
   }));
 
-  const divisions: DivisionCount[] = topDivisions.map((item: any) => ({
+  const divisions: DivisionCount[] = topDivisions.map((item) => ({
     name: item.district || "Unknown",
     count: item._count,
   }));
 
-  const districts: string[] = (availableDistricts || []).sort();
+  const districts: string[] = (availableDistricts || []).filter((district): district is string => district !== null).sort();
 
   return NextResponse.json({
     success: true,
@@ -172,7 +172,7 @@ async function getDashboardData(req: Request): Promise<NextResponse<DashboardRes
   });
 }
 
-async function generateResolutionTimeline(where: any): Promise<ResolutionTimelinePoint[]> {
+async function generateResolutionTimeline(where: Prisma.ReportWhereInput): Promise<ResolutionTimelinePoint[]> {
   const resolvedReports = await db.report.findMany({
     where: { ...where, status: "RESOLVED", resolvedAt: { not: null } },
     select: {
@@ -186,7 +186,7 @@ async function generateResolutionTimeline(where: any): Promise<ResolutionTimelin
 
   const timeline = new Map<string, { totalDays: number; count: number }>();
 
-  resolvedReports.forEach((report: any) => {
+  resolvedReports.forEach((report) => {
     const resolvedAt = report.resolvedAt!;
     const year = resolvedAt.getFullYear();
     const month = resolvedAt.getMonth();
@@ -212,7 +212,7 @@ async function generateResolutionTimeline(where: any): Promise<ResolutionTimelin
     .sort((a, b) => a.period.localeCompare(b.period));
 }
 
-async function generateWeeklyTrend(where: any): Promise<WeeklyTrendPoint[]> {
+async function generateWeeklyTrend(where: Prisma.ReportWhereInput): Promise<WeeklyTrendPoint[]> {
   const reports = await db.report.findMany({
     where,
     select: {
@@ -226,7 +226,7 @@ async function generateWeeklyTrend(where: any): Promise<WeeklyTrendPoint[]> {
   const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const trend = new Map<number, number>();
 
-  reports.forEach((report: any) => {
+  reports.forEach((report) => {
     const dayOfWeek = report.createdAt.getDay();
     trend.set(dayOfWeek, (trend.get(dayOfWeek) || 0) + 1);
   });

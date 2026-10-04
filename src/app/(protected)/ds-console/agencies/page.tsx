@@ -1,17 +1,25 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { Building2, Plus, Edit, Trash2, Search, Filter, CheckCircle2, X, Phone, Mail, MapPin } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { useLanguage } from "@/lib/i18n/LanguageContext";
+
+type Agency = {
+  id: string;
+  name: string;
+  type: string;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+  district?: string | null;
+  isActive?: boolean;
+};
 
 export default function DsConsoleAgencies() {
   const { currentUser } = useAuth();
-  const { t } = useLanguage();
 
-  const [agencies, setAgencies] = useState<any[]>([]);
-  const [filteredAgencies, setFilteredAgencies] = useState<any[]>([]);
+  const [agencies, setAgencies] = useState<Agency[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("ALL");
   const [filterDistrict, setFilterDistrict] = useState("ALL");
@@ -19,9 +27,9 @@ export default function DsConsoleAgencies() {
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingAgency, setEditingAgency] = useState<any | null>(null);
+  const [editingAgency, setEditingAgency] = useState<Agency | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deletingAgency, setDeletingAgency] = useState<any | null>(null);
+  const [deletingAgency, setDeletingAgency] = useState<Agency | null>(null);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -35,11 +43,28 @@ export default function DsConsoleAgencies() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchAgencies();
+  const fetchAgencies = useCallback(async () => {
+    try {
+      const response = await fetch("/api/agencies");
+      const data = await response.json() as { success: boolean; data?: Agency[] };
+      if (data.success) {
+        setAgencies(data.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch agencies:", error);
+    }
   }, []);
 
   useEffect(() => {
+    fetch("/api/agencies")
+      .then(async (response) => {
+        const data = await response.json() as { success: boolean; data?: Agency[] };
+        if (data.success) setAgencies(data.data || []);
+      })
+      .catch((error: unknown) => console.error("Failed to fetch agencies:", error));
+  }, []);
+
+  const filteredAgencies = useMemo(() => {
     let filtered = agencies;
 
     if (searchTerm) {
@@ -58,20 +83,8 @@ export default function DsConsoleAgencies() {
       filtered = filtered.filter((agency) => agency.district === filterDistrict);
     }
 
-    setFilteredAgencies(filtered);
+    return filtered;
   }, [agencies, searchTerm, filterType, filterDistrict]);
-
-  const fetchAgencies = async () => {
-    try {
-      const response = await fetch("/api/agencies");
-      const data = await response.json();
-      if (data.success) {
-        setAgencies(data.data || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch agencies:", error);
-    }
-  };
 
   const handleCreateAgency = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,7 +121,7 @@ export default function DsConsoleAgencies() {
     }
   };
 
-  const handleEditAgency = (agency: any) => {
+  const handleEditAgency = (agency: Agency) => {
     setEditingAgency(agency);
     setFormData({
       name: agency.name,
@@ -154,7 +167,7 @@ export default function DsConsoleAgencies() {
     }
   };
 
-  const handleDeleteAgency = (agency: any) => {
+  const handleDeleteAgency = (agency: Agency) => {
     setDeletingAgency(agency);
     setIsDeleteModalOpen(true);
   };
@@ -186,7 +199,7 @@ export default function DsConsoleAgencies() {
     }
   };
 
-  const districts = Array.from(new Set(agencies.map((a) => a.district).filter(Boolean)));
+  const districts = Array.from(new Set(agencies.map((agency) => agency.district).filter((district): district is string => Boolean(district))));
 
   return (
     <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">

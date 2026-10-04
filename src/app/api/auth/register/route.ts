@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
           email: cleanEmail,
           firstName,
           lastName,
-          role: userRole as any,
+          role: userRole,
           preferredLang: Language.EN,
           dsDivision: "DS-COL-01",
           district: "Colombo",
