@@ -4,6 +4,7 @@ import { Category, ReportStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { requireRole } from "@/lib/auth-guard";
+import { ROLE_HOME_ROUTES } from "@/lib/auth/role-routes";
 import type {
   DashboardStats,
   StatusCount,
@@ -234,8 +235,11 @@ async function generateWeeklyTrend(where: any): Promise<WeeklyTrendPoint[]> {
 }
 
 export default async function DashboardPage() {
-  // Restrict access to ADMIN and DS_OFFICER only
-  const user = await requireRole(["ADMIN", "DS_OFFICER"]);
+  const user = await requireRole(["ADMIN", "DS_OFFICER", "NGO_PARTNER", "CITIZEN"]);
+
+  if (user.role !== "ADMIN" && user.role !== "DS_OFFICER") {
+    redirect(ROLE_HOME_ROUTES[user.role]);
+  }
 
   const initialData = await getDashboardData({});
 

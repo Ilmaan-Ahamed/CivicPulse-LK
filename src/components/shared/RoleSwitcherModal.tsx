@@ -5,12 +5,17 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { UserRole, MOCK_ROLE_USERS } from "@/lib/auth/rbac";
 import { RoleBadge } from "@/components/ui/RoleBadge";
 import { Shuffle, X, Check, Shield } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export function RoleSwitcherModal() {
   const { currentRole, switchRole } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
   const router = useRouter();
+
+  if (pathname !== "/dashboard/admin") {
+    return null;
+  }
 
   const rolesList: UserRole[] = ["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"];
 

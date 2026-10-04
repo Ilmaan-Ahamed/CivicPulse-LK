@@ -132,6 +132,7 @@ model User {
   notifications        Notification[]
   roleRequests         RoleRequest[]     @relation("UserRoleRequests")
   reviewedRoleRequests RoleRequest[]     @relation("ReviewedRequests")
+  pledges              Pledge[]          @relation("NGOPledges")
 
   @@index([clerkId])
   @@index([role])
@@ -170,6 +171,7 @@ model Report {
   verifications Verification[]
   assignments   Assignment[]
   statusHistory StatusHistory[]
+  pledges       Pledge[]
 
   @@index([citizenId])
   @@index([status])
@@ -181,7 +183,7 @@ model Report {
 
 model Photo {
   id             String   @id @default(cuid())
-  url            String
+  url            String?
   key            String // MinIO object key
   caption        String?
   reportId       String?
@@ -197,6 +199,14 @@ model Photo {
   @@index([reportId])
   @@index([verificationId])
   @@index([inspectionId])
+}
+
+model UploadRateLimit {
+  bucketKey   String   @id
+  count       Int      @default(0)
+  windowStart DateTime
+
+  @@index([windowStart])
 }
 
 model Verification {
@@ -326,16 +336,16 @@ model Notification {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  actorId   String? // Nullable for backward compatibility
-  action    String // ASSIGNMENT_CREATED, ASSIGNMENT_STATUS_UPDATED, AGENCY_CREATED, etc.
-  entity    String? // Legacy field name (nullable for backward compatibility)
-  entityId  String? // Legacy field name (nullable for backward compatibility)
+  id         String   @id @default(cuid())
+  actorId    String? // Nullable for backward compatibility
+  action     String // ASSIGNMENT_CREATED, ASSIGNMENT_STATUS_UPDATED, AGENCY_CREATED, etc.
+  entity     String? // Legacy field name (nullable for backward compatibility)
+  entityId   String? // Legacy field name (nullable for backward compatibility)
   targetType String? // Report, Assignment, Agency, etc. (nullable for backward compatibility)
-  targetId  String? // Nullable for backward compatibility
-  metadata  Json? // Additional context (before/after values, etc.)
-  ipAddress String?
-  createdAt DateTime @default(now())
+  targetId   String? // Nullable for backward compatibility
+  metadata   Json? // Additional context (before/after values, etc.)
+  ipAddress  String?
+  createdAt  DateTime @default(now())
 
   // Relations
   user User? @relation(fields: [actorId], references: [id])
@@ -372,4 +382,24 @@ model RoleRequest {
   @@index([status])
   @@index([requestedRole])
   @@index([createdAt])
+}
+
+model Pledge {
+  id          String   @id @default(cuid())
+  reportId    String
+  ngoId       String
+  pledgeType  String // VOLUNTEERS, FUNDING, MATERIALS, TECHNICAL_SUPPORT
+  description String
+  amountLkr   Int?
+  status      String   @default("PLEDGED") // PLEDGED, ACTIVE, COMPLETED, CANCELLED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  ngo    User   @relation("NGOPledges", fields: [ngoId], references: [id])
+
+  @@index([reportId])
+  @@index([ngoId])
+  @@index([status])
 }

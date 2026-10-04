@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Shield,
@@ -25,54 +25,17 @@ import { CaseCard, CaseCardData } from "@/components/shared/CaseCard";
 export default function LandingPage() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"step1" | "step2" | "step3" | "step4">("step1");
+  const [sampleCases, setSampleCases] = useState<CaseCardData[]>([]);
 
-  const sampleCases: CaseCardData[] = [
-    {
-      id: "case-1042",
-      caseNumber: "CP-2026-1042",
-      title: "Hazardous Deep Potholes near Bambalapitiya Junction",
-      description: "Severe road surface damage causing vehicle accidents and traffic congestion on A2 main corridor near Galle Road Bamba junction.",
-      category: "ROADS",
-      status: "VERIFIED",
-      priorityScore: 88.5,
-      address: "Galle Road, Bambalapitiya, Colombo 04",
-      dsDivisionName: "Colombo DS Office",
-      imageUrl: "https://images.unsplash.com/photo-1595856341628-fdcee0607911?auto=format&fit=crop&w=800&q=80",
-      verificationCount: 4,
-      verificationThreshold: 3,
-      createdAt: "2026-08-10",
-    },
-    {
-      id: "case-1043",
-      caseNumber: "CP-2026-1043",
-      title: "Blocked Main Canal Causing Pettah Market Flooding",
-      description: "Polythene and debris blockages in the primary drainage channel adjacent to Central Bus Stand during heavy rains.",
-      category: "DRAINAGE",
-      status: "IN_PROGRESS",
-      priorityScore: 76.0,
-      address: "Bodhiraja Mawatha, Pettah, Colombo 11",
-      dsDivisionName: "Colombo DS Office",
-      imageUrl: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=800&q=80",
-      verificationCount: 3,
-      verificationThreshold: 3,
-      createdAt: "2026-08-11",
-    },
-    {
-      id: "case-1045",
-      caseNumber: "CP-2026-1045",
-      title: "Burst Main Water Pipe at Galle Fort Pedestrian Walkway",
-      description: "Clean water leak under high pressure washing away paved heritage stones near Rampart Street.",
-      category: "WATER",
-      status: "RESOLVED",
-      priorityScore: 91.0,
-      address: "Rampart Street, Galle Fort, Galle",
-      dsDivisionName: "Galle DS Office",
-      imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=800&q=80",
-      verificationCount: 5,
-      verificationThreshold: 3,
-      createdAt: "2026-08-12",
-    },
-  ];
+  useEffect(() => {
+    fetch("/api/reports/public?limit=3")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setSampleCases(data.data || []);
+      })
+      .catch(() => setSampleCases([]));
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen">

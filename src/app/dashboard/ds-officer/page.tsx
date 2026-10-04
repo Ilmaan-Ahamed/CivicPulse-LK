@@ -9,57 +9,64 @@ import { InteractiveMap } from "@/components/map/InteractiveMap";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSharedIssues } from "@/lib/report-sync";
+import { ReportPhotoGallery } from "@/components/shared/ReportPhotoGallery";
 
 export default function DsOfficerConsole() {
   const { currentUser } = useAuth();
   const { t } = useLanguage();
   const sharedIssues = useSharedIssues();
   const [dbReports, setDbReports] = useState<any[]>([]);
+  const [transparencyReports, setTransparencyReports] = useState<any[]>([]);
+
+  // Deduplicate sharedIssues with useMemo to prevent infinite loop
+  const uniqueSharedIssues = React.useMemo(
+    () => Array.from(new Map(sharedIssues.map((issue) => [issue.id, issue])).values()),
+    [sharedIssues]
+  );
 
   React.useEffect(() => {
+    fetch("/api/reports/dashboard")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setDbReports(Array.from(new Map((data.data || []).map((r: any) => [r.id, r])).values()));
+      })
+      .catch(() => setDbReports([]));
+
+    // Fetch all reports for map (like transparency page)
     fetch("/api/transparency")
       .then(async (response) => {
         if (!response.ok) throw new Error("Failed");
-        const data = (await response.json()) as { cases?: any[] };
-        setDbReports(data.cases || []);
+        const data = await response.json();
+        setTransparencyReports(Array.from(new Map((data.cases || []).map((r: any) => [r.id, r])).values()));
       })
-      .catch(() => setDbReports([]));
+      .catch(() => setTransparencyReports([]));
+
+    // Fetch assignments
+    fetch("/api/assignments")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setAssignments(data.data || []);
+      })
+      .catch(() => setAssignments([]));
+
+    // Fetch dashboard analytics data
+    fetch("/api/dashboard")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        setDashboardData(data.data || null);
+      })
+      .catch(() => setDashboardData(null));
   }, []);
 
-  const [triageCases, setTriageCases] = useState([
-    {
-      id: "case-1042",
-      caseNumber: "CP-2026-1042",
-      title: "Hazardous Deep Potholes near Bambalapitiya Junction",
-      description: "Severe road surface damage causing vehicle accidents and traffic congestion on A2 main corridor near Galle Road Bamba junction.",
-      category: "ROADS",
-      status: "VERIFIED",
-      priorityScore: 88.5,
-      aiSummary: "High-priority urban arterial road hazard near major public transit junction. Immediate asphalt resurfacing recommended.",
-      address: "Galle Road, Bambalapitiya, Colombo 04",
-      verificationCount: 4,
-      age: "2 days old",
-      slaBreachRisk: true,
-    },
-    {
-      id: "case-1046",
-      caseNumber: "CP-2026-1046",
-      title: "Collapsed Drainage Retaining Wall in Nugegoda",
-      description: "Heavy rain damaged 8m segment of concrete canal wall near high street market.",
-      category: "DRAINAGE",
-      status: "VERIFIED",
-      priorityScore: 81.0,
-      aiSummary: "Drainage wall collapse risking flash floods in nearby commercial market stalls.",
-      address: "High Level Road, Nugegoda",
-      verificationCount: 3,
-      age: "1 day old",
-      slaBreachRisk: false,
-    },
-  ]);
+  const [triageCases, setTriageCases] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
 
   React.useEffect(() => {
-    const syncedQueue = sharedIssues
-      .filter((issue) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(issue.status))
+    const syncedQueue = uniqueSharedIssues
+      .filter((issue) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(issue.status) && issue.status !== "WITHDRAWN")
       .map((issue) => ({
         id: issue.id,
         caseNumber: issue.caseNumber,
@@ -70,22 +77,78 @@ export default function DsOfficerConsole() {
         priorityScore: issue.priorityScore,
         aiSummary: `Citizen-submitted ${issue.category.toLowerCase()} issue. This report is now visible to the DS Office dashboard for triage.`,
         address: issue.address,
+        imageUrl: issue.imageUrl,
         verificationCount: 1,
         age: "Just submitted",
         slaBreachRisk: issue.priorityScore >= 80,
       }));
 
-    setTriageCases((previous) => {
-      const seen = new Set(previous.map((item) => item.caseNumber));
-      const freshItems = syncedQueue.filter((item) => !seen.has(item.caseNumber));
-      return [...freshItems, ...previous];
-    });
-  }, [sharedIssues]);
+    const dbQueue = dbReports
+      .filter((report) => ["SUBMITTED", "UNDER_VERIFICATION", "VERIFIED"].includes(report.status) && report.status !== "WITHDRAWN")
+      .map((report) => ({
+        id: report.id,
+        caseNumber: report.caseNumber,
+        title: report.title,
+        description: report.description,
+        category: report.category,
+        status: report.status,
+        priorityScore: report.priorityScore || report.aiConfidence || 50,
+        aiSummary: `Citizen-submitted ${report.category.toLowerCase()} issue. This report is now visible to the DS Office dashboard for triage.`,
+        address: report.address,
+        imageUrl: report.imageUrl,
+        photos: report.photos,
+        verificationCount: report.verificationCount || 0,
+        age: "Just submitted",
+        slaBreachRisk: (report.priorityScore || report.aiConfidence || 50) >= 80,
+      }));
+
+    setTriageCases(
+      Array.from(
+        new Map([...syncedQueue, ...dbQueue].map((item) => [item.id, item])).values()
+      )
+    );
+  }, [uniqueSharedIssues, dbReports]);
 
   const [assigningCase, setAssigningCase] = useState<any | null>(null);
   const [selectedAgency, setSelectedAgency] = useState("RDA Western Province");
   const [instructions, setInstructions] = useState("");
-  const [assignedCasesCount, setAssignedCasesCount] = useState(14);
+  const [assignedCasesCount, setAssignedCasesCount] = useState(0);
+  const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [filterCategory, setFilterCategory] = useState<string>("ALL");
+  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [decisionNote, setDecisionNote] = useState("");
+  const [dashboardData, setDashboardData] = useState<any>(null);
+
+  // Calculate statistics from real data
+  const stats = React.useMemo(() => {
+    const totalReports = dbReports.length;
+    const verifiedReports = dbReports.filter(r => r.status === "VERIFIED" || r.status === "FIELD_VERIFIED").length;
+    const resolvedReports = dbReports.filter(r => r.status === "RESOLVED").length;
+    const inProgressReports = dbReports.filter(r => r.status === "IN_PROGRESS").length;
+    const highPriorityReports = dbReports.filter(r => (r.priorityScore || r.aiConfidence || 50) >= 80).length;
+    
+    const categoryCounts = dbReports.reduce((acc, r) => {
+      acc[r.category] = (acc[r.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const districtCounts = dbReports.reduce((acc, r) => {
+      if (r.district) {
+        acc[r.district] = (acc[r.district] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return {
+      totalReports,
+      verifiedReports,
+      resolvedReports,
+      inProgressReports,
+      highPriorityReports,
+      categoryCounts,
+      districtCounts,
+    };
+  }, [dbReports]);
 
   const handleAssignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +159,48 @@ export default function DsOfficerConsole() {
     setAssigningCase(null);
     setInstructions("");
   };
+
+  const handleReportDecision = async (reportId: string, newStatus: string) => {
+    // Verify the report exists in the database before attempting to update
+    const reportExists = dbReports.some((r) => r.id === reportId);
+    if (!reportExists) {
+      console.error("Cannot update: Report not found in database");
+      alert("Cannot update: Report not found in database");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/reports/${reportId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("Decision failed:", result.error);
+        alert(`Decision failed: ${result.error || "Unknown error"}`);
+        return;
+      }
+
+      setDbReports(dbReports.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
+      setSelectedReport(null);
+      setDecisionNote("");
+    } catch (error) {
+      console.error("Failed to update report status:", error);
+      alert("Failed to update report status: Network error");
+    }
+  };
+
+  const filteredReports = React.useMemo(() => {
+    // Filter database reports directly
+    return dbReports.filter((report) => {
+      const statusMatch = filterStatus === "ALL" || report.status === filterStatus;
+      const categoryMatch = filterCategory === "ALL" || report.category === filterCategory;
+      return statusMatch && categoryMatch;
+    });
+  }, [dbReports, filterStatus, filterCategory]);
 
   return (
     <div className="min-h-screen bg-background text-foreground py-8 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors duration-300">
@@ -132,7 +237,7 @@ export default function DsOfficerConsole() {
           </div>
           <div className="card-light dark:bg-slate-950 dark:border-slate-800 px-4 py-2 rounded-2xl border text-center">
             <span className="text-[10px] card-subtext dark:text-slate-500 font-medium block">Assigned Active</span>
-            <span className="text-lg card-stat dark:text-orange-400 font-mono">{assignedCasesCount}</span>
+            <span className="text-lg card-stat dark:text-orange-400 font-mono">{assignments.filter(a => a.status === "IN_PROGRESS").length}</span>
           </div>
         </div>
       </div>
@@ -140,20 +245,20 @@ export default function DsOfficerConsole() {
       {/* Analytics KPI Row */}
       <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4">
-          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">Average Triage SLA</span>
-          <p className="text-xl card-stat dark:text-white font-mono mt-1">1.4 Hours</p>
+          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">Total Reports</span>
+          <p className="text-xl card-stat dark:text-white font-mono mt-1">{stats.totalReports}</p>
         </div>
         <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4">
-          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">SLA Risk Warnings</span>
-          <p className="text-xl card-stat dark:text-rose-400 font-mono mt-1">1 Case Alert</p>
+          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">High Priority</span>
+          <p className="text-xl card-stat dark:text-rose-400 font-mono mt-1">{stats.highPriorityReports}</p>
         </div>
         <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4">
-          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">Active Agencies</span>
-          <p className="text-xl card-stat dark:text-orange-400 font-mono mt-1">6 Partner Agencies</p>
+          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">Verified</span>
+          <p className="text-xl card-stat dark:text-orange-400 font-mono mt-1">{stats.verifiedReports}</p>
         </div>
         <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4">
-          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">AI Accuracy Rate</span>
-          <p className="text-xl card-stat dark:text-teal-400 font-mono mt-1">94.8% Advisory</p>
+          <span className="text-[10px] card-subtext dark:text-slate-500 font-medium">Resolved</span>
+          <p className="text-xl card-stat dark:text-teal-400 font-mono mt-1">{stats.resolvedReports}</p>
         </div>
       </div>
 
@@ -163,42 +268,36 @@ export default function DsOfficerConsole() {
         <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
           <h4 className="text-sm font-bold card-heading dark:text-white">Reports by Category</h4>
           <div className="space-y-3">
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Roads</span>
-                <span className="font-mono icon-orange">45%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-orange-500 dark:bg-orange-400 rounded-full" style={{ width: "45%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Drainage</span>
-                <span className="font-mono text-blue-400">28%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 dark:bg-blue-400 rounded-full" style={{ width: "28%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Water</span>
-                <span className="font-mono text-cyan-400">18%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-cyan-500 dark:bg-cyan-400 rounded-full" style={{ width: "18%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Streetlights</span>
-                <span className="font-mono text-amber-400">9%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-amber-500 dark:bg-amber-400 rounded-full" style={{ width: "9%" }}></div>
-              </div>
-            </div>
+            {Object.entries(stats.categoryCounts).map(([category, count]) => {
+              const countNum = count as number;
+              const percentage = stats.totalReports > 0 ? Math.round((countNum / stats.totalReports) * 100) : 0;
+              const colors: Record<string, string> = {
+                ROADS: "icon-orange",
+                DRAINAGE: "text-blue-400",
+                WATER: "text-cyan-400",
+                STREETLIGHTS: "text-amber-400",
+              };
+              const bgColors: Record<string, string> = {
+                ROADS: "bg-orange-500 dark:bg-orange-400",
+                DRAINAGE: "bg-blue-500 dark:bg-blue-400",
+                WATER: "bg-cyan-500 dark:bg-cyan-400",
+                STREETLIGHTS: "bg-amber-500 dark:bg-amber-400",
+              };
+              return (
+                <div key={category}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="body-text dark:text-slate-400">{category}</span>
+                    <span className={`font-mono ${colors[category] || "text-slate-400"}`}>{percentage}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${bgColors[category] || "bg-slate-500"} rounded-full`} style={{ width: `${percentage}%` }}></div>
+                  </div>
+                </div>
+              );
+            })}
+            {Object.keys(stats.categoryCounts).length === 0 && (
+              <p className="text-xs body-text dark:text-slate-400">No data available</p>
+            )}
           </div>
         </div>
 
@@ -206,33 +305,30 @@ export default function DsOfficerConsole() {
         <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
           <h4 className="text-sm font-bold card-heading dark:text-white">Resolution Status</h4>
           <div className="space-y-3">
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Resolved</span>
-                <span className="font-mono text-emerald-400">82%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full" style={{ width: "82%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">In Progress</span>
-                <span className="font-mono text-blue-400">12%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 dark:bg-blue-400 rounded-full" style={{ width: "12%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="body-text dark:text-slate-400">Pending</span>
-                <span className="font-mono text-amber-400">6%</span>
-              </div>
-              <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-amber-500 dark:bg-amber-400 rounded-full" style={{ width: "6%" }}></div>
-              </div>
-            </div>
+            {stats.totalReports > 0 ? (
+              <>
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="body-text dark:text-slate-400">Resolved</span>
+                    <span className="font-mono text-emerald-400">{Math.round((stats.resolvedReports / stats.totalReports) * 100)}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full" style={{ width: `${(stats.resolvedReports / stats.totalReports) * 100}%` }}></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="body-text dark:text-slate-400">Verified</span>
+                    <span className="font-mono text-blue-400">{Math.round((stats.verifiedReports / stats.totalReports) * 100)}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 dark:bg-blue-400 rounded-full" style={{ width: `${(stats.verifiedReports / stats.totalReports) * 100}%` }}></div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs body-text dark:text-slate-400">No data available</p>
+            )}
           </div>
         </div>
 
@@ -240,26 +336,19 @@ export default function DsOfficerConsole() {
         <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
           <h4 className="text-sm font-bold card-heading dark:text-white">Top DS Divisions</h4>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs body-text dark:text-slate-400">Colombo</span>
-              <span className="text-xs font-mono icon-orange font-bold">245</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs body-text dark:text-slate-400">Gampaha</span>
-              <span className="text-xs font-mono text-blue-400 font-bold">189</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs body-text dark:text-slate-400">Kandy</span>
-              <span className="text-xs font-mono text-cyan-400 font-bold">156</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs body-text dark:text-slate-400">Galle</span>
-              <span className="text-xs font-mono text-amber-400 font-bold">134</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs body-text dark:text-slate-400">Kurunegala</span>
-              <span className="text-xs font-mono text-purple-400 font-bold">98</span>
-            </div>
+            {dashboardData?.topDivisions && dashboardData.topDivisions.length > 0 ? (
+              dashboardData.topDivisions.slice(0, 5).map((item: any, index: number) => {
+                const colors = ["icon-orange", "text-blue-400", "text-cyan-400", "text-amber-400", "text-purple-400"];
+                return (
+                  <div key={item.name} className="flex items-center justify-between">
+                    <span className="text-xs body-text dark:text-slate-400">{item.name || "Unknown"}</span>
+                    <span className={`text-xs font-mono ${colors[index] || "text-slate-400"} font-bold`}>{item.count}</span>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-xs body-text dark:text-slate-400">No data available</p>
+            )}
           </div>
         </div>
 
@@ -267,34 +356,25 @@ export default function DsOfficerConsole() {
         <div className="card-light dark:bg-[#0a0a0a] dark:border-[#333333] rounded-3xl p-6 space-y-4">
           <h4 className="text-sm font-bold card-heading dark:text-white">Weekly Trend</h4>
           <div className="flex items-end justify-between h-24 gap-2">
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "60%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Mon</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "80%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Tue</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "45%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Wed</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "90%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Thu</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "70%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Fri</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "40%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Sat</span>
-            </div>
-            <div className="flex flex-col items-center gap-1 flex-1">
-              <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: "30%" }}></div>
-              <span className="text-[10px] body-text dark:text-slate-400">Sun</span>
-            </div>
+            {dashboardData?.weeklyTrend ? (
+              dashboardData.weeklyTrend.map((item: any) => {
+                const maxCount = Math.max(...dashboardData.weeklyTrend.map((d: any) => d.count), 1);
+                const height = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+                return (
+                  <div key={item.day} className="flex flex-col items-center gap-1 flex-1">
+                    <div className="w-full bg-orange-500 dark:bg-orange-400 rounded-t" style={{ height: `${Math.max(height, 5)}%` }}></div>
+                    <span className="text-[10px] body-text dark:text-slate-400">{item.day}</span>
+                  </div>
+                );
+              })
+            ) : (
+              ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                <div key={day} className="flex flex-col items-center gap-1 flex-1">
+                  <div className="w-full bg-slate-700 dark:bg-slate-800 rounded-t" style={{ height: "5%" }}></div>
+                  <span className="text-[10px] body-text dark:text-slate-400">{day}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -308,35 +388,22 @@ export default function DsOfficerConsole() {
           <span className="text-[10px] font-mono text-amber-400">{[...triageCases, ...sharedIssues].length} mapped alerts</span>
         </div>
         <InteractiveMap
-          markers={[
-            ...sharedIssues.map((issue) => ({
-              id: issue.id,
-              title: issue.title,
-              category: issue.category,
-              status: issue.status,
-              latitude: issue.category === "ROADS" ? 6.8905 : issue.category === "DRAINAGE" ? 6.9344 : 7.2625,
-              longitude: issue.category === "ROADS" ? 79.855 : issue.category === "DRAINAGE" ? 79.8519 : 80.5972,
-              address: issue.address,
-            })),
-            ...triageCases.map((item) => ({
-              id: item.id,
-              title: item.title,
-              category: item.category,
-              status: item.status,
-              latitude: item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625,
-              longitude: item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972,
-              address: item.address,
-            })),
-            ...dbReports.map((report) => ({
-              id: report.id,
-              title: report.title,
-              category: report.category,
-              status: report.status,
-              latitude: report.latitude || 6.9271,
-              longitude: report.longitude || 79.8612,
-              address: report.address,
-            })),
-          ]}
+          markers={Array.from(
+            new Map(
+              transparencyReports.map((item) => [
+                item.id,
+                {
+                  id: item.id,
+                  title: item.title,
+                  category: item.category,
+                  status: item.status,
+                  latitude: item.latitude || (item.category === "ROADS" ? 6.8905 : item.category === "DRAINAGE" ? 6.9344 : 7.2625),
+                  longitude: item.longitude || (item.category === "ROADS" ? 79.855 : item.category === "DRAINAGE" ? 79.8519 : 80.5972),
+                  address: item.address,
+                },
+              ])
+            ).values()
+          )}
           center={[6.9271, 79.8612]}
           zoom={11}
         />
@@ -402,6 +469,161 @@ export default function DsOfficerConsole() {
                   >
                     <Building2 className="w-4 h-4" />
                     <span>Assign Agency</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Assignment Tracking Section */}
+        <div className="max-w-7xl mx-auto space-y-4 mt-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg page-title dark:text-white flex items-center gap-2">
+              <Building2 className="w-4 h-4 icon-orange dark:text-orange-400" />
+              <span>Active Assignments Tracking</span>
+            </h2>
+            <span className="text-xs body-text dark:text-slate-400 font-mono">{assignments.length} total assignments</span>
+          </div>
+
+          {assignments.length === 0 ? (
+            <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-12 text-center space-y-3">
+              <Building2 className="w-10 h-10 text-slate-400 mx-auto" />
+              <h3 className="text-base card-heading dark:text-white">No Active Assignments</h3>
+              <p className="text-xs body-text dark:text-slate-400">Assign verified cases to agencies to track progress here.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {assignments.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-purple-400">{assignment.report?.referenceNo}</span>
+                      <StatusBadge status={assignment.status} size="sm" />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      {assignment.acceptedAt && (
+                        <span>Accepted: {new Date(assignment.acceptedAt).toLocaleDateString()}</span>
+                      )}
+                      {assignment.deadline && (
+                        <span className={new Date(assignment.deadline) < new Date() ? "text-rose-400" : ""}>
+                          Due: {new Date(assignment.deadline).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base card-heading dark:text-white">{assignment.report?.title}</h3>
+                    <p className="text-xs body-text dark:text-slate-400 mt-1">{assignment.report?.address}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-border dark:border-slate-800">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-orange-400" />
+                        <span className="text-xs card-heading dark:text-white">{assignment.agency?.name}</span>
+                      </div>
+                      <span className="text-xs text-slate-500">({assignment.agency?.type})</span>
+                    </div>
+                    {assignment.inspections && assignment.inspections.length > 0 && (
+                      <span className="text-xs text-emerald-400">{assignment.inspections.length} inspection(s)</span>
+                    )}
+                  </div>
+
+                  {assignment.notes && (
+                    <div className="p-3 rounded-xl card-light dark:bg-slate-950 dark:border-slate-800 text-xs body-text dark:text-slate-400">
+                      <span className="font-bold card-heading dark:text-slate-300">Notes: </span>
+                      {assignment.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* All Reports Section with Decision Making */}
+      <div className="max-w-7xl mx-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg page-title dark:text-white">All Reports - Decision Making</h2>
+          <span className="text-xs body-text dark:text-slate-400 font-mono">{filteredReports.length} reports</span>
+        </div>
+
+        {/* Filters */}
+        <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-2xl p-4 flex flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold card-heading dark:text-slate-300">Status:</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="card-light dark:bg-slate-950 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs card-heading dark:text-white focus:outline-none focus:border-orange-500"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="SUBMITTED">Submitted</option>
+              <option value="UNDER_VERIFICATION">Under Verification</option>
+              <option value="VERIFIED">Verified</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="RESOLVED">Resolved</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold card-heading dark:text-slate-300">Category:</label>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="card-light dark:bg-slate-950 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs card-heading dark:text-white focus:outline-none focus:border-orange-500"
+            >
+              <option value="ALL">All Categories</option>
+              <option value="ROADS">Roads</option>
+              <option value="DRAINAGE">Drainage</option>
+              <option value="WATER">Water</option>
+              <option value="STREETLIGHTS">Streetlights</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Reports List */}
+        {filteredReports.length === 0 ? (
+          <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-12 text-center space-y-3">
+            <CheckCircle2 className="w-10 h-10 text-slate-400 mx-auto" />
+            <h3 className="text-base card-heading dark:text-white">No Reports Found</h3>
+            <p className="text-xs body-text dark:text-slate-400">No reports match the current filters.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredReports.map((report) => (
+              <div
+                key={report.id}
+                className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-orange-400">{report.referenceNo || report.caseNumber}</span>
+                    <StatusBadge status={report.status} size="sm" />
+                  </div>
+                  <PriorityIndicator score={report.priorityScore || 50} />
+                </div>
+
+                <div>
+                  <h3 className="text-base card-heading dark:text-white">{report.title}</h3>
+                  <p className="text-xs body-text dark:text-slate-400 mt-1">{report.description}</p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-border dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs body-text dark:text-slate-400">{report.address}</span>
+                    <span className="text-xs body-text dark:text-slate-400">• {report.category}</span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedReport(report)}
+                    className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold"
+                  >
+                    Make Decision
                   </button>
                 </div>
               </div>
@@ -481,6 +703,86 @@ export default function DsOfficerConsole() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Report Decision Modal */}
+      {selectedReport && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card-light dark:bg-slate-900 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
+            <div className="border-b border-slate-800 pb-3">
+              <span className="font-mono icon-orange dark:text-orange-400 font-bold">{selectedReport.referenceNo || selectedReport.caseNumber}</span>
+              <h3 className="text-lg card-heading dark:text-white">Make Decision on Report</h3>
+            </div>
+
+            <div className="p-3 rounded-2xl card-light dark:bg-slate-950 dark:border-slate-800 text-xs">
+              <h4 className="font-bold card-heading dark:text-white text-sm">{selectedReport.title}</h4>
+              <ReportPhotoGallery title={selectedReport.title} photos={selectedReport.photos} imageUrl={selectedReport.imageUrl} />
+              <p className="body-text dark:text-slate-400 mt-1">{selectedReport.description}</p>
+              <p className="text-slate-500 mt-2">{selectedReport.address}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <StatusBadge status={selectedReport.status} size="sm" />
+                <span className="body-text dark:text-slate-400">{selectedReport.category}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold card-heading dark:text-slate-300 uppercase tracking-wider mb-2">
+                Decision Note (Optional)
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Add notes about your decision..."
+                value={decisionNote}
+                onChange={(e) => setDecisionNote(e.target.value)}
+                className="w-full card-light dark:bg-slate-950 dark:border-slate-800 rounded-xl p-3 text-xs card-heading dark:text-white focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-xs font-bold card-heading dark:text-slate-300 uppercase tracking-wider mb-2">
+                Select Action
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleReportDecision(selectedReport.id, "VERIFIED")}
+                  className="px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold"
+                >
+                  Mark as Verified
+                </button>
+                <button
+                  onClick={() => handleReportDecision(selectedReport.id, "IN_PROGRESS")}
+                  className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold"
+                >
+                  Mark as In Progress
+                </button>
+                <button
+                  onClick={() => handleReportDecision(selectedReport.id, "RESOLVED")}
+                  className="px-4 py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold"
+                >
+                  Mark as Resolved
+                </button>
+                <button
+                  onClick={() => handleReportDecision(selectedReport.id, "SUBMITTED")}
+                  className="px-4 py-3 bg-slate-600 hover:bg-slate-500 text-white rounded-xl text-xs font-bold"
+                >
+                  Return to Submitted
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setSelectedReport(null);
+                  setDecisionNote("");
+                }}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

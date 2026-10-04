@@ -2,7 +2,8 @@
 
 import React from "react";
 import Image from "next/image";
-import { MapPin, Calendar, ArrowRight, ShieldCheck, CheckCircle2, Building2 } from "lucide-react";
+import Link from "next/link";
+import { MapPin, Calendar, ArrowRight, ShieldCheck, CheckCircle2, Building2, Edit, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PriorityIndicator } from "@/components/ui/PriorityIndicator";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -22,6 +23,7 @@ export interface CaseCardData {
   verificationCount?: number;
   verificationThreshold?: number;
   createdAt: string | Date;
+  citizenId?: string;
 }
 
 interface CaseCardProps {
@@ -29,9 +31,13 @@ interface CaseCardProps {
   onSelect?: (caseData: CaseCardData) => void;
   onVerify?: (caseId: string) => void;
   onAssign?: (caseId: string) => void;
+  onEdit?: (caseData: CaseCardData) => void;
+  onDelete?: (caseId: string) => void;
+  isOwnReport?: boolean;
+  detailsHref?: string;
 }
 
-export function CaseCard({ caseData, onSelect, onVerify, onAssign }: CaseCardProps) {
+export function CaseCard({ caseData, onSelect, onVerify, onAssign, onEdit, onDelete, isOwnReport, detailsHref }: CaseCardProps) {
   const { currentRole } = useAuth();
   const { t } = useLanguage();
 
@@ -123,6 +129,29 @@ export function CaseCard({ caseData, onSelect, onVerify, onAssign }: CaseCardPro
           </button>
         )}
 
+        {currentRole === "CITIZEN" && isOwnReport && (
+          <div className="flex items-center gap-2 w-full">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(caseData)}
+                className="flex-1 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                <span>Edit</span>
+              </button>
+            )}
+            {onDelete && ["SUBMITTED", "UNDER_VERIFICATION"].includes(caseData.status) && (
+              <button
+                onClick={() => onDelete(caseData.id)}
+                className="flex-1 py-1.5 px-3 bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 border border-rose-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {onSelect && (
           <button
             onClick={() => onSelect(caseData)}
@@ -131,6 +160,15 @@ export function CaseCard({ caseData, onSelect, onVerify, onAssign }: CaseCardPro
             <span>{t("btn.viewDetails")}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
+        )}
+        {detailsHref && (
+          <Link
+            href={detailsHref}
+            className="btn-secondary-orange mt-2 w-full py-1.5 px-3 text-xs flex items-center justify-center gap-1"
+          >
+            Full report
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         )}
       </div>
     </div>

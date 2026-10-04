@@ -4,6 +4,9 @@ import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import { requireRole } from "@/lib/auth-guard";
 import { Role } from "@/lib/roles";
+import { logStatusChange } from "@/lib/tracking/status-history";
+import { logAuditAction } from "@/lib/tracking/audit-log";
+import { createNotification } from "@/lib/tracking/notifications";
 
 // Allowed status transitions
 const STATUS_TRANSITIONS: Record<string, string[]> = {
@@ -15,7 +18,7 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
 };
 
 async function createAssignment(req: Request) {
-  const { userId } = await requireRole(["DS_OFFICER"] as any);
+  const { userId, role } = await requireRole(["DS_OFFICER"] as any);
   const body = await req.json();
   const { reportId, agencyId, notes } = body;
 
@@ -23,6 +26,19 @@ async function createAssignment(req: Request) {
     return NextResponse.json(
       { success: false, error: "reportId and agencyId are required" },
       { status: 400 }
+    );
+  }
+
+  // Get user ID from clerkId
+  const user = await db.user.findUnique({
+    where: { clerkId: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: "User not found" },
+      { status: 404 }
     );
   }
 
@@ -70,7 +86,7 @@ async function createAssignment(req: Request) {
       data: {
         reportId,
         agencyId,
-        assignedById: userId,
+        assignedById: user.id,
         status: "PENDING" as any,
         notes,
       },
@@ -81,9 +97,20 @@ async function createAssignment(req: Request) {
       data: { status: ReportStatus.ASSIGNED },
     });
 
+    // Log status change
+    await tx.statusHistory.create({
+      data: {
+        reportId,
+        fromStatus: report.status,
+        toStatus: ReportStatus.ASSIGNED,
+        changedBy: user.id,
+        reason: "Report assigned to agency",
+      },
+    });
+
     await tx.auditLog.create({
       data: {
-        actorId: userId,
+        actorId: user.id,
         action: "ASSIGNMENT_CREATED",
         entity: "Assignment",
         entityId: assignment.id,
@@ -101,9 +128,89 @@ async function createAssignment(req: Request) {
     return { assignment, updatedReport };
   });
 
+  // Notify citizen about assignment
+  await createNotification(
+    report.citizenId,
+    "Report Assigned",
+    `Your report "${report.title}" has been assigned to ${agency.name}`,
+    "ASSIGNMENT",
+    result.assignment.id
+  );
+
   return NextResponse.json({
     success: true,
     data: result.assignment,
+  });
+}
+
+async function listAssignments(req: Request) {
+  const { userId } = await requireRole(["DS_OFFICER", "NGO_PARTNER", "ADMIN"] as any);
+  const url = new URL(req.url);
+  const status = url.searchParams.get("status");
+  const agencyId = url.searchParams.get("agencyId");
+  const reportId = url.searchParams.get("reportId");
+
+  const where: any = {};
+  if (status) where.status = status;
+  if (agencyId) where.agencyId = agencyId;
+  if (reportId) where.reportId = reportId;
+
+  const assignments = await db.assignment.findMany({
+    where,
+    include: {
+      report: {
+        select: {
+          id: true,
+          referenceNo: true,
+          title: true,
+          description: true,
+          category: true,
+          status: true,
+          district: true,
+          latitude: true,
+          longitude: true,
+          address: true,
+          createdAt: true,
+        },
+      },
+      agency: {
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          contactEmail: true,
+          contactPhone: true,
+          district: true,
+        },
+      },
+      assignedBy: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+        },
+      },
+      inspections: {
+        include: {
+          inspector: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return NextResponse.json({
+    success: true,
+    data: assignments,
   });
 }
 
@@ -151,6 +258,8 @@ async function updateAssignment(req: Request) {
       data: {
         status: status as any,
         updatedAt: new Date(),
+        ...(status === "ACCEPTED" && { acceptedAt: new Date() }),
+        ...(status === "COMPLETED" && { completedAt: new Date() }),
       },
     });
 
@@ -171,11 +280,40 @@ async function updateAssignment(req: Request) {
     return { updatedAssignment };
   });
 
+  // Update report status based on assignment status
+  if (status === "IN_PROGRESS" && assignment.report.status === "ASSIGNED") {
+    await db.report.update({
+      where: { id: assignment.reportId },
+      data: { status: ReportStatus.IN_PROGRESS },
+    });
+    await logStatusChange(assignment.reportId, ReportStatus.IN_PROGRESS, userId, "Assignment in progress");
+  }
+
+  if (status === "COMPLETED") {
+    await db.report.update({
+      where: { id: assignment.reportId },
+      data: { status: ReportStatus.FIELD_VERIFIED },
+    });
+    await logStatusChange(assignment.reportId, ReportStatus.FIELD_VERIFIED, userId, "Assignment completed");
+  }
+
+  // Notify DS officer about assignment update
+  if (assignment.assignedById) {
+    await createNotification(
+      assignment.assignedById,
+      "Assignment Status Updated",
+      `Assignment status changed to ${status}`,
+      "ASSIGNMENT_UPDATE",
+      id
+    );
+  }
+
   return NextResponse.json({
     success: true,
     data: result.updatedAssignment,
   });
 }
 
+export const GET = withErrorHandler(listAssignments);
 export const POST = withErrorHandler(createAssignment);
 export const PATCH = withErrorHandler(updateAssignment);
