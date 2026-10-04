@@ -24,6 +24,12 @@ export async function uploadReportImage(fileBuffer: Buffer, folder = "civicpulse
           reject(error);
           return;
         }
+        console.log("[CLOUDINARY UPLOAD RESPONSE]", {
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+          folder,
+          resource_type: "image",
+          response: result,
+        });
         if (!result?.secure_url || !result.public_id) {
           reject(new Error("Cloudinary returned an incomplete upload response"));
           return;

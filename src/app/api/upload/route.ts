@@ -88,21 +88,11 @@ export async function POST(request: Request) {
       { status: 201, headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const errorCode = typeof error === "object" && error !== null && "code" in error
-      ? String(error.code)
-      : "UNKNOWN";
-    const status = 500;
-    console.error("[UPLOAD ERROR]", {
-      name: error instanceof Error ? error.name : "UnknownError",
-      code: errorCode,
-      message,
-      status,
-    });
+    console.error("[UPLOAD ERROR]", error);
 
     return NextResponse.json(
       { success: false, error: "Failed to upload photo, please try again." },
-      { status, headers: { "Cache-Control": "no-store" } }
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 }
