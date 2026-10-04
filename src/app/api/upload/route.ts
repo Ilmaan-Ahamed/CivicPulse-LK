@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { uploadReportImage } from "@/lib/cloudinary";
+import { deleteReportImage, uploadReportImage } from "@/lib/cloudinary";
 import { consumeUploadLimit } from "@/lib/upload-rate-limit";
 
 export const runtime = "nodejs";
@@ -14,6 +14,8 @@ const uploadSchema = z
   .instanceof(File)
   .refine((file) => allowedMimeTypes.includes(file.type), "Only JPEG, PNG, and WebP images are allowed")
   .refine((file) => file.size > 0 && file.size <= MAX_FILE_SIZE, "Images must be between 1 byte and 5 MB");
+
+const deleteSchema = z.object({ public_id: z.string().min(1).max(300) });
 
 function matchesImageSignature(bytes: Buffer, contentType: string) {
   if (contentType === "image/jpeg") {
@@ -101,6 +103,56 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { success: false, error: "Failed to upload photo, please try again." },
       { status, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ success: false, error: "Please sign in to remove a photo." }, { status: 401 });
+    }
+
+    const user = await db.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    });
+    if (!user) {
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+    }
+
+    const parsed = deleteSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "Invalid image reference" }, { status: 400 });
+    }
+
+    const { public_id: publicId } = parsed.data;
+    const ownedPrefix = `civicpulse-reports/${user.id}/`;
+    if (!publicId.startsWith(ownedPrefix) || !/^[A-Za-z0-9_-]+$/.test(publicId.slice(ownedPrefix.length))) {
+      return NextResponse.json({ success: false, error: "Invalid image reference" }, { status: 400 });
+    }
+
+    const attachedReport = await db.report.findFirst({
+      where: {
+        OR: [
+          { imagePublicId: publicId },
+          { photos: { some: { key: publicId } } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (attachedReport) {
+      return NextResponse.json({ success: false, error: "This photo is already attached to a report" }, { status: 409 });
+    }
+
+    await deleteReportImage(publicId);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[UPLOAD DELETE ERROR]", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to remove photo, please try again." },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 }

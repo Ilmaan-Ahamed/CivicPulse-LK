@@ -147,9 +147,27 @@ export default function ReportIssuePage() {
     }
   };
 
-  const removePhoto = (photo: ReportPhoto) => {
-    URL.revokeObjectURL(photo.src);
-    setPhotos((current) => current.filter((item) => item.id !== photo.id));
+  const removePhoto = async (photo: ReportPhoto) => {
+    setSubmitError(null);
+    if (photo.status === "uploading") return;
+
+    try {
+      if (photo.publicId) {
+        const response = await fetch("/api/upload", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ public_id: photo.publicId }),
+        });
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        if (!response.ok) throw new Error(result?.error || "Unable to remove uploaded photo");
+      }
+
+      URL.revokeObjectURL(photo.src);
+      setPhotos((current) => current.filter((item) => item.id !== photo.id));
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Unable to remove photo");
+    }
   };
 
   const renderPhotoGrid = () => (
@@ -183,8 +201,9 @@ export default function ReportIssuePage() {
               )}
               <button
                 type="button"
-                onClick={() => removePhoto(photo)}
-                className="rounded bg-slate-800 p-1 text-white hover:bg-slate-700"
+                onClick={() => void removePhoto(photo)}
+                disabled={photo.status === "uploading"}
+                className="rounded bg-slate-800 p-1 text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={`Remove photo ${index + 1}`}
               >
                 <X className="h-3 w-3" />
