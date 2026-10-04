@@ -37,3 +37,5 @@ jobs:
 
       - name: Build for production
         run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://ci:ci@localhost:5432/civicpulse_ci?sslmode=disable' }}

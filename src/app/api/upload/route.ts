@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { deleteReportImage, uploadReportImage } from "@/lib/cloudinary";
+import { assertCloudinaryCredentials, deleteReportImage, uploadReportImage } from "@/lib/cloudinary";
 import { consumeUploadLimit } from "@/lib/upload-rate-limit";
 
 export const runtime = "nodejs";
@@ -34,6 +34,8 @@ function matchesImageSignature(bytes: Buffer, contentType: string) {
 
 export async function POST(request: Request) {
   try {
+    assertCloudinaryCredentials();
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ success: false, error: "Please sign in to upload a photo." }, { status: 401 });
@@ -99,6 +101,8 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    assertCloudinaryCredentials();
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ success: false, error: "Please sign in to remove a photo." }, { status: 401 });

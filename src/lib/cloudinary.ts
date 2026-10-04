@@ -7,14 +7,21 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-function ensureCloudinaryCredentials() {
-  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-    throw new Error("Cloudinary credentials are not configured");
+const requiredCloudinaryEnvironmentVariables = [
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET",
+] as const;
+
+export function assertCloudinaryCredentials() {
+  const missing = requiredCloudinaryEnvironmentVariables.filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    throw new Error(`Missing ${missing.join(", ")}`);
   }
 }
 
 export async function uploadReportImage(fileBuffer: Buffer, folder = "civicpulse-reports") {
-  ensureCloudinaryCredentials();
+  assertCloudinaryCredentials();
 
   return new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -42,7 +49,7 @@ export async function uploadReportImage(fileBuffer: Buffer, folder = "civicpulse
 }
 
 export async function deleteReportImage(publicId: string) {
-  ensureCloudinaryCredentials();
+  assertCloudinaryCredentials();
   const result = await cloudinary.uploader.destroy(publicId, { resource_type: "image", invalidate: true });
   if (result.result !== "ok" && result.result !== "not found") {
     throw new Error(`Cloudinary image deletion failed: ${result.result}`);
