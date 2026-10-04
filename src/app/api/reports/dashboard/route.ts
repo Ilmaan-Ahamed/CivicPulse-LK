@@ -50,7 +50,7 @@ async function getDashboardReports(req: Request) {
       const photos = await Promise.all(report.photos.map(async (photo) => ({
         id: photo.id,
         caption: photo.caption,
-        url: await tryGetPresignedUrl(photo.key),
+        url: photo.url?.startsWith("https://") ? photo.url : await tryGetPresignedUrl(photo.key),
       })));
 
       return {

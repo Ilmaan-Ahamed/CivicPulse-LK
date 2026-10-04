@@ -11,7 +11,10 @@ const createReportSchema = z.object({
   latitude: z.number().finite().optional(),
   longitude: z.number().finite().optional(),
   address: z.string().trim().max(500).optional(),
-  photoKeys: z.array(z.string().min(1).max(300)).max(5).optional(),
+  photos: z.array(z.object({
+    secure_url: z.string().url().max(2000),
+    public_id: z.string().min(1).max(300),
+  })).max(5).optional(),
 });
 
 export async function GET(request: Request) {
@@ -79,7 +82,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const report = await createIssue(parsed.data);
+    const { photos, ...reportData } = parsed.data;
+    const report = await createIssue({
+      ...reportData,
+      photos: photos?.map(({ secure_url, public_id }) => ({ url: secure_url, publicId: public_id })),
+    });
     console.info("[REPORT CREATED]", {
       id: report.id,
       referenceNo: report.referenceNo,

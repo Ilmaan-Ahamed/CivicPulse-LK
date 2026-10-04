@@ -27,7 +27,7 @@ async function getPublicReports(req: Request) {
       priorityScore: report.aiConfidence || 50,
       address: report.address,
       dsDivisionName: report.district,
-      imageUrl: null,
+      imageUrl: report.imageUrl,
       verificationCount: report.verifications.length,
       verificationThreshold: 3,
       createdAt: report.createdAt.toISOString(),

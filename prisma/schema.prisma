@@ -148,6 +148,8 @@ model Report {
   title         String
   description   String
   summary       String? // AI-generated summary
+  imageUrl      String?
+  imagePublicId String?
   latitude      Float
   longitude     Float
   address       String?
@@ -184,7 +186,7 @@ model Report {
 model Photo {
   id             String   @id @default(cuid())
   url            String?
-  key            String // MinIO object key
+  key            String // Storage provider object identifier
   caption        String?
   reportId       String?
   verificationId String?

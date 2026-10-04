@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api-handler";
 import { requireRole } from "@/lib/auth-guard";
 import { tryGetPresignedUrl } from "@/lib/minio";
+import { deleteReportImage } from "@/lib/cloudinary";
 
 const updateReportSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
@@ -122,7 +123,7 @@ async function getReportById(req: Request, { params }: { params: Promise<{ id: s
 
   const photos = await Promise.all(report.photos.map(async ({ key, ...photo }) => ({
     ...photo,
-    url: await tryGetPresignedUrl(key),
+    url: photo.url?.startsWith("https://") ? photo.url : await tryGetPresignedUrl(key),
   })));
 
   return NextResponse.json({
@@ -147,6 +148,7 @@ async function updateReport(req: Request, { params }: { params: Promise<{ id: st
   // Check if report exists
   const report = await db.report.findUnique({
     where: { id },
+    include: { photos: { select: { key: true } } },
   });
 
   if (!report) {
@@ -275,6 +277,7 @@ async function deleteReport(req: Request, { params }: { params: Promise<{ id: st
   // Check if report exists
   const report = await db.report.findUnique({
     where: { id },
+    include: { photos: { select: { key: true } } },
   });
 
   if (!report) {
@@ -339,6 +342,18 @@ async function deleteReport(req: Request, { params }: { params: Promise<{ id: st
       },
     });
   });
+
+  const cloudinaryIds = [...new Set([
+    report.imagePublicId,
+    ...report.photos.map((photo) => photo.key.startsWith("civicpulse-reports/") ? photo.key : null),
+  ].filter((publicId): publicId is string => Boolean(publicId)))];
+  await Promise.all(cloudinaryIds.map(async (publicId) => {
+    try {
+      await deleteReportImage(publicId);
+    } catch (error) {
+      console.error("[REPORT IMAGE DELETE ERROR]", { reportId: id, publicId, error });
+    }
+  }));
 
   return NextResponse.json({
     success: true,
