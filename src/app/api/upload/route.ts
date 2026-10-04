@@ -1,24 +1,19 @@
-import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth-guard";
+import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { uploadFile } from "@/lib/minio";
+import { uploadReportImage } from "@/lib/cloudinary";
 import { consumeUploadLimit } from "@/lib/upload-rate-limit";
 
 export const runtime = "nodejs";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const mimeExtensions: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp"];
 
 const uploadSchema = z
   .instanceof(File)
-  .refine((file) => Boolean(mimeExtensions[file.type]), "Only JPEG, PNG, and WebP images are allowed")
-  .refine((file) => file.size > 0 && file.size <= MAX_FILE_SIZE, "Images must be between 1 byte and 10 MB");
+  .refine((file) => allowedMimeTypes.includes(file.type), "Only JPEG, PNG, and WebP images are allowed")
+  .refine((file) => file.size > 0 && file.size <= MAX_FILE_SIZE, "Images must be between 1 byte and 5 MB");
 
 function matchesImageSignature(bytes: Buffer, contentType: string) {
   if (contentType === "image/jpeg") {
@@ -37,7 +32,11 @@ function matchesImageSignature(bytes: Buffer, contentType: string) {
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await requireRole(["CITIZEN", "DS_OFFICER", "ADMIN"]);
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ success: false, error: "Please sign in to upload a photo." }, { status: 401 });
+    }
+
     const user = await db.user.findUnique({
       where: { clerkId: userId },
       select: { id: true },
@@ -57,7 +56,7 @@ export async function POST(request: Request) {
 
     const contentLength = Number(request.headers.get("content-length"));
     if (Number.isFinite(contentLength) && contentLength > MAX_FILE_SIZE + 64 * 1024) {
-      return NextResponse.json({ success: false, error: "Image must be 10 MB or smaller" }, { status: 413 });
+      return NextResponse.json({ success: false, error: "Image must be 5 MB or smaller" }, { status: 400 });
     }
 
     const formData = await request.formData();
@@ -80,16 +79,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "File contents do not match an allowed image type" }, { status: 400 });
     }
 
-    const key = `reports/${user.id}/${randomUUID()}.${mimeExtensions[file.type]}`;
-    await uploadFile(buffer, key, file.type);
+    const image = await uploadReportImage(buffer, `civicpulse-reports/${user.id}`);
 
-    return NextResponse.json({ success: true, key }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { success: true, ...image },
+      { status: 201, headers: { "Cache-Control": "no-store" } }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const errorCode = typeof error === "object" && error !== null && "code" in error
       ? String(error.code)
       : "UNKNOWN";
-    const status = message.startsWith("Unauthorized") ? 401 : message.startsWith("Forbidden") ? 403 : 500;
+    const status = 500;
     console.error("[UPLOAD ERROR]", {
       name: error instanceof Error ? error.name : "UnknownError",
       code: errorCode,
@@ -97,13 +98,8 @@ export async function POST(request: Request) {
       status,
     });
 
-    const safeMessage = status === 401
-      ? "Please sign in to upload a photo."
-      : status === 403
-        ? "You do not have permission to upload this photo."
-        : "Failed to upload photo, please try again.";
     return NextResponse.json(
-      { success: false, error: safeMessage },
+      { success: false, error: "Failed to upload photo, please try again." },
       { status, headers: { "Cache-Control": "no-store" } }
     );
   }

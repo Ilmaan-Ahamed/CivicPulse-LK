@@ -19,7 +19,8 @@ type ReportPhoto = {
   src: string;
   file: File;
   status: "uploading" | "uploaded" | "failed";
-  key?: string;
+  url?: string;
+  publicId?: string;
   error?: string;
 };
 
@@ -39,7 +40,7 @@ export default function ReportIssuePage() {
   const [photos, setPhotos] = useState<ReportPhoto[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
   const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
@@ -122,16 +123,19 @@ export default function ReportIssuePage() {
       const response = await fetch("/api/upload", { method: "POST", body, credentials: "include" });
       const result = (await response.json().catch(() => null)) as {
         success?: boolean;
-        key?: string;
+        secure_url?: string;
+        public_id?: string;
         error?: string;
       } | null;
 
-      if (!response.ok || !result?.success || !result.key) {
+      if (!response.ok || !result?.success || !result.secure_url || !result.public_id) {
         throw new Error(result?.error || `Photo upload failed (${response.status})`);
       }
 
       setPhotos((current) => current.map((item) =>
-        item.id === photo.id ? { ...item, status: "uploaded", key: result.key, error: undefined } : item
+        item.id === photo.id
+          ? { ...item, status: "uploaded", url: result.secure_url, publicId: result.public_id, error: undefined }
+          : item
       ));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Photo upload failed";
@@ -200,7 +204,7 @@ export default function ReportIssuePage() {
   const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-    if (hasUploadingPhotos || hasFailedPhotos || photos.some((photo) => photo.status !== "uploaded" || !photo.key)) {
+    if (hasUploadingPhotos || hasFailedPhotos || photos.some((photo) => photo.status !== "uploaded" || !photo.url || !photo.publicId)) {
       setSubmitError("Finish or retry each photo upload before submitting.");
       return;
     }
@@ -218,7 +222,9 @@ export default function ReportIssuePage() {
           latitude: lat,
           longitude: lng,
           address: address.trim() || undefined,
-          photoKeys: photos.flatMap((photo) => (photo.key ? [photo.key] : [])),
+          photos: photos.flatMap((photo) => photo.url && photo.publicId
+            ? [{ secure_url: photo.url, public_id: photo.publicId }]
+            : []),
         }),
       });
       const result = (await response.json()) as {
@@ -441,7 +447,7 @@ export default function ReportIssuePage() {
                         }
                         // Validate size
                         if (f.size > MAX_FILE_SIZE) {
-                          setUploadError("File is too large. Maximum allowed size is 10 MB.");
+                          setUploadError("File is too large. Maximum allowed size is 5 MB.");
                           continue;
                         }
                         // Prevent duplicates by name+size

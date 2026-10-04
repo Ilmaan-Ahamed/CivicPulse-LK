@@ -102,7 +102,11 @@ export async function GET(request: Request) {
         status: report.status,
         priorityScore,
         address: report.address || "Unknown location",
-        imageUrl: report.photos[0]?.key ? await tryGetPresignedUrl(report.photos[0].key) : null,
+        imageUrl: report.photos[0]?.url?.startsWith("https://")
+          ? report.photos[0].url
+          : report.photos[0]?.key
+            ? await tryGetPresignedUrl(report.photos[0].key)
+            : null,
         distance,
         currentConfirmations,
         threshold,

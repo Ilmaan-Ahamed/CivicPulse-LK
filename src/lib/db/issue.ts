@@ -14,7 +14,7 @@ export type CreateIssueInput = {
   longitude?: number;
   address?: string;
   status?: ReportStatus | keyof typeof ReportStatus | string;
-  photoKeys?: string[];
+  photos?: Array<{ url: string; publicId: string }>;
 };
 
 function toCategory(value?: CreateIssueInput["category"]): Category {
@@ -62,14 +62,15 @@ export async function createIssue(data: CreateIssueInput) {
     throw new Error("User profile is not synchronized with the database");
   }
 
-  const photoKeys = data.photoKeys ?? [];
-  const photoKeyPrefix = `reports/${user.id}/`;
+  const photos = data.photos ?? [];
+  const photoKeyPrefix = `civicpulse-reports/${user.id}/`;
   if (
-    photoKeys.length > 5 ||
-    new Set(photoKeys).size !== photoKeys.length ||
-    photoKeys.some((key) =>
-      !key.startsWith(photoKeyPrefix) ||
-      !/^[0-9a-f-]{36}\.(jpg|png|webp)$/.test(key.slice(photoKeyPrefix.length))
+    photos.length > 5 ||
+    new Set(photos.map((photo) => photo.publicId)).size !== photos.length ||
+    photos.some((photo) =>
+      !photo.publicId.startsWith(photoKeyPrefix) ||
+      !/^[A-Za-z0-9_-]+$/.test(photo.publicId.slice(photoKeyPrefix.length)) ||
+      !/^https:\/\/res\.cloudinary\.com\//.test(photo.url)
     )
   ) {
     throw new Error("Invalid report photo reference");
@@ -98,11 +99,13 @@ export async function createIssue(data: CreateIssueInput) {
       latitude: lat,
       longitude: lng,
       address: data.address ?? null,
+      imageUrl: photos[0]?.url ?? null,
+      imagePublicId: photos[0]?.publicId ?? null,
       status,
       duplicateOfId,
       isDuplicate: !!duplicateOfId,
       photos: {
-        create: photoKeys.map((key) => ({ key, url: key })),
+        create: photos.map(({ url, publicId }) => ({ key: publicId, url })),
       },
     },
   });
