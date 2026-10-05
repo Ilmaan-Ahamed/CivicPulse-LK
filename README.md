@@ -1,8 +1,6 @@
 # CivicPulse LK 
 
 **Community-Verified Public Infrastructure Reporting Platform**
-
-**Live Link:** https://civic-pulse-lk.vercel.app/
 ---
 
 ## Project Title
