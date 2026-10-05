@@ -109,8 +109,6 @@ export const translations: Record<Language, Record<string, string>> = {
     "auth.createAccountBtn": "Create Civic Account",
     "auth.creatingAccount": "Creating account...",
     "auth.backToHome": "Back to Home",
-    "auth.demoHintTitle": "Demo Quick Login",
-    "auth.demoHintDesc": "Register a new user or use any existing email (e.g. citizen.anusha@civicpulse.lk) with any password for demo access.",
 
     // Role Selection Page
     "roleSelect.brand": "CivicPulse LK",

@@ -19,7 +19,7 @@ export function Footer() {
           </p>
           <div className="flex items-center gap-1.5 text-xs text-[#F97316] dark:text-[#FF8C00] font-mono">
             <MapPin className="w-3.5 h-3.5" />
-            <span>Colombo • Kandy • Galle • Jaffna</span>
+            <span>Sri Lanka</span>
           </div>
         </div>
 
