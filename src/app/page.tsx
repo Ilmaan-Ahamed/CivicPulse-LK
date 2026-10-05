@@ -46,10 +46,6 @@ export default function LandingPage() {
         <div className="absolute inset-0 opacity-8 dark:opacity-15 bg-[radial-gradient(#F97316_1px,transparent_1px)] [background-size:24px_24px]" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
-          <div className="badge-orange">
-            <Sparkles className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: "8s" }} />
-            <span>Empowering Citizens & DS Offices Across Sri Lanka</span>
-          </div>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl page-title tracking-tight leading-[1.1]">
             Community-Verified Public Infrastructure Reporting for <br />
@@ -198,7 +194,7 @@ export default function LandingPage() {
                 <span>Active</span>
               </div>
               <p>✓ Automated GPS Geocoding</p>
-              <p>✓ AI Priority Advisory Scoring (1-100)</p>
+              <p>✓ Verification Process by Public</p>
               <p>✓ Divisional Secretariat Routing</p>
               <p>✓ Photographic Proof Publishing</p>
             </div>
@@ -430,7 +426,7 @@ export default function LandingPage() {
       </section>
 
       {/* 5. FINAL CALL TO ACTION */}
-      <section className="py-16 bg-[var(--surface)] dark:bg-gradient-to-r dark:from-[#FF8C00] dark:to-black text-[var(--foreground)] text-center">
+      <section className="py-16 bg-[var(--surface)]  dark:from-[#FF8C00] dark:to-black text-[var(--foreground)] text-center">
         <div className="max-w-4xl mx-auto px-4 space-y-6">
           <h2 className="text-3xl page-title">Ready to Make Sri Lankan Infrastructure Accountable?</h2>
           <p className="text-sm body-text">

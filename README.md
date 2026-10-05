@@ -2,8 +2,6 @@
 
 **Community-Verified Public Infrastructure Reporting Platform**
 
-**Live Link:** https://civic-pulse-lk.vercel.app/
----
 
 ## Project Title
 
@@ -475,6 +473,4 @@ This project was developed as part of the **Technology Challenge Competition Mod
 ---
 
 
-## 🔗 Repository
 
-**GitHub:** https://github.com/Ilmaan-Ahamed/CivicPulse-LK

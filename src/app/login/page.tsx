@@ -348,15 +348,6 @@ export default function LoginPage() {
                     </>
                   )}
                 </button>
-
-                {/* Demo credentials hint */}
-                <div className="mt-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-400 text-[11px]">
-                  <div className="flex items-center gap-1.5 font-bold mb-1">
-                    <Sparkles className="w-3 h-3" />
-                    <span>{t("auth.demoHintTitle")}</span>
-                  </div>
-                  <p className="text-amber-600 dark:text-amber-500">{t("auth.demoHintDesc")}</p>
-                </div>
               </form>
             )}
 
