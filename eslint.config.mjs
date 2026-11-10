@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored security-audit tooling is standalone Node validation code and should not be linted as app sources.
+    ".agents/**",
   ]),
 ]);
 

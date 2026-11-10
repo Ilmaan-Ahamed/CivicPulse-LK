@@ -13,7 +13,7 @@ export function Footer() {
               <Shield className="w-4 h-4" />
             </div>
             <span className="text-lg font-black text-slate-900 dark:text-white">CivicPulse LK</span>
-          </div>
+          </div> 
           <p className="text-xs text-slate-500 dark:text-[#B0B0B0] leading-relaxed">
             Sri Lanka&apos;s premier community-verified public infrastructure reporting and governance transparency platform.
           </p>

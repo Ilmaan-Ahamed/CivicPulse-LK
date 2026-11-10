@@ -39,15 +39,15 @@ export const normalizeRole = (role?: string | null): Role | undefined => {
   return aliases[keyed] ?? undefined;
 };
 
-// Which roles can access which route prefixes. Keep route checks permissive during the demo
-// login flow when Clerk metadata has not yet been populated for the selected role.
+// Route access is enforced from the server-side DB role to keep authorization
+// least-privilege and avoid trusting browser-selected roles.
 export const ROUTE_ACCESS: Record<string, Role[]> = {
-  "/dashboard/citizen": ["CITIZEN", "NGO_PARTNER", "DS_OFFICER", "ADMIN"],
-  "/dashboard/verifier": ["CITIZEN", "DS_OFFICER", "ADMIN"],
-  "/dashboard/volunteer": ["CITIZEN", "DS_OFFICER", "ADMIN"],
-  "/dashboard/ngo": ["NGO_PARTNER", "DS_OFFICER", "ADMIN"],
-  "/dashboard/agency": ["NGO_PARTNER", "DS_OFFICER", "ADMIN"],
-  "/dashboard/ds-officer": ["DS_OFFICER", "ADMIN"],
+  "/dashboard/citizen": ["CITIZEN"],
+  "/dashboard/verifier": ["CITIZEN"],
+  "/dashboard/volunteer": ["CITIZEN"],
+  "/dashboard/ngo": ["NGO_PARTNER"],
+  "/dashboard/agency": ["NGO_PARTNER"],
+  "/dashboard/ds-officer": ["DS_OFFICER"],
   "/dashboard/admin": ["ADMIN"],
   "/ds-console": ["DS_OFFICER", "ADMIN"],
   "/ds-console/agencies": ["DS_OFFICER", "ADMIN"],

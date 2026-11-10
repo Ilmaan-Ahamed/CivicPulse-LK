@@ -20,21 +20,12 @@ export async function POST(request: Request) {
     }
 
     const { userId: authUserId } = await auth();
-    const effectiveClerkId = authUserId || (body.clerkId as string | undefined);
-    console.log("SYNC Auth Debug:", {
-      authUserId,
-      bodyClerkId: body.clerkId,
-      effectiveClerkId,
-    });
-
-    if (!effectiveClerkId) {
+    if (!authUserId) {
       return NextResponse.json({ success: false, error: "Not signed in" }, { status: 401 });
     }
 
-    const requestedRole = parseSignupRole(body.role);
-
     let user = await db.user.findUnique({
-      where: { clerkId: effectiveClerkId },
+      where: { clerkId: authUserId },
     });
 
     if (!user) {
@@ -44,24 +35,21 @@ export async function POST(request: Request) {
       let avatarUrl = typeof body.imageUrl === "string" ? body.imageUrl : null;
       let clerkMetadataRole: SignupRole | undefined;
 
-      if (authUserId) {
-        const clerkUser = await currentUser();
-        if (clerkUser) {
-          if (!email) email = clerkUser.emailAddresses[0]?.emailAddress;
-          firstName = clerkUser.firstName || firstName;
-          lastName = clerkUser.lastName || lastName;
-          avatarUrl = clerkUser.imageUrl || avatarUrl;
-          clerkMetadataRole = parseSignupRole(
-            clerkUser.unsafeMetadata?.role ?? clerkUser.publicMetadata?.role
-          );
-        }
+      const clerkUser = await currentUser();
+      if (clerkUser) {
+        if (!email) email = clerkUser.emailAddresses[0]?.emailAddress;
+        firstName = clerkUser.firstName || firstName;
+        lastName = clerkUser.lastName || lastName;
+        avatarUrl = clerkUser.imageUrl || avatarUrl;
+        clerkMetadataRole = parseSignupRole(
+          clerkUser.unsafeMetadata?.role ?? clerkUser.publicMetadata?.role
+        );
       }
 
       if (!email) {
         return NextResponse.json({ success: false, error: "No email provided for user sync" }, { status: 400 });
       }
 
-      // Check if user exists by email (to avoid unique constraint issues)
       const existingByEmail = await db.user.findUnique({
         where: { email },
       });
@@ -70,24 +58,18 @@ export async function POST(request: Request) {
         user = await db.user.update({
           where: { id: existingByEmail.id },
           data: {
-            clerkId: effectiveClerkId,
+            clerkId: authUserId,
             firstName: firstName || existingByEmail.firstName,
             lastName: lastName || existingByEmail.lastName,
             avatarUrl: avatarUrl || existingByEmail.avatarUrl,
           },
         });
       } else {
-        const signupRole = requestedRole || clerkMetadataRole;
-        if (!signupRole) {
-          return NextResponse.json(
-            { success: false, error: "A role is required to create an account" },
-            { status: 400 }
-          );
-        }
+        const signupRole = clerkMetadataRole ?? "CITIZEN";
 
         user = await db.user.create({
           data: {
-            clerkId: effectiveClerkId,
+            clerkId: authUserId,
             email,
             firstName,
             lastName,
@@ -116,4 +98,4 @@ export async function POST(request: Request) {
     console.error("Auth sync error:", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
-}
+}

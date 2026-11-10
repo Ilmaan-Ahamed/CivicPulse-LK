@@ -205,9 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Robust fallback if DB sync is temporarily slow or failing
             const metadataRole: unknown = user.unsafeMetadata?.role;
             const clerkRole = isUserRole(metadataRole) ? metadataRole : undefined;
-            const savedRoleValue = readAuthValue(ROLE_KEY);
-            const savedRole = isUserRole(savedRoleValue) ? savedRoleValue : undefined;
-            const activeRole: UserRole = clerkRole || savedRole || "CITIZEN";
+            const activeRole: UserRole = clerkRole || "CITIZEN";
             const fallbackUser: UserProfile = {
               id: user.id,
               name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.primaryEmailAddress?.emailAddress || "Citizen",
@@ -243,6 +241,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const switchRole = useCallback(
     (role: UserRole) => {
+      if (isAuthenticated) {
+        console.warn("[AUTH ROLE SWITCH] ignored for authenticated session; authorization is server-derived");
+        return;
+      }
+
       console.info("[AUTH ROLE SWITCH] requested", {
         role,
         authenticated: isAuthenticated,
@@ -250,16 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       setCurrentRole(role);
       writeAuthValue(ROLE_KEY, role);
-
-      if (isAuthenticated) {
-        setCurrentUser((prev) => {
-          const updated = { ...prev, role };
-          writeAuthValue(STORAGE_KEY, JSON.stringify(updated));
-          return updated;
-        });
-      } else {
-        setCurrentUser(MOCK_ROLE_USERS[role] || MOCK_ROLE_USERS.CITIZEN);
-      }
+      setCurrentUser(MOCK_ROLE_USERS[role] || MOCK_ROLE_USERS.CITIZEN);
       console.info("[AUTH ROLE SWITCH] applied", { role });
     },
     [isAuthenticated]

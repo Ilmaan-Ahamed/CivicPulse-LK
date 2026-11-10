@@ -17,19 +17,19 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const userRole = normalizeRole(typeof role === "string" ? role : null);
-    if (!isSignupRole(userRole)) {
+    const requestedRole = normalizeRole(typeof role === "string" ? role : null);
+    if (requestedRole && requestedRole !== "CITIZEN") {
       return NextResponse.json(
-        { error: "A valid role is required (Citizen, NGO, or DS Officer)" },
-        { status: 400 }
+        { error: "Self-service role assignment is disabled. Roles are assigned by the server-side auth flow." },
+        { status: 403 }
       );
     }
 
+    const userRole: UserRole = "CITIZEN";
     const nameParts = name.trim().split(" ");
     const firstName = nameParts[0] || name.trim();
     const lastName = nameParts.slice(1).join(" ") || "";
 
-    // Attempt DB create
     try {
       const created = await db.user.create({
         data: {
@@ -60,7 +60,6 @@ export async function POST(request: NextRequest) {
         },
       });
     } catch {
-      // Fallback in-memory response if DB is offline
       return NextResponse.json({
         success: true,
         user: {

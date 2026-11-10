@@ -1,6 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { ROUTE_ACCESS, normalizeRole } from "@/lib/roles";
+import { db } from "@/lib/db";
 
 const isProtectedRoute = (path: string) => path.startsWith("/dashboard");
 
@@ -8,22 +9,20 @@ export default clerkMiddleware(async (auth, req) => {
   const path = req.nextUrl.pathname;
   if (!isProtectedRoute(path)) return;
 
-  const { userId, sessionClaims } = await auth();
+  const { userId } = await auth();
   if (!userId) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const claims = sessionClaims as Record<string, unknown> | null | undefined;
-  const metadata = claims?.metadata as Record<string, unknown> | undefined;
-  const publicMetadata = claims?.publicMetadata as Record<string, unknown> | undefined;
-  const roleClaim = metadata?.role ?? claims?.role ?? publicMetadata?.role ?? claims?.userRole;
-  const role = normalizeRole(typeof roleClaim === "string" ? roleClaim : undefined);
+  const user = await db.user.findUnique({
+    where: { clerkId: userId },
+    select: { role: true },
+  });
 
-  const matchedPrefix = Object.keys(ROUTE_ACCESS).find((prefix) =>
-    path.startsWith(prefix)
-  );
+  const role = normalizeRole(user?.role);
+  const matchedPrefix = Object.keys(ROUTE_ACCESS).find((prefix) => path.startsWith(prefix));
 
-  if (matchedPrefix && role && !ROUTE_ACCESS[matchedPrefix].includes(role)) {
+  if (!role || !matchedPrefix || !ROUTE_ACCESS[matchedPrefix].includes(role)) {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 });
