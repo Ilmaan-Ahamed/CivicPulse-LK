@@ -5,7 +5,7 @@
 
 ## Project Title
 
-**CivicPulse LK** — a full-stack civic technology platform designed for Sri Lanka to improve how public infrastructure issues are **reported, verified, coordinated, and resolved**.
+**CivicPulse LK** — A full-stack civic technology platform designed for Sri Lanka to improve how public infrastructure issues are **reported, verified, coordinated, and resolved**.
 
 > **Report. Verify. Coordinate. Resolve.**
 
